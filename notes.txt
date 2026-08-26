@@ -1,0 +1,64 @@
+Toroidal direction: the "long way around" the donut hole, i.e., the direction that follows the big loop of the torus (like walking around the outer rim of a donut). This is the angle usually written φ.
+Poloidal direction: the "short way around," circling the cross-section of the donut (like walking around the tube's own circumference at one fixed point along the loop). This is the angle usually written θ.
+Optimization problem: you're searching for the input that minimizes (or maximizes) some objective function, subject to some rules.
+High-dimensional: the input you're searching over has many degrees of freedom. Here that's the 80 Fourier coefficients defining the plasma boundary shape (per CLAUDE.md), so you're searching an 80-dimensional space, not tuning a handful of knobs.
+Constrained: not every point in that space is a valid answer. Some combinations of coefficients must be excluded or penalized, e.g. aspect ratio below some bound, rotational transform above some threshold (Table 2's s.t. lines). The optimizer has to satisfy those constraints while also optimizing the objective, not just find any minimum.
+Strellator design approcahed in 2 stages: optimize the magnetic field, then design coils to produce this field.
+
+Aspect ratio (A)
+  Major radius (donut-hole size) divided by minor radius
+  (tube thickness). Higher means a thinner ring, lower means
+  a fatter, more compact device.
+
+Max elongation (ε_max)
+  How stretched the cross-section is at its most extreme
+  point. A value of 1 is circular, higher values are
+  flattened or oval.
+
+Average triangularity (δ̄)
+  How D-shaped versus egg-shaped the cross-section is,
+  meaning whether it is pointier on one side than the other.
+
+Edge rotational transform over N_fp (ῑ_edge)
+  At the outermost flux surface, how many times a field line
+  twists poloidally per trip around toroidally, normalized by
+  the number of field periods. Governs confinement shear.
+
+Axis rotational transform over N_fp (ῑ_axis)
+  The same twist rate, measured at the magnetic axis instead
+  of the edge.
+
+QI residual (QI)
+  How far the field is from a perfect quasi-isodynamic field,
+  meaning perfectly poloidally closed |B| contours. Lower is
+  closer to ideal, giving better trapped-particle confinement.
+
+Vacuum well (W_MHD)
+  Whether field strength decreases from axis to edge, forming
+  a magnetic well. A positive value is stabilizing against
+  pressure-driven MHD instabilities.
+
+Edge magnetic mirror ratio (Δ_edge)
+  At the edge surface, the ratio of maximum to minimum field
+  strength along a field line. Higher means a deeper trap, so
+  more particles bounce instead of circulating freely.
+
+Axis magnetic mirror ratio (Δ_axis)
+  The same ratio, evaluated along the magnetic axis instead
+  of the edge.
+
+Flux compression in regions of bad curvature (χ∇r)
+  A geometric proxy for turbulence risk. Measures where
+  curvature and pressure-gradient drift align unfavorably,
+  compressing flux surfaces together. Higher means more prone
+  to ion-temperature-gradient turbulence.
+
+Minimum normalized magnetic gradient scale length (L̃_∇B)
+  The smallest length scale over which the field strength
+  changes appreciably. Larger means a smoother field, allowing
+  simpler coils placed farther from the plasma. Coil-simplicity
+  proxy.
+
+Aspect ratio over edge rotational transform (A / ῑ_edge)
+  A compound ratio of compactness to edge twist, used directly
+  as its own metric column.

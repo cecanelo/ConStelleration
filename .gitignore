@@ -1,0 +1,26 @@
+# data
+data/
+*.parquet
+
+# reading material, not part of the repo
+*.pdf
+An Introduction to Stellarators
+
+# python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+*.egg-info/
+build/
+dist/
+
+# model artifacts and outputs
+*.pt
+*.pth
+*.ckpt
+figures/
+runs/
+
+# editor / os
+.vscode/
+.DS_Store
