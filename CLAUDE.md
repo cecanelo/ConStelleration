@@ -81,6 +81,30 @@ region."
 
 ---
 
+## Environment and working state
+
+Work happens in a Lightning AI Studio, reached over SSH from local VS Code (Remote-SSH host alias `lightning-constellaration`). Workspace root is `/teamspace/studios/this_studio/ConStelleration`, which is the persistent path and survives machine-type switches.
+
+⚠️ **Use the right interpreter.** Bare `python3` resolves to `/usr/bin/python3`, which has **none** of the project's packages. The active environment is the conda env `cloudspace`:
+
+```
+/home/zeus/miniconda3/envs/cloudspace/bin/python3
+```
+
+An interactive VS Code terminal activates it automatically, but a non-interactive `ssh host "command"` does not, so scripted calls must use the full path. Running bare `python3` and seeing every import fail is this trap, not a broken environment.
+
+**Installed:** torch 2.8.0+cu128, pandas 2.1.4, scikit-learn 1.3.2, numpy 1.26.4, matplotlib 3.8.2 (preinstalled by Lightning), plus pyarrow 25.0.1, datasets 5.0.1, huggingface_hub 1.28.0 (added for this project). Pinned in `requirements.txt`. **Do not reinstall or upgrade torch**, the CUDA build is matched to Lightning's GPU images.
+
+**Package:** installed editable, so `import constellaration_uq` works from anywhere. Source lives in `src/constellaration_uq/`.
+
+**Data:** `data_raw/data/train-0000{0,1,2}-of-00003.parquet`, ~584 MB, the `default` subset only. Gitignored. Re-fetch with `huggingface_hub.snapshot_download(repo_id="proxima-fusion/constellaration", repo_type="dataset", allow_patterns=["data/*"], local_dir="data_raw")`.
+
+**Machine type:** currently CPU. `torch.cuda.is_available()` returning `False` is correct here, not a fault. Everything through the day 1-2 grid check is CPU work; switch to GPU only for the Stage 6 N-sweep, and switch back after. An attached local VS Code session prevents the studio from auto-sleeping, which is harmless on CPU and expensive on GPU.
+
+**Current position:** Phases 0, 0b and A complete (studio, repo, environment). Phase B complete (data pulled, schema verified). Data findings documented in decision log 1.5 to 1.8. **Next: write `src/constellaration_uq/data.py` against the filter chain in decision log 1.8.** Then gate 3.5, the Stage 2 noise floor, and the day 1-2 grid.
+
+---
+
 ## The dataset (verified facts, do not re-derive)
 
 Hugging Face: `proxima-fusion/constellaration`. Paper: arXiv 2506.19583 (NeurIPS 2025). Code: `github.com/proximafusion/constellaration`.
