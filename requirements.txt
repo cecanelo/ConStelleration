@@ -1,0 +1,13 @@
+# Preinstalled in the Lightning "cloudspace" conda env, pinned here for the record.
+# torch build is 2.8.0+cu128; a plain `pip install torch==2.8.0` elsewhere will not
+# reproduce the CUDA build, only the base version.
+torch==2.8.0
+pandas==2.1.4
+scikit-learn==1.3.2
+numpy==1.26.4
+matplotlib==3.8.2
+
+# Installed for this project.
+pyarrow==25.0.1
+datasets==5.0.1
+huggingface_hub==1.28.0
