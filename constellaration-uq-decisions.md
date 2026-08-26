@@ -151,19 +151,120 @@ Write your own reasoning in the blockquote under each open item, in your own wor
 
 ---
 
-**1.5 Input vector** `SETTLED`
+**1.5 Input vector** `SETTLED` ✅ VERIFIED 2026-08-26
 
 **Decided:** The 80 coefficients as the paper defines them, with major radius fixed at 1.
 
 **Why:** Poloidal and toroidal mode numbers capped at 4, stellarator symmetry zeroing certain entries, R(0,0) fixed at 1. The paper states 80 degrees of freedom explicitly. Confirm your loader returns exactly 80 columns before going further; if it does not, you have misread the symmetry conditions.
 
+**Verified against their code, not inferred.** `_to_X` in `src/constellaration/generative_model/bootstrap_dataset.py`:
+
+```python
+x = np.concatenate([
+    surface.r_cos.ravel()[surface.max_toroidal_mode + 1:],
+    surface.z_sin.ravel()[surface.max_toroidal_mode + 1:],
+])
+```
+
+`max_toroidal_mode = 4`, so each `(5, 9)` array ravels to 45 entries and drops indices `[0:5]`, which are `m=0, n=-4..0`. That is the four symmetry zeros plus R(0,0). 40 kept per array, 80 total.
+
+**Verified empirically across all 182,221 usable rows:** `r_cos[m=0, n<0]` and `z_sin[m=0, n<0]` are exactly 0.0, and `Z(0,0)` is exactly 0.0. No exceptions, not "small", exactly zero.
+
+**Surprise on R(0,0), resolved.** Stored R(0,0) is *not* exactly 1: range 0.894 to 1.016, std 0.0051, only 52.8% of rows within 1e-4 of 1.0. But it is 6 to 20 times less variable than the least-variable genuine coefficient (std 0.033 to 0.103), correlates weakly with aspect ratio (0.14), and their inverse function `_x_to_surface` hardcodes `r_cos[max_toroidal_mode] = 1.0` on reconstruction. So it is optimizer residue around a fixed convention, and dropping it is correct.
+
+**Decision: drop R(0,0). 80 columns.**
+
 ---
 
-**1.6 Failed rows** `SETTLED`
+**1.6 Failed rows** `SETTLED` ✅ VERIFIED 2026-08-26
 
 **Decided:** Load `default` unfiltered to get the ~24k flagged failures. Use them only for the survivorship figure, never for training.
 
 **Why:** `misc.has_neurips_2025_forward_model_error` is a real column, so survivorship is measurable rather than speculative. Watch for nulls: a null almost certainly means "this check does not apply to this generation pathway," not "no error." Also check whether `boundary.r_cos` is populated for flagged rows, since some may have failed at generation rather than simulation.
+
+**Null convention confirmed.** Their loader `load_source_datasets_with_no_errors` does `.fillna(False)` across all five error flags then drops any row with a True. So nulls count as "no error", and the filter is all five flags, not just the NeurIPS one:
+
+```python
+errors_dframe = dframe[[
+    "misc.has_optimize_boundary_omnigenity_vmec_error",
+    "misc.has_optimize_boundary_omnigenity_desc_error",
+    "misc.has_generate_qp_initialization_from_targets_error",
+    "misc.has_generate_nae_initialization_from_targets_error",
+    "misc.has_neurips_2025_forward_model_error",
+]].fillna(False)
+dframe = dframe[~errors_dframe.any(axis=1)]
+```
+
+⚠️ **THE NULL-ROW TRAP.** Exactly one row in 182,222 (file 3, index 60739) has `boundary.r_cos`, `boundary.z_sin`, `n_field_periods` and every metric set to `None`. It failed at boundary *generation*, so the solver never ran on it, so:
+
+```
+misc.has_optimize_boundary_omnigenity_desc_error : True
+misc.has_neurips_2025_forward_model_error        : False   <- reads CLEAN
+```
+
+Filtering on `has_neurips_2025_forward_model_error` alone, which is the flag named throughout the docs, lets this row through. It then either throws on `np.array(None)` or silently produces NaNs that surface much later as an unexplained loss failure. It did in fact crash the first full-dataset script written for this project.
+
+**Required:** drop rows with null `boundary.r_cos` / `z_sin` as an explicit standalone check, never as a side effect of trusting an error flag. It happens to be redundant on today's data (the five-flag filter already catches this row via the DESC flag) and it stays in anyway. The point is that the filter cannot let a null through, not that it happens not to.
+
+---
+
+**1.7 Boundary sign convention (z_sin canonicalization)** `SETTLED` 2026-08-26
+
+- [x] Decided
+
+**Decided:** Do NOT canonicalize. Use the 80 coefficients exactly as stored.
+
+**What this is.** The boundary is a Fourier series in two angles, θ poloidal and φ toroidal:
+
+```
+R(θ,φ) = Σ r_cos[m,n] · cos(mθ − n·NFP·φ)
+Z(θ,φ) = Σ z_sin[m,n] · sin(mθ − n·NFP·φ)
+```
+
+Negating every `z_sin` coefficient leaves R untouched and sends Z to −Z, which is the same shape reflected through the horizontal midplane. So two different 80-vectors can describe mirror-image shapes.
+
+**The stored data is not canonicalized:** 89.4% of the pool has the reference coefficient `z_sin[m=0,n=1] < 0`, 10.6% has it positive.
+
+**Their code does both things, in different places.** `_flip_z_sin_if_negative` in `_augment_dataset` forces one handedness, but that is generative-model-specific. Their surrogate feature extractor `_to_X` does **not** canonicalize. For a forward surrogate, `_to_X` is the precedent that applies.
+
+**Why not canonicalize, the decision-relevant reason:** most metrics are reflection-invariant (aspect ratio, elongation, mirror ratio, QI residual), but rotational transform measures the *twist direction* of field lines, so mirroring should flip its sign. The primary target is `edge_rotational_transform_over_n_field_periods`. Forcing all inputs to one handedness while leaving targets untouched would produce identical input vectors with opposite targets, which is label corruption that would be invisible in the metrics and would simply show up as a model that will not fit.
+
+**Supporting evidence:** the target column already takes both signs in the data (minimum −0.49 and −0.56 in the two sign groups), so handedness is a real varying property here, not a fixed convention.
+
+**Not fully resolved:** confirming that mirroring flips the target's sign would require running VMEC++ on a flipped boundary, which is out of scope. The two sign groups are also different populations (different aspect ratio, elongation and triangularity distributions), not flipped copies of one another, so their distributions cannot settle the question either. Stated as a limitation, not as a verified physical claim.
+
+**My decision:**
+> Leave the coefficients alone. Their surrogate feature extractor does not canonicalize, and if mirroring flips the sign of rotational transform then canonicalizing inputs without flipping targets would hand the model contradictory labels. Not worth the risk to buy an invariance the model can learn from data.
+
+---
+
+**1.8 The filter chain** `SETTLED` ✅ VERIFIED 2026-08-26
+
+- [x] Decided
+
+**Decided:** the ordered row-dropping sequence from raw download to training pool.
+
+| step | operation | rows left |
+|---|---|---|
+| 0 | load all three `data/*.parquet` files | 182,222 |
+| 1 | drop rows where any of the 5 error flags is True (`fillna(False)` first) | 158,685 |
+| 2 | keep `boundary.n_field_periods == 3` | 68,191 |
+| 3 | keep rows where `desc` or `vmec` settings id is non-null | 27,050 |
+| 4 | drop rows with null `boundary.r_cos` / `z_sin` | 27,050 |
+| 5 | trim 0.05% off each tail of the **target metric only** | ~27,023 |
+
+Steps 1 to 3 are Proxima's own filters, copied from their loader for Table 7 comparability. Step 4 is the null-row guard (1.6). Step 5 is 1.4, deliberately narrower than their all-twelve-metric trim, because trimming the split axis would delete the extrapolation region.
+
+**Two counts reconcile exactly and confirm the chain is right:** 158,685 matches the paper's "~158k evaluated without errors", and 68,191 matches the documented "68k at NFP=3" (that figure is post-error-filter, which resolves an apparent discrepancy with the raw NFP=3 count of 82,043).
+
+**Generation pathway has no single column.** It is read off which of four settings blocks has a non-null `.id`. This partitions cleanly: 182,221 of 182,222 rows have exactly one populated. Counts match the documented pathways: `desc` 87,727 (~88k), `nae_init` 48,851 (~49k), `qp_init` 29,886 (~30k), `vmec` 15,757 (~15k). Note these `.id` values identify *settings groups*, not rows: 17,671 desc rows share only 148 unique ids, so they cannot be used for deduplication.
+
+**⚠️ Unresolved: 27,050 vs A.4's stated ~23k.** Ruled out by direct test: duplicates (only 8 identical boundaries in 27,050), the five-flag filter (removes 1 extra row over the NeurIPS flag alone), and the documented 0.05% per-metric trim (leaves 26,746; reaching 23k would need roughly a 1% trim). Two surviving explanations, not distinguishable from public information: A.4's appendix describes its filter chain incompletely, or the HF dataset grew after the NeurIPS submission.
+
+**Decided:** accept 27,050 and document the discrepancy honestly in the write-up. A.4's training code is not published (same reason its NRMSE/SNR formulas are unrecoverable, see 5.3), so exact reproduction may not be achievable, and a 15% pool difference will not change which (axis, direction) pair wins the day 1-2 grid.
+
+**My decision:**
+> Match their filters where their code shows them, then stop. I can account for every step of my chain and two of my intermediate counts land exactly on numbers the paper reports, so the pipeline is right even though the final count is 15% above their stated figure. Forcing it down to 23k would mean inventing a filter they never documented, which is worse than a documented discrepancy.
 
 ---
 
@@ -181,9 +282,9 @@ Write your own reasoning in the blockquote under each open item, in your own wor
 
 ---
 
-**2.2 Duplicate detection tolerance** `OPEN`
+**2.2 Duplicate detection tolerance** `PARTIALLY ANSWERED` 2026-08-26
 
-- [ ] Decided
+- [ ] Decided (exact-match pass done, tolerance-based pass still open)
 
 **Options:** round coefficients to N decimals and group / exact match only / nearest-neighbour distance threshold
 
@@ -191,8 +292,12 @@ Write your own reasoning in the blockquote under each open item, in your own wor
 
 **Why:** You are looking for identical inputs with different targets. Also check whether `plasma_config_id` repeats across rows, which would be the trivial explanation for anything you find.
 
+**Exact-match result:** hashing `boundary.json` over the 27,050-row training pool gives 27,042 unique, so **8 exact duplicates**. Negligible, and far too few to explain anything. The tolerance-based version (round-and-group, or kNN threshold) is still worth one pass as part of 2.3, but the exact-duplicate explanation for target spread is now ruled out.
+
+**Note:** there is no usable `plasma_config_id`. The four `*_optimization_settings.id` columns identify settings groups, not configurations (17,671 desc rows share 148 unique ids), so they cannot serve this purpose.
+
 **My decision:**
->
+> Exact duplicates are a non-issue, 8 in 27k. Fold the tolerance-based check into the kNN work in 2.3 rather than treating it as its own step, since standardized-coefficient distance answers both questions at once.
 
 ---
 
@@ -944,11 +1049,12 @@ Write your own reasoning in the blockquote under each open item, in your own wor
 
 | Date | What I expected | What I found |
 |---|---|---|
-|  |  |  |
-|  |  |  |
-|  |  |  |
-|  |  |  |
-|  |  |  |
+| 2026-08-26 | R(0,0) is fixed at exactly 1, so dropping it is trivially safe | It is not fixed. Range 0.894 to 1.016, std 0.0051, only 52.8% within 1e-4 of 1.0. Still correct to drop: 6 to 20x less variable than any genuine coefficient, weak correlation with aspect ratio (0.14), and their `_x_to_surface` hardcodes it to 1.0 on reconstruction. Right answer, wrong reason. |
+| 2026-08-26 | `has_neurips_2025_forward_model_error` is the flag that identifies bad rows | It misses generation-stage failures. One row has a fully null boundary with that flag reading `False`, because the solver never ran on it. Filtering on the documented flag alone passes it straight through into the flattener. It crashed the first full-dataset script written for this project. |
+| 2026-08-26 | The 80-coefficient encoding would need to be reverse-engineered from the data | Their `_to_X` states it exactly: ravel each `(5,9)` array, drop the first 5 entries. Empirically confirmed across all 182,221 rows, the symmetry zeros are exactly 0.0, not approximately. |
+| 2026-08-26 | Matching their documented filters would reproduce A.4's ~23k pool | Gives 27,050, about 15% high. Duplicates, the five-flag filter and the 0.05% trim are all ruled out by direct test. Two intermediate counts land exactly on published figures (158,685 and 68,191), so the chain is right and their appendix is incomplete. |
+| 2026-08-26 | The input representation is unique per shape | It is not. Negating every `z_sin` coefficient gives the mirror image, and the stored pool is 89.4% / 10.6% mixed on that sign. Their generative code canonicalizes it, their surrogate feature extractor does not. Left uncanonicalized, because mirroring likely flips the sign of the primary target and normalizing inputs alone would corrupt labels invisibly. |
+| 2026-08-26 | The `*_settings.id` columns identify configurations | They identify settings *groups*. 17,671 desc rows share 148 unique ids, 9,379 vmec rows share 8. No per-row config id exists, so pathway must be inferred from which of four blocks is non-null, and dedup by id is impossible. |
 
 ---
 

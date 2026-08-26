@@ -89,7 +89,13 @@ Hugging Face: `proxima-fusion/constellaration`. Paper: arXiv 2506.19583 (NeurIPS
 
 **We use `default` only.** Mixing vacuum and finite-beta rows without beta as an input would put different answers on identical inputs. That is the one genuine source of unobserved-confounder noise here and it is avoidable.
 
-**Inputs.** `boundary.r_cos` and `boundary.z_sin` (nested lists). `boundary.r_sin` and `boundary.z_cos` are null because all configurations are stellarator-symmetric. Poloidal and toroidal mode numbers capped at 4. Symmetry zeroes certain entries and the major radius R(0,0) is fixed at 1, giving exactly 80 degrees of freedom.
+**Inputs.** `boundary.r_cos` and `boundary.z_sin`, each a nested list of shape `(5, 9)`: poloidal `m` = 0..4, toroidal `n` = −4..4. `boundary.r_sin` and `boundary.z_cos` are null-typed columns because all configurations are stellarator-symmetric.
+
+**The 80 columns, verified against their code and the data (2026-08-26).** `_to_X` in `src/constellaration/generative_model/bootstrap_dataset.py` ravels each `(5,9)` array to 45 and drops the first 5 entries (`m=0, n=−4..0`), keeping 40 each, 80 total. Those 5 dropped entries are the four symmetry zeros plus R(0,0). Confirmed empirically over all 182,221 usable rows: `r_cos[m=0,n<0]`, `z_sin[m=0,n<0]` and `Z(0,0)` are all *exactly* 0.0.
+
+⚠️ **R(0,0) is NOT exactly 1 in the stored data**, contrary to what this file previously said. Range 0.894 to 1.016, std 0.0051, only 52.8% of rows within 1e-4 of 1.0. Dropping it is still correct: it is 6 to 20x less variable than the least-variable genuine coefficient, correlates weakly with aspect ratio (0.14), and their inverse `_x_to_surface` hardcodes `r_cos[max_toroidal_mode] = 1.0` on reconstruction. Treat it as optimizer residue around a fixed convention, not a degree of freedom.
+
+⚠️ **The encoding is not canonicalized for sign.** Negating every `z_sin` coefficient leaves R unchanged and sends Z to −Z, i.e. the mirror image through the horizontal midplane, so two different 80-vectors can describe mirror-image shapes. The pool is 89.4% / 10.6% mixed on the reference coefficient `z_sin[m=0,n=1]`. Their `_flip_z_sin_if_negative` canonicalizes this, but only inside `_augment_dataset`, which is generative-model-specific; their surrogate feature extractor `_to_X` does not. **Decision: do not canonicalize** (decision log 1.7). Mirroring should flip the sign of rotational transform, which is the primary target, so normalizing inputs without flipping targets would produce identical inputs with opposite labels.
 
 **Field periods.** `boundary.n_field_periods` takes values 1 to 5, with 15k, 20k, 68k, 27k and 28k configurations respectively. The toroidal mode index is in units of NFP, so the coefficient vector means something different at each value. Proxima's own example filters to NFP=3.
 
@@ -117,11 +123,21 @@ There is **no effective ripple column**. Computing it would need the `vmecpp_wou
 
 **Independently corroborated, do not present this as only our own inference.** Two later papers describe the low-aspect-ratio region as underpopulated and are actively generating configurations there: the domain-adaptive latent diffusion work (arXiv 2608.16938) targets "the sparsely sampled low-aspect-ratio regime" in those words, and "Data-Driven Generation of Compact Quasi-Isodynamic Stellarators" (2026) works the same region. This upgrades the split-axis premise from a reading of the generation process to a citable claim, and it strengthens the deferral argument: people are pushing into exactly the region where a silently-wrong surrogate does the most damage. Caveat: both work at NFP=4 while we are at NFP=3, so this corroborates the shape of the design space, not our exact slice.
 
-**Failures are flagged, not deleted.** `misc.has_neurips_2025_forward_model_error` marks rows where the solver failed. Nulls in these columns mean "does not apply to this generation pathway," not "no error." Separate columns exist for generation-stage failures.
+**Failures are flagged, not deleted.** `misc.has_neurips_2025_forward_model_error` marks rows where the solver failed. Separate columns exist for generation-stage failures.
+
+**Null convention, confirmed from their loader.** `load_source_datasets_with_no_errors` applies `.fillna(False)` across all five error flags and drops any row with a True. So nulls count as "no error", and the filter is **all five flags**, not just the NeurIPS one.
+
+⚠️ **The null-row trap.** One row in 182,222 (file 3, index 60739) has `boundary.r_cos`, `boundary.z_sin`, `n_field_periods` and every metric set to `None`. It failed at boundary *generation*, so the solver never ran, so `has_neurips_2025_forward_model_error` reads `False` while `has_optimize_boundary_omnigenity_desc_error` is `True`. Filtering on the NeurIPS flag alone lets it through, and it then either throws on `np.array(None)` or silently yields NaNs. **Always drop null `boundary.r_cos`/`z_sin` as an explicit standalone check**, never as a side effect of an error flag.
+
+**The verified filter chain (2026-08-26).** Raw 182,222 → five-flag error filter 158,685 → NFP=3 68,191 → `desc` or `vmec` pathway 27,050 → null-boundary guard 27,050 → 0.05% target-only trim ~27,023. Two intermediate counts land exactly on published figures: 158,685 is the paper's "~158k evaluated without errors", and 68,191 is the documented "68k at NFP=3" (post-error-filter; the raw NFP=3 count is 82,043).
+
+**Generation pathway has no single column.** Read it off which of four `*_optimization_settings.id` fields is non-null. Partitions cleanly (182,221 of 182,222 have exactly one). Counts match the documented pathways: `desc` 87,727, `nae_init` 48,851, `qp_init` 29,886, `vmec` 15,757. These ids identify *settings groups*, not rows (17,671 desc rows share 148 unique ids), so they cannot be used for deduplication and there is no per-row config id.
 
 **Class imbalance on feasibility:** roughly 41 and 52 feasible points out of ~160k for two relaxed benchmark problems. This is why the project does regression on a continuous metric rather than feasibility classification.
 
 **Appendix A.4 is the direct precedent.** Proxima trained an ensemble of ten MLPs (three layers, 256 hidden units, tanh, MSE loss, z-scored targets using training statistics) predicting the twelve metrics from boundary coefficients. Whether that is one network with twelve outputs or twelve single-output models is not stated anywhere, make no assumption either way (see the comparability note below). Filtered to vacuum, NFP=3, DESC or VMEC-optimized boundaries only, 0.05% tails trimmed per metric, ~23k points, 80/20 split.
+
+⚠️ **Their ~23k does not reproduce; we get 27,050.** Applying every filter their published loader actually performs gives 27,050, about 15% high. Ruled out by direct test: exact duplicates (8 in 27,050), the five-flag filter (removes 1 row beyond the NeurIPS flag alone), and the documented 0.05% per-metric trim (leaves 26,746; reaching 23k needs roughly a 1% trim). Two surviving explanations, not distinguishable from public information: A.4's appendix describes its filter chain incompletely, or the HF dataset grew after the NeurIPS submission. **Decided: accept 27,050 and document the discrepancy** rather than inventing an undocumented filter to force the number down. A 15% pool difference will not change which (axis, direction) pair wins the day 1-2 grid.
 
 Table 7, accurately: R² is above 0.97 for every metric (lowest 0.974, `axis_magnetic_mirror_ratio`). RMSE is **not** uniformly small, it spans 0.006 to 0.581 and three metrics exceed 0.1: `aspect_ratio_over_edge_rotational_transform` 0.581, `minimum_normalized_magnetic_gradient_scale_length` 0.330, `max_elongation` 0.161. The two rows that matter here: `edge_rotational_transform_over_n_field_periods` at RMSE 0.006 / R² 0.997, and `log_10_qi` at RMSE 0.051 / R² 0.982.
 
@@ -399,6 +415,8 @@ Highest priority first. Full reasoning is in `constellaration-uq-decisions.md` i
 ## Traps to watch for
 
 - Trimming outliers on the split axis (silently destroys the test set).
+- Filtering bad rows on `has_neurips_2025_forward_model_error` alone (misses generation-stage failures; see the null-row trap above).
+- Canonicalizing the `z_sin` sign without also flipping the target (produces identical inputs with opposite labels).
 - Recalibrating on out-of-region data (silently invalidates the premise).
 - Splitting on the target rather than on an input-measurable quantity (confounds covariate shift with label shift).
 - Letting the early-stopping validation set include out-of-region points.
