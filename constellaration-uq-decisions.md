@@ -413,20 +413,24 @@ Third question answered by the same index, at roughly ten extra lines. Settles t
 
 ---
 
-**3.1 Primary target** `OPEN`
+**3.1 Primary target** `SETTLED` ✅ 2026-08-27
 
-- [ ] Decided
+- [x] Decided
+
+**Decided:** `edge_rotational_transform_over_n_field_periods`.
 
 **Options:** `edge_rotational_transform_over_n_field_periods` / `vacuum_well` / `log10(qi)` / other
 
-**Leaning:** edge rotational transform over field periods
-
 **Why:** Passes all four filters: requires the equilibrium solve (so deferral has stakes), tidy range with no heavy tail, appears as a constraint in all three benchmark problems, and is not defined as a max or min over a surface (so no kinks). It is the low-risk choice for week one, and swapping the target later is one line.
+
+**Confirmed by the day 1-2 grid**, `scripts/day_1_2_grid.py`, so this is now evidence rather than a prior. On the winning split (aspect ratio, tail-low) it shows an out/in RMSE ratio of **3.02**, against 1.53 for log10 qi on the same split. The stronger gap means more signal for the calibration study to work with.
+
+**In-region sanity anchor:** RMSE 0.0138 against Table 7's 0.006. About 2.4x, which is what one untuned MLP should give against a tuned ten-member ensemble. log10 qi lands at 0.143 against 0.051, a factor of 2.8. A consistent factor across two unrelated metrics is evidence the pipeline is right, since a loader or scaling bug would not produce that.
 
 **Blocks:** everything downstream
 
 **My decision:**
->
+> Edge rotational transform, and now for a measured reason rather than a prior. It shows a 3x error gap on the winning split where qi shows 1.5x, so it gives the calibration work more to bite on. The in-region number also sits a consistent 2.4x above Table 7 across both targets, which tells me the shortfall is ensemble and tuning rather than a pipeline bug.
 
 ---
 
@@ -440,8 +444,9 @@ Third question answered by the same index, at roughly ten extra lines. Settles t
 
 **Why:** It is the metric the dataset is named around, it spans decades so relative error is the natural cost, and A.4 reports `log_10_qi` so you have a comparison number. Reporting two targets lets you say something comparative: epistemic dominates on the smooth metric, the variance head earns its keep on the rough one.
 
-**My decision:**
->
+**Evidence from the day 1-2 grid (2026-08-27):** viable, and more interesting than expected. log10 qi degrades on **both** tails (1.53 low, 1.75 high) where edge rotational transform degrades sharply on one only (3.02 low, 1.14 high). So the two targets fail differently, which makes the comparative claim in the Why above concrete rather than speculative. Its in-region RMSE of 0.143 against Table 7's 0.051 tracks the same 2.4 to 2.8x factor as the primary target, so nothing about it looks broken.
+
+**Still deferred to the week 2 gate.** The evidence says it is worth doing, not that there will be time. Per 6.1 it gets its own ensemble, never its own N-sweep.
 
 ---
 
@@ -453,9 +458,24 @@ Third question answered by the same index, at roughly ten extra lines. Settles t
 
 ---
 
-**3.4 Split axis** `OPEN`
+**3.4 Split axis** `SETTLED` ✅ 2026-08-27
 
-- [ ] Decided
+- [x] Decided
+
+**Decided: aspect ratio.** Confirmed by the day 1-2 grid, `scripts/day_1_2_grid.py`, not by the reasoning below, which was a prior.
+
+**max_elongation is disqualified on coverage, not on gap.** It does produce error gaps (1.91 tail-low, 1.26 tail-high on the primary target), but it cannot support the calibration figure:
+
+| axis | cut | min bin count | achievable δ |
+|---|---|---|---|
+| aspect ratio | tail-low | 276 | 0.059 |
+| aspect ratio | hole | 641 | 0.039 |
+| max elongation | tail-low | 12 | 0.283 |
+| max elongation | tail-high | **0** | ∞ |
+
+Elongation has a pathological outlier tail: its tail-high held-out set reaches 37 standard deviations from the training region, against 2.13 for aspect ratio's tail-low. That spreads the held-out points so thinly that an equal-width distance bin comes out **empty**, and a bin with no points cannot yield a coverage rate at any tolerance. Aspect ratio clears both required bands comfortably; elongation clears neither.
+
+**This is the disqualification rule from 3.7 firing exactly as designed.** Worth noting in the write-up: the axis with the second-largest gap was rejected for a reason that has nothing to do with gap size, which is what the two-condition pass criterion existed to catch.
 
 **Options:** aspect ratio / max elongation / high mode-number spectral energy / PCA direction
 
@@ -524,13 +544,26 @@ std of y is 1.639 for scale.
 
 ---
 
-**3.6 Split direction** `OPEN`
+**3.6 Split direction** `SETTLED` ✅ 2026-08-27
 
-- [ ] Decided
+- [x] Decided
+
+**Decided: low. Hold out the compact, low-aspect-ratio end.**
 
 **Options:** hold out low aspect ratio (compact) / hold out high aspect ratio
 
-**Leaning:** low, but not pre-committed
+**The grid settles it decisively.** Out/in RMSE ratio on the primary target, aspect ratio axis:
+
+| direction | ratio | d_max | min bin | δ |
+|---|---|---|---|---|
+| **tail-low (compact)** | **3.02** | 2.13 | 276 | 0.059 |
+| tail-high | 1.14 | 1.35 | 196 | 0.070 |
+
+Holding out the compact end triples the error. Holding out the high end costs 14%, which is barely a shift at all. Both bands have adequate coverage, so this is a genuine difference in generalization rather than an artifact of test-set size.
+
+**The leaning was right, and now it is measured.** Convenient rather than lucky: the compact end is both the commercially interesting frontier (Section 3.3's compactness versus coil complexity trade-off) and the direction that actually produces a gap. Had they disagreed, the evidence would have won.
+
+**Corroboration lines up too.** The two independent papers in 3.4 describe the low-aspect-ratio region as sparsely sampled and are generating there. The 3.02 ratio is what that sparsity looks like from the surrogate's side, which strengthens the deferral argument: people are pushing into exactly the region where a confidently wrong surrogate does the most damage. Caveat unchanged, both work at NFP=4 while we are at NFP=3.
 
 **Why:** Compact devices are the commercially interesting frontier, and the paper's Section 3.3 makes the compactness versus coil complexity trade-off explicit. But Table 6 shows aspect ratio targets were drawn uniformly on 4 to 12 while A was an upper-bound constraint during optimization, so achieved values will not be uniform.
 
@@ -541,9 +574,19 @@ std of y is 1.639 for scale.
 
 ---
 
-**3.7 Threshold and held-out fraction** `OPEN`
+**3.7 Threshold and held-out fraction** `SETTLED` ✅ 2026-08-27
 
-- [ ] Decided
+- [x] Decided
+
+**Decided: 20% held out, 8 distance bins, δ = 0.06.**
+
+At `test_fraction = 0.2` on the winning axis and direction, the thinnest equal-width distance bin holds **276** points, which supports δ = 0.059 by n = z²p(1−p)/δ² solved for δ. The mid-range band does better still, 641 points and δ = 0.039. Both required bands clear, and comfortably better than the δ = 0.10 the method note below hoped for.
+
+**Do not tighten δ to 0.039 just because the hole allows it.** The figure compares the two bands, so the reportable tolerance is set by the weaker of them. Quote δ = 0.06 for both.
+
+⚠️ **One geometry problem this run exposed, still to resolve.** The hole's held-out set reaches only **0.20** standard deviations from the training region, while the tail reaches **2.13**. 3.11 predicted the hole would be shorter, and called it geometry rather than defect, but the gap is a factor of ten. The main figure's sharpest claim is "at matched distance, leaving the region costs more than filling a gap," and matched distance only exists over 0 to 0.20, where the tail has barely begun to degrade.
+
+**Options, to decide before building the ensembles:** widen the hole beyond 20% so it spans more of the axis, accept the short overlap and make the weaker claim, or place the hole somewhere sparser than the median so the same fraction spans more distance. Widening trades against the tail comparison being at matched held-out size, which is currently clean. Not urgent, but it is a real design choice and it should not be discovered while making the figure.
 
 **Options:** fixed percentile / fixed aspect ratio value / sized to hit a target test-set count
 
@@ -1110,9 +1153,36 @@ std of y is 1.639 for scale.
 
 ---
 
-**GATE: day 1-2 of week 1** `GATE`
+**GATE: day 1-2 of week 1** `GATE` ✅ PASSED 2026-08-27
 
-- [ ] Passed
+- [x] Passed
+
+**Run:** `scripts/day_1_2_grid.py`, twelve single-MLP fits, 746s total. Full results table below.
+
+| axis | cut | target | rmse_in | rmse_out | ratio | d_max | min_bin | δ |
+|---|---|---|---|---|---|---|---|---|
+| aspect_ratio | tail_low | edge_rot | 0.01379 | 0.04157 | **3.02** | 2.13 | 276 | 0.059 |
+| aspect_ratio | tail_high | edge_rot | 0.01521 | 0.01736 | 1.14 | 1.35 | 196 | 0.070 |
+| aspect_ratio | hole | edge_rot | 0.01476 | 0.01406 | 0.95 | 0.20 | 641 | 0.039 |
+| max_elongation | tail_low | edge_rot | 0.01431 | 0.02727 | 1.91 | 2.28 | 12 | 0.283 |
+| max_elongation | tail_high | edge_rot | 0.01443 | 0.01824 | 1.26 | 37.23 | **0** | ∞ |
+| max_elongation | hole | edge_rot | 0.01528 | 0.01391 | 0.91 | 0.26 | 608 | 0.040 |
+| aspect_ratio | tail_low | log10_qi | 0.14344 | 0.21976 | 1.53 | 2.13 | 276 | 0.059 |
+| aspect_ratio | tail_high | log10_qi | 0.14283 | 0.24935 | 1.75 | 1.35 | 197 | 0.070 |
+| aspect_ratio | hole | log10_qi | 0.14842 | 0.16515 | 1.11 | 0.20 | 641 | 0.039 |
+| max_elongation | tail_low | log10_qi | 0.13291 | 0.23208 | 1.75 | 2.28 | 12 | 0.283 |
+| max_elongation | tail_high | log10_qi | 0.14926 | 0.17981 | 1.20 | 37.25 | 0 | ∞ |
+| max_elongation | hole | log10_qi | 0.14604 | 0.14420 | 0.99 | 0.26 | 614 | 0.040 |
+
+**Both pass conditions met.** Aspect ratio with tail-low gives a 3.02 ratio on the primary target, and aspect ratio clears coverage in the mid-range band (641 points, δ 0.039) and the tail band (276 points, δ 0.059).
+
+**Decisions this settles:** 3.1 primary target (edge rotational transform), 3.2 secondary evidence (log10 qi viable, defers to week 2), 3.4 split axis (aspect ratio), 3.6 direction (low), 3.7 δ (0.06). 7.1 remains open, see that entry.
+
+⚠️ **The most important result is the one that looks like nothing.** Interior-hole ratios are 0.95 and 0.91, meaning the model fills a mid-range gap with **no measurable penalty at all**, while the same axis, model and recipe cost 3x at the tail. That is not a null result, it is the main figure: the model can interpolate into gaps and cannot leave the region. Per 0.4 the finding is reported whether or not a gap appears, and here the absence of a hole gap is precisely what gives the tail gap its meaning.
+
+**Methodological note worth defending.** The grid uses an MLP rather than gradient boosting on purpose. Trees return the boundary value outside the training range, so a tail split would show a large gap by construction and would measure the model class rather than the axis. Given that the eventual model is an MLP ensemble, the MLP baseline also previews the real extrapolation behaviour. Choosing the faster model here would have produced a confidently wrong answer to the gate's central question.
+
+**In-region sanity anchor holds.** RMSE sits about 2.4x above Table 7 on edge rotational transform (0.0138 vs 0.006) and 2.8x on log10 qi (0.143 vs 0.051). One untuned MLP against a tuned ten-member ensemble is expected to land there, and a consistent factor across two unrelated metrics is positive evidence the loader, filters, trimming and scaling are all correct, since a pipeline bug would not produce that.
 
 **Required:** cheap baseline (ridge or a single small MLP, not the ensemble) run across the full candidate grid before any ensemble work begins. Axes (aspect ratio, max elongation) × cuts (tail-low, tail-high, interior hole) × targets (edge rotational transform, log10(qi)). Twelve fits, one afternoon.
 
@@ -1162,6 +1232,9 @@ std of y is 1.639 for scale.
 | 2026-08-27 | `boundary.r_cos` holds a clean `(5, 9)` numeric block per row | It holds an object array of 5 entries, each its own 9-element float array. `np.stack` merges only the outer level, giving `(n, 5)` object dtype, and the `[:, 5:]` slice then returns an empty `(n, 0)` array **without raising**. Silently produced a zero-width feature matrix. Fix is a per-row `.tolist()` before `np.array`. The regression test for it has to reproduce the nested structure, or a clean-block fixture passes against the broken code. |
 | 2026-08-27 | Gate 3.5 would predict aspect ratio near machine precision | Ridge 0.784, gradient boosting 0.988, MLP 0.983. The linear result reflects model class, aspect ratio being roughly R(0,0) over minor radius, and a linear model cannot represent division. The residual gap is budget, not information: every increase in training budget raised the score, the trim changed nothing, and residual correlation with the dropped R(0,0) was +0.075. |
 | 2026-08-27 | A pre-registered pass threshold protects against fooling yourself | Only if it measures the right thing. 0.99 was derived from the information floor implied by dropping R(0,0), which bounds what *any* model could know and says nothing about what a quick untuned fit reaches on 21k points. Knowable and learnable are different questions. The gate's question was also qualitative, input-measurable versus solver output, so a single absolute R² was the wrong instrument regardless of its value. Recorded the 0.988 miss rather than relaxing the bar. |
+| 2026-08-27 | The interior hole would show a smaller gap than the tail, but still a gap | It shows no gap whatsoever. Ratios of 0.95 and 0.91, meaning out-of-region error is *lower* than in-region. The model fills a mid-range gap for free and pays 3x to leave the region. Better than expected for the project: the contrast is absolute rather than a matter of degree, and it separates "cannot interpolate" from "cannot extrapolate" more cleanly than a graded difference would have. |
+| 2026-08-27 | The runner-up split axis would lose on gap size | max_elongation was rejected on coverage instead. It shows real gaps (1.91 and 1.26) but its tail-high held-out set reaches 37 standard deviations from the training region against aspect ratio's 2.13, so an equal-width distance bin comes out empty and no coverage rate can be estimated at any tolerance. The two-condition pass criterion in 3.7 caught something gap size alone would have missed. |
+| 2026-08-27 | Model choice for a cheap baseline is a speed convenience | It would have inverted the gate's answer. Gradient boosting returns the boundary value outside the training range, so every tail split shows a large gap by construction regardless of whether the axis means anything. Picking the faster model would have produced a confident, wrong pass on any axis tested. |
 | 2026-08-27 | Binning is a presentation choice that does not change conclusions | It flipped one. With uniform deciles the log10 qi noise floor read 0.021, twice its bar, verdict ABOVE FLOOR. The bottom decile spanned distance 0 to 1.53 while genuine near-twins live below 0.5, so the intercept was extrapolated from bins centred at 1.1 to 2.4 and never came near zero. Rebinning with quantile edges packed into the left tail dropped it 10x to 0.0018 and flipped the verdict to AT FLOOR. The tell was that the fit window's own x-values sat nowhere near the point being extrapolated to. |
 
 ---

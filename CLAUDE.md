@@ -121,7 +121,23 @@ Incidental, worth keeping: error tracks data density, lowest around A 9.9 to 10.
 
 ⚠️ **High-dimensional caveat for the write-up:** median nearest-neighbour distance is 3.84 in z-scored 80-dimensional space. Genuine near-twins barely exist outside the bottom percentile, which caps what this check can prove.
 
-**Next: the mirror-pair search** (folded into 2.2, answers the 1.7 leftover, nothing downstream depends on it), then `splits.py` and the day 1-2 grid.
+**`splits.py` written and tested (2026-08-27).** Four functions: `random_split`, `tail_split`, `hole_split` (all returning complementary boolean masks so the grid calls them interchangeably) and `distance_from_training_region`, the one 3.11 formula covering all three splits. Distance uses sort plus `searchsorted`, not all-pairs, which would need 4.7 GB at this pool size; `np.clip` guards the ends where `pos - 1` would otherwise wrap and silently return a wrong distance. 20 tests in `tests/test_splits.py`, 36 across the suite.
+
+**Day 1-2 gate PASSED (2026-08-27), `scripts/day_1_2_grid.py`,** twelve single-MLP fits in 746s. **Decided: split axis is aspect ratio, direction is low (hold out the compact end), primary target is edge rotational transform, δ is 0.06.** log10 qi is viable as a secondary and still defers to the week 2 gate.
+
+Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-low 3.02**, tail-high 1.14, interior hole 0.95.
+
+⚠️ **The hole result is the main figure, not a null result.** Ratios of 0.95 and 0.91 mean the model fills a mid-range gap with no measurable penalty at all, while the same axis and recipe cost 3x at the tail. The absence of a hole gap is what gives the tail gap its meaning: the model can interpolate into gaps, it cannot leave the region.
+
+⚠️ **The grid must use an MLP, never gradient boosting.** Trees return the boundary value outside the training range, so a tail split shows a large gap by construction and measures the model class rather than the axis. The faster model would have produced a confident wrong pass on any axis.
+
+⚠️ **max_elongation was disqualified on coverage, not on gap.** It shows real gaps (1.91, 1.26) but its tail-high held-out set reaches 37 std from the training region against aspect ratio's 2.13, so an equal-width distance bin comes out empty and no coverage rate is estimable. The two-condition rule in 3.7 caught what gap size alone would have missed.
+
+⚠️ **Unresolved geometry, decide before building ensembles.** The hole reaches 0.20 std from the training region while the tail reaches 2.13, a factor of ten. "At matched distance, leaving the region costs more than filling a gap" only has 0 to 0.20 of overlap to work with. Options in decision log 3.7: widen the hole, accept the weaker claim, or place the hole somewhere sparser than the median.
+
+**In-region sanity anchor holds:** RMSE about 2.4x Table 7 on edge rotational transform and 2.8x on log10 qi. One untuned MLP against a tuned ten-member ensemble should land there, and a consistent factor across two unrelated metrics is positive evidence the pipeline is correct.
+
+**Next: the ensemble.** Per 4.6 the plain MSE version comes first, ten members, same architecture minus the variance head, to verify the pipeline against Table 7 before the variance head or NLL loss can confuse the diagnosis. Two smaller items still open: the mirror-pair search (folded into 2.2, nothing downstream depends on it) and 7.1's diagnostic set.
 
 ---
 
@@ -427,34 +443,32 @@ architecture claim in either direction.
 
 Highest priority first. Full reasoning is in `constellaration-uq-decisions.md` in this repo.
 
-1. **Split axis.** Leaning aspect ratio, direction not
-   pre-committed. Both candidate axes (aspect ratio, max
-   elongation) and all three cuts (tail-low, tail-high,
-   interior hole) get checked together in the day 1-2 baseline
-   check, held-out histogram thickness plus in/out error gap.
-   Whichever (axis, direction) pair shows the strongest real
-   gap wins, but only if that axis also clears the coverage
-   threshold in both a mid-range band and a tail band, since
-   the main figure needs the hole and the tail results both. If aspect ratio and max elongation tie, prefer aspect
-   ratio for its tighter link to the paper's own compactness
-   narrative (Section 3.3). If nothing shows a gap, reconsider
-   PCA direction or high mode-number spectral energy before
-   falling back further. (Field period and generation pathway
-   are no longer usable fallbacks, both are constant columns
-   once filtered to NFP=3, DESC/VMEC-optimized only.)
-1a. **Calibration diagnostic set.** Undecided until the day 1-2
-   histogram is seen. What's settled is the principle and
-   priority order, not a pick: diagnostics that reuse the
-   existing distance bins are preferred over ones that need
-   their own. CRPS costs nothing extra and is the most likely
-   floor. If there's room past it, coverage-versus-nominal is
-   next, not because it's next-cheapest, but because it's most
-   directly tied to making the deferral threshold defensible.
-   PIT and reliability diagrams are last, they need their own
-   binning on top of the distance bins. Final set decided once
-   the histogram shows what's actually affordable.
-2. **Primary target.** Leaning `edge_rotational_transform_over_n_field_periods` (tidy range, no heavy tail, requires the solve, appears as a constraint in all three benchmarks, not defined as a max or min over a surface so no kinks). Secondary target `log10(qi)` if time allows. Both this choice and the secondary-target call get real evidence from the day 1-2 grid check, not just Table 7 priors.
+1. **Calibration diagnostic set.** Still open, but the grid
+   removed the constraint that was blocking it. δ = 0.06 is
+   affordable at 8 bins, with 276 points in the thinnest tail
+   bin and 641 in the hole, so there is more room than the
+   original δ = 0.10 hope assumed. Priority order unchanged:
+   diagnostics reusing the existing distance bins beat ones
+   needing their own. CRPS costs nothing extra and is almost
+   certainly in. Coverage-versus-nominal is next, not because
+   it is next-cheapest but because it is most directly tied to
+   making the deferral threshold defensible. PIT and
+   reliability diagrams are last, needing their own binning on
+   top of the distance bins.
+2. **Hole geometry.** New, and it came out of the grid. The
+   interior hole reaches 0.20 std from the training region
+   while the tail reaches 2.13, so "at matched distance,
+   leaving the region costs more than filling a gap" has only
+   0 to 0.20 of overlap. Widen the hole, accept the weaker
+   claim, or place the hole somewhere sparser than the median.
+   Decide before building the ensembles, not while making the
+   figure. Full reasoning in decision log 3.7.
 3. **Loss.** MSE warm-up plus variance floor, β-NLL in reserve.
+
+**Recently closed by the day 1-2 grid (2026-08-27):** split axis
+(aspect ratio), split direction (low), primary target (edge
+rotational transform), secondary-target evidence (log10 qi
+viable, still deferred to the week 2 gate), and δ (0.06).
 
 ---
 
