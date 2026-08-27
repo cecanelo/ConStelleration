@@ -2,18 +2,18 @@
 # flatten boundary.r_cos and boundary.z_sin to the 80 input columns,
 # apply the 0.05% target-only tail trim.
 
-import pandas as pd 
-import numpy as np 
-from pathlib import Path 
 from collections.abc import Iterator
+from pathlib import Path
 
+import numpy as np
+import pandas as pd
 
 ERROR_FLAG_COLUMNS = [
-    "misc.has_optimize_boundary_omnigenity_vmec_error",
-    "misc.has_optimize_boundary_omnigenity_desc_error",
-    "misc.has_generate_qp_initialization_from_targets_error",
-    "misc.has_generate_nae_initialization_from_targets_error",
-    "misc.has_neurips_2025_forward_model_error",
+    'misc.has_optimize_boundary_omnigenity_vmec_error',
+    'misc.has_optimize_boundary_omnigenity_desc_error',
+    'misc.has_generate_qp_initialization_from_targets_error',
+    'misc.has_generate_nae_initialization_from_targets_error',
+    'misc.has_neurips_2025_forward_model_error',
 ]
 
 
@@ -34,8 +34,8 @@ def filter_valid(df: pd.DataFrame) -> Iterator[tuple[str, pd.DataFrame]]:
     yield 'nfp_3', df
 
     has_pathway = (
-        df["desc_omnigenous_field_optimization_settings.id"].notna()
-        | df["vmec_omnigenous_field_optimization_settings.id"].notna()
+        df['desc_omnigenous_field_optimization_settings.id'].notna()
+        | df['vmec_omnigenous_field_optimization_settings.id'].notna()
     )
     df = df[has_pathway]
     yield 'pathway_filter', df
@@ -53,8 +53,8 @@ def trim_target_tails(
 
 
 def extract_input_features(df: pd.DataFrame) -> np.ndarray:
-    r_cos = np.array([row.tolist() for row in df["boundary.r_cos"]]).reshape(len(df), -1)[:, 5:]
-    z_sin = np.array([row.tolist() for row in df["boundary.z_sin"]]).reshape(len(df), -1)[:, 5:]
+    r_cos = np.array([row.tolist() for row in df['boundary.r_cos']]).reshape(len(df), -1)[:, 5:]
+    z_sin = np.array([row.tolist() for row in df['boundary.z_sin']]).reshape(len(df), -1)[:, 5:]
     return np.concatenate([r_cos, z_sin], axis=1)
 
 
@@ -63,6 +63,6 @@ def load_dataset(data_dir: Path, target_column: str, verbose: bool = False) -> p
 
     for step_name, filtered in filter_valid(raw):
         if verbose:
-            print(f"{step_name:20s} {len(filtered):>7,}")
+            print(f'{step_name:20s} {len(filtered):>7,}')
 
     return trim_target_tails(filtered, target_column)

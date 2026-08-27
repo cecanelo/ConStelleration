@@ -9,3 +9,15 @@ requires-python = ">=3.10"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+extend-select = ["I"]
+# Files on the Lightning studio carry the execute bit by default, which is a
+# filesystem artifact rather than intent, so the missing-shebang rule is noise.
+ignore = ["EXE002"]
+
+[tool.ruff.format]
+quote-style = "single"

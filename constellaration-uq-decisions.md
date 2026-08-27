@@ -227,14 +227,28 @@ Negating every `z_sin` coefficient leaves R untouched and sends Z to −Z, which
 
 **Their code does both things, in different places.** `_flip_z_sin_if_negative` in `_augment_dataset` forces one handedness, but that is generative-model-specific. Their surrogate feature extractor `_to_X` does **not** canonicalize. For a forward surrogate, `_to_X` is the precedent that applies.
 
-**Why not canonicalize, the decision-relevant reason:** most metrics are reflection-invariant (aspect ratio, elongation, mirror ratio, QI residual), but rotational transform measures the *twist direction* of field lines, so mirroring should flip its sign. The primary target is `edge_rotational_transform_over_n_field_periods`. Forcing all inputs to one handedness while leaving targets untouched would produce identical input vectors with opposite targets, which is label corruption that would be invisible in the metrics and would simply show up as a model that will not fit.
+**Why not canonicalize, primary reason:** `_to_X` does not canonicalize, and Table 7 comparability is the entire point of matching their pipeline. Canonicalizing would put our inputs in a different space from the precedent we measure against.
 
-**Supporting evidence:** the target column already takes both signs in the data (minimum −0.49 and −0.56 in the two sign groups), so handedness is a real varying property here, not a fixed convention.
+**Why not canonicalize, second and independent reason:** the two handedness classes are not interchangeable. The sign of the reference coefficient correlates with the target at −0.29 across the 27,022-row pool, and the classes have different aspect ratio, elongation and triangularity distributions. Folding them together discards a signal the model can currently use.
 
-**Not fully resolved:** confirming that mirroring flips the target's sign would require running VMEC++ on a flipped boundary, which is out of scope. The two sign groups are also different populations (different aspect ratio, elongation and triangularity distributions), not flipped copies of one another, so their distributions cannot settle the question either. Stated as a limitation, not as a verified physical claim.
+⚠️ **The original justification does not survive contact with their code. Corrected 2026-08-27.** This entry previously argued that mirroring flips the sign of rotational transform, so canonicalizing inputs without flipping targets would create identical inputs with opposite labels. Checked against both the repo (cloned, read directly) and the pool:
+
+- Their canonicalizer keys on `z_sin[0, DATASET_MAX_TOROIDAL_MODE + 1]`, and that constant is 4, so the reference coefficient is `z_sin[m=0,n=1]`. Confirms the column used above is the right one. Its docstring reads "Flip theta sign."
+- `forward_model.py:135-144` interpolates `equilibrium.iotaf` to normalized effective radius 1.0 and passes it straight through, divided by NFP at line 217. The stored metric is VMEC's **signed** edge iota. No absolute value anywhere in the forward model.
+- All three benchmark problems apply `np.abs()` to the metric at constraint evaluation (`problems.py` lines 174, 248, 384). That is dead code if the value were always positive, written three times. Proxima themselves treat the sign as physically arbitrary.
+- Their own optimizer does not. `augmented_lagrangian_runner.py` builds the same constraint from the raw signed value in all three problem branches. So their scorer enforces `|iota| ≥ bound` while their generator enforces `iota ≥ bound`. That inconsistency is theirs, not a subtlety we missed.
+- In the pool, both handedness classes are overwhelmingly positive: 24,041 of 24,169 with the reference negative, 2,848 of 2,853 with it positive. Only 133 negative targets in 27,022, about 0.49%.
+
+Read together: the generation optimizer selected for positive signed iota, which is why negatives are rare, and handedness does not determine the sign of the stored target. The most consistent reading is that VMEC's iota sign follows its own toroidal flux convention rather than boundary handedness, and the `np.abs()` in `problems.py` is defensive coding for cases where it might not.
+
+⚠️ **Retracted supporting evidence.** This entry previously cited "the target takes both signs in the data (minimum −0.49 and −0.56 in the two sign groups)" as showing handedness is a real varying property. It shows no such thing. A negative minimum within each group is consistent with a 0.5% negative tail and says nothing about handedness. Do not reuse that sentence.
+
+**Still open, deliberately parked:** whether a genuine mirrored *pair* carries opposite iota. Neither their code nor the class-level distributions settle it, because two rows in opposite handedness classes are not necessarily mirror images of one another. Testable via the pair search folded into 2.2. Nothing downstream depends on the answer.
+
+**Side effect worth remembering:** `aspect_ratio_over_edge_rotational_transform` divides by the *signed* edge transform (`forward_model.py:214`), so it inherits the sign. Relevant only if that metric is ever promoted to a target.
 
 **My decision:**
-> Leave the coefficients alone. Their surrogate feature extractor does not canonicalize, and if mirroring flips the sign of rotational transform then canonicalizing inputs without flipping targets would hand the model contradictory labels. Not worth the risk to buy an invariance the model can learn from data.
+> Unchanged conclusion, rebuilt justification. Leave the coefficients alone because `_to_X` leaves them alone and comparability to Table 7 is the point, and because the two handedness classes carry genuinely different information. Drop the label-corruption argument entirely: it is not what their pipeline does, and it is the kind of sentence an interviewer would pull on.
 
 ---
 
@@ -282,9 +296,20 @@ Steps 1 to 3 are Proxima's own filters, copied from their loader for Table 7 com
 
 ---
 
-**2.2 Duplicate detection tolerance** `PARTIALLY ANSWERED` 2026-08-26
+**2.2 Duplicate detection tolerance** `SETTLED` ✅ 2026-08-27 (mirror-pair search still open)
 
-- [ ] Decided (exact-match pass done, tolerance-based pass still open)
+- [x] Decided (exact-match and tolerance-based passes both done)
+
+**Tolerance-based result (2026-08-27), `scripts/stage_2_noise_floor.py`.** Tolerance set to **0.2 in z-scored 80-dimensional distance**, chosen from the nearest-neighbour distance distribution rather than in advance: p0.05 is 0.000000 and p0.1 is 0.1965, so 0.2 is where the exactly-coincident pairs stop and genuinely distinct shapes begin. A natural break, not a round number.
+
+| | pairs | median &#124;dy&#124; | p90 | max | Table 7 RMSE |
+|---|---|---|---|---|---|
+| edge rotational transform | 28 | 0.000000 | 0.000376 | 0.003917 | 0.006 |
+| log10 qi | 28 | 0.000000 | 0.000976 | 0.021100 | 0.051 |
+
+**Verdict: no near-duplicate contradiction.** Median target difference among near-identical shapes is exactly zero to six decimals for both targets. Two pairs per target exceed the 2.3 floor bar, which is expected and not a concern: that bar is calibrated for an aggregate floor rather than individual pairs, and those pairs sit at the top of the 0 to 0.2 distance range where genuine shape difference applies. The decisive comparison is that the *worst* near-twin disagreement is below Table 7's RMSE for the same metric, so even the extreme case would not limit a model.
+
+**Caveat:** only 28 of 27,050 rows have a neighbour that close, so tail statistics are thin. The result holds because the median is exactly zero rather than merely small.
 
 **Options:** round coefficients to N decimals and group / exact match only / nearest-neighbour distance threshold
 
@@ -296,8 +321,23 @@ Steps 1 to 3 are Proxima's own filters, copied from their loader for Table 7 com
 
 **Note:** there is no usable `plasma_config_id`. The four `*_optimization_settings.id` columns identify settings groups, not configurations (17,671 desc rows share 148 unique ids), so they cannot serve this purpose.
 
+**Mirror-pair search, folded in here** `ADDED` 2026-08-27
+
+Third question answered by the same index, at roughly ten extra lines. Settles the piece of 1.7 left open: does a genuine mirrored pair carry opposite iota?
+
+- **Query set.** Copy X, negate columns 40:80. Negating every `z_sin` is the mirror, so this is the mirrored version of every row.
+- **Scaling.** Fit the scaler on the original pool, then apply that same transform to the mirrored queries. Do not refit on the mirrored set or the two sides land in different spaces. Note that negating `z_sin` leaves its standard deviation unchanged, so this bites on the means.
+- **Search.** Index the originals, query with the mirrors. Brute force, 27k x 80 is seconds. Same `NearestNeighbors` object as 2.3.
+- **Exclude self-matches.** A shape with `z_sin` near zero is its own mirror and will match itself perfectly. Drop any query whose distance to its own unmirrored row is below tolerance.
+- **Do not pick a tolerance blind.** Compare two distributions: each row's distance to its nearest *real* neighbour excluding itself, against each mirrored query's distance to its nearest real row. The first is the yardstick for how close two independently generated designs normally land. Overlapping distributions mean genuine pairs plausibly exist; mirrored distances sitting systematically further out mean the dataset never contains both handedness versions of any shape. **That comparison is the result.** Everything else is plumbing.
+- **Verdict.** For pairs inside tolerance, scatter partner target against original. On `y_j = +y_i` the target is mirror-invariant. On `y_j = −y_i` it flips. No pairs at all is a clean answer too.
+
+⚠️ **"No pairs exist" does not make canonicalizing safe.** It only means the training set holds no contradictory labels today. The model still meets both handednesses at test time, and folding them together still discards the −0.29 signal. All three outcomes leave the 1.7 decision standing.
+
+**When:** here, inside 2.3's index build. Not as its own task, which is what would make it expensive. Run it standalone only if the sign claim is challenged in review, or if `aspect_ratio_over_edge_rotational_transform` is ever promoted to a target, since it inherits the sign.
+
 **My decision:**
-> Exact duplicates are a non-issue, 8 in 27k. Fold the tolerance-based check into the kNN work in 2.3 rather than treating it as its own step, since standardized-coefficient distance answers both questions at once.
+> Exact duplicates are a non-issue, 8 in 27k. Fold the tolerance-based check into the kNN work in 2.3 rather than treating it as its own step, since standardized-coefficient distance answers both questions at once. Same for the mirror-pair search: same index, same distance, third question answered nearly free. If it had needed its own afternoon I would have skipped it, since nothing downstream depends on the answer.
 
 ---
 
@@ -313,6 +353,23 @@ Steps 1 to 3 are Proxima's own filters, copied from their loader for Table 7 com
 
 **My decision:**
 > Standardize first, otherwise "nearest neighbour" just means "similar in the few low-order modes that happen to be biggest." k anywhere from 5 to 10 is fine, this is a sanity check and I am not going to tune it.
+
+**Result (2026-08-27), `scripts/stage_2_noise_floor.py`.** k=10, brute force, distance on z-scored coefficients. Method: pair each shape with its single nearest neighbour, bin the pairs by distance, take the median target difference per bin, then fit a line through the closest three bins and read the intercept at zero distance. The intercept is the floor estimate; the slope is just local steepness of the physics and is not the quantity of interest.
+
+**Pre-registered bar:** 20% of Table 7's RMSE. Independent errors combine in quadrature, so a floor at 20% of model error inflates total error by about 2%, which is invisible. Stating the bar as a tolerance on total error rather than a bare percentage is what makes it defensible.
+
+| target | intercept | bar | verdict |
+|---|---|---|---|
+| edge rotational transform | −0.000003 | 0.0012 | AT FLOOR |
+| log10 qi | 0.001834 | 0.0102 | AT FLOOR |
+
+**Verdict: the 2.1 prediction is confirmed. Aleatoric sits at the numerical floor for both candidate targets.** The negative intercept on edge rotational transform is fit noise, meaning indistinguishable from zero.
+
+**The single strongest line in the output:** the 28 pairs closer than distance 0.197 have a median target difference of **0.000000 for both targets**. Shapes that are effectively identical carry identical answers to six decimals. That is determinism measured rather than asserted, and it is the sentence worth quoting.
+
+⚠️ **Binning matters more than expected, and the first pass got it wrong.** With uniform deciles, log10 qi came out ABOVE FLOOR at intercept 0.021, twice its bar. The cause was the bottom decile spanning distance 0 to 1.53 while genuinely close pairs live below 0.5, so the fit window sat at distances 1.1 to 2.4 and the intercept was a long extrapolation into unobserved territory. qi is about 12x steeper in shape than edge rotational transform (slope 0.053 vs 0.0044), and steeper functions curve more, so a linear extrapolation overshoots hardest there. Rebinning with quantile edges packed into the left tail (`BIN_QUANTILES = [0, 0.001, 0.005, 0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 1.0]`) dropped the intercept 10x to 0.0018 and flipped the verdict. **Record this rather than hiding it:** the first answer was a binning artifact, diagnosed by noticing the fit window never came near zero.
+
+⚠️ **High-dimensional caveat, belongs in the write-up.** Median nearest-neighbour distance is 3.84 in z-scored 80-dimensional space, which is far. In high dimensions everything is far from everything, so genuine near-twins barely exist outside the bottom percentile. This caps what the check can prove, and it is better stated by us than discovered by a reviewer.
 
 ---
 
@@ -333,13 +390,22 @@ Steps 1 to 3 are Proxima's own filters, copied from their loader for Table 7 com
 
 ---
 
-**2.5 GATE: does the data behave as expected?** `GATE`
+**2.5 GATE: does the data behave as expected?** `GATE` ✅ PASSED 2026-08-27
 
-- [ ] Passed
+- [x] Passed
 
 **Stop if:** duplicates exist with large target spread, or kNN residual spread in dense regions is far above the numerical floor.
 
 **Then:** find out why before building anything. Something about the data is not what you think it is, and every downstream number would inherit that misunderstanding.
+
+**Neither condition triggered.**
+
+- **Duplicates with large target spread: no.** 28 near-identical pairs, median target difference exactly 0.000000 for both targets, worst case below Table 7's RMSE for the same metric (2.2).
+- **Residual spread above the floor: no.** Intercepts of −0.000003 and 0.001834 against bars of 0.0012 and 0.0102 (2.3).
+
+**What this buys downstream.** The aleatoric term now has a known true value of approximately zero, so when the ensemble's variance head reports one, there is a reference to check it against. Without this measurement a wrong variance head and a genuinely noisy dataset would look identical. It is also what makes the manufactured-aleatoric experiment in 2.4 clean: the injected noise will sit well above a natural floor that is at zero.
+
+**Still open in Stage 2:** the mirror-pair search folded into 2.2. It answers the 1.7 leftover and nothing downstream depends on it.
 
 ---
 
@@ -401,6 +467,10 @@ Steps 1 to 3 are Proxima's own filters, copied from their loader for Table 7 com
 
 **Options removed:** generation pathway is a constant column after 1.3, field period after 1.2. Neither is a usable fallback any more.
 
+**Input-measurability confirmed (2026-08-27, gate 3.5).** Aspect ratio is predictable from the 80 coefficients at R² 0.988, with the shortfall from 1.0 traced to model budget rather than missing information. The "measurable from the inputs alone" clause in the Why above is now checked rather than assumed, so the axis is safe from the label-shift confound. Full numbers and the threshold caveat are in 3.5.
+
+**Early evidence for the compact end, from the same run.** Prediction error on aspect ratio itself tracks data density: lowest in the dense band around A 9.9 to 10.1, elevated at both the sparse upper tail and the compact end. Weak evidence, since it concerns a geometric quantity rather than a solver metric, but it is consistent with the sampling-density premise and costs nothing to mention.
+
 **How it gets decided:** not from reasoning, from the day 1-2 grid. Aspect ratio and max elongation are checked together, both directions each, against both candidate targets. Winner is whichever (axis, direction) pair shows the strongest real in/out error gap AND clears the coverage threshold in both a mid-range band and a tail band, since the main figure needs the hole and the tail results both. If aspect ratio and max elongation tie, take aspect ratio for its tighter link to the paper's compactness narrative (Section 3.3). If nothing shows a gap, reconsider PCA direction or high mode-number spectral energy before going further.
 
 **Blocks:** 3.5, 3.6, 3.7
@@ -410,14 +480,47 @@ Steps 1 to 3 are Proxima's own filters, copied from their loader for Table 7 com
 
 ---
 
-**3.5 GATE: is the split axis really a function of the inputs?** `GATE`
+**3.5 GATE: is the split axis really a function of the inputs?** `GATE` ✅ PASSED WITH CAVEAT 2026-08-27
 
-- [ ] Passed
+- [x] Passed
 
 **Check:** predict `metrics.aspect_ratio` from the raw coefficients. It should come out near machine precision.
 
 **If yes:** the leakage objection is dead and you can say so in one sentence.
 **If no:** you have misunderstood how aspect ratio is defined here. Resolve before continuing, or pick a different axis.
+
+**Run:** `scripts/gate_3_5_split_axis.py`, 27,050-row pool, 80/20 split, seed 0. Inputs are the 80 coefficients exactly as the surrogate will see them, so R(0,0) is excluded per 1.5.
+
+| model | R² | RMSE |
+|---|---|---|
+| RidgeCV (linear) | 0.784 | 0.761 |
+| HistGradientBoosting, 100 iters | 0.983 | 0.216 |
+| HistGradientBoosting, 1000 iters | 0.988 | 0.179 |
+| MLP, A.4 architecture (256x3, tanh) | 0.983 | 0.213 |
+
+std of y is 1.639 for scale.
+
+**Verdict: aspect ratio is input-measurable. Use it as the split axis.** Splitting on it is a shift in the questions asked, not in the answers, so the leakage objection is answered.
+
+**Supporting diagnostics, all pointing the same way:**
+
+- **Model class, not missing information.** Ridge at 0.784 versus 0.988 for nonlinear models. Aspect ratio is roughly R(0,0) over the minor radius, a ratio, and a linear model cannot represent division.
+- **Not outliers.** The 0.05% trim drops 3 test points and moves R² by 0.00002.
+- **Not the dropped R(0,0).** Correlation between ridge residual and R(0,0) is +0.075, essentially nothing.
+- **Not converged.** Every increase in training budget raised the number (GBM 0.983 to 0.988 on iterations alone; the MLP early-stopped at 116 then 179 iterations, never approaching its cap). Budget-limited, not information-limited, which is the signature of a mapping that exists.
+- **Error is diffuse, not structural.** Median absolute error 0.072, p90 0.265.
+
+⚠️ **The caveat: it scored 0.988 against a pre-registered 0.99, so it technically missed.** The bar was set from the information floor implied by the dropped R(0,0). That was the wrong instrument twice over. First, an information floor bounds what *any* model could know; it says nothing about what a quick untuned model reaches on 21k points, so it conflated knowable with learnable. Second, the gate's question is qualitative, input-measurable versus solver output, and a single absolute R² cannot answer it without a reference for what each category looks like on this data.
+
+**Decided: record the miss, do not move the bar.** The threshold stays 0.99 in the script and this entry documents why it was not met. A pre-registered miss that can be explained is stronger evidence of honest method than a threshold quietly relaxed to 0.98 after the fact.
+
+**The better test, not run, noted for completeness.** Fit the same model on a solver-dependent target (`edge_rotational_transform_over_n_field_periods`) and compare. If aspect ratio is clearly better predicted, the objection dies by contrast rather than by an absolute number. Skipped as the gate had already served its purpose and the day 1-2 grid produces those numbers anyway.
+
+**If the attribution question resurfaces:** one run with R(0,0) added back to the inputs cleanly separates "missing input" from "model budget". Not needed now.
+
+**Independent support:** the dataset documentation already lists `aspect_ratio` among the metrics computable from the coefficients without solving. This gate corroborates a documented fact rather than discovering one, which is why 0.988 is sufficient.
+
+**Incidental finding, feeds 3.4 and Stage 7.** Mean absolute error by aspect ratio decile is lowest where the data is densest (0.064 at A 9.92 to 10.14) and highest in the sparse upper tail (0.210 at A 10.14 to 12.05), with the compact end also elevated (0.096 at A 4.07 to 6.05). The extrapolation premise is visible in a purely geometric quantity, before any surrogate has been built.
 
 ---
 
@@ -1053,8 +1156,13 @@ Steps 1 to 3 are Proxima's own filters, copied from their loader for Table 7 com
 | 2026-08-26 | `has_neurips_2025_forward_model_error` is the flag that identifies bad rows | It misses generation-stage failures. One row has a fully null boundary with that flag reading `False`, because the solver never ran on it. Filtering on the documented flag alone passes it straight through into the flattener. It crashed the first full-dataset script written for this project. |
 | 2026-08-26 | The 80-coefficient encoding would need to be reverse-engineered from the data | Their `_to_X` states it exactly: ravel each `(5,9)` array, drop the first 5 entries. Empirically confirmed across all 182,221 rows, the symmetry zeros are exactly 0.0, not approximately. |
 | 2026-08-26 | Matching their documented filters would reproduce A.4's ~23k pool | Gives 27,050, about 15% high. Duplicates, the five-flag filter and the 0.05% trim are all ruled out by direct test. Two intermediate counts land exactly on published figures (158,685 and 68,191), so the chain is right and their appendix is incomplete. |
-| 2026-08-26 | The input representation is unique per shape | It is not. Negating every `z_sin` coefficient gives the mirror image, and the stored pool is 89.4% / 10.6% mixed on that sign. Their generative code canonicalizes it, their surrogate feature extractor does not. Left uncanonicalized, because mirroring likely flips the sign of the primary target and normalizing inputs alone would corrupt labels invisibly. |
+| 2026-08-26 | The input representation is unique per shape | It is not. Negating every `z_sin` coefficient gives the mirror image, and the stored pool is 89.4% / 10.6% mixed on that sign. Their generative code canonicalizes it, their surrogate feature extractor does not. Left uncanonicalized to match `_to_X`, and because the two handedness classes carry different information (see 1.7). |
+| 2026-08-27 | Mirroring flips the sign of the primary target | It does not, in this data. Both handedness classes are overwhelmingly positive (24,041/24,169 and 2,848/2,853), and only 133 of 27,022 targets are negative at all. Their forward model stores VMEC's signed edge iota with no `abs`, all three benchmark problems `abs` it at scoring time, and their own ALM optimizer does not. The generation optimizer selected for positive signed iota, which is why negatives are rare. The 1.7 conclusion survives; its justification was rewritten. |
 | 2026-08-26 | The `*_settings.id` columns identify configurations | They identify settings *groups*. 17,671 desc rows share 148 unique ids, 9,379 vmec rows share 8. No per-row config id exists, so pathway must be inferred from which of four blocks is non-null, and dedup by id is impossible. |
+| 2026-08-27 | `boundary.r_cos` holds a clean `(5, 9)` numeric block per row | It holds an object array of 5 entries, each its own 9-element float array. `np.stack` merges only the outer level, giving `(n, 5)` object dtype, and the `[:, 5:]` slice then returns an empty `(n, 0)` array **without raising**. Silently produced a zero-width feature matrix. Fix is a per-row `.tolist()` before `np.array`. The regression test for it has to reproduce the nested structure, or a clean-block fixture passes against the broken code. |
+| 2026-08-27 | Gate 3.5 would predict aspect ratio near machine precision | Ridge 0.784, gradient boosting 0.988, MLP 0.983. The linear result reflects model class, aspect ratio being roughly R(0,0) over minor radius, and a linear model cannot represent division. The residual gap is budget, not information: every increase in training budget raised the score, the trim changed nothing, and residual correlation with the dropped R(0,0) was +0.075. |
+| 2026-08-27 | A pre-registered pass threshold protects against fooling yourself | Only if it measures the right thing. 0.99 was derived from the information floor implied by dropping R(0,0), which bounds what *any* model could know and says nothing about what a quick untuned fit reaches on 21k points. Knowable and learnable are different questions. The gate's question was also qualitative, input-measurable versus solver output, so a single absolute R² was the wrong instrument regardless of its value. Recorded the 0.988 miss rather than relaxing the bar. |
+| 2026-08-27 | Binning is a presentation choice that does not change conclusions | It flipped one. With uniform deciles the log10 qi noise floor read 0.021, twice its bar, verdict ABOVE FLOOR. The bottom decile spanned distance 0 to 1.53 while genuine near-twins live below 0.5, so the intercept was extrapolated from bins centred at 1.1 to 2.4 and never came near zero. Rebinning with quantile edges packed into the left tail dropped it 10x to 0.0018 and flipped the verdict to AT FLOOR. The tell was that the fit window's own x-values sat nowhere near the point being extrapolated to. |
 
 ---
 

@@ -109,7 +109,19 @@ An interactive VS Code terminal activates it automatically, but a non-interactiv
 
 `tests/test_data.py` covers the three functions that do real logic (16 tests, pytest). Fixtures deliberately reproduce the nested boundary structure, verified that the pre-fix implementation fails them.
 
-**Next: gate 3.5**, predict `metrics.aspect_ratio` from the 80 coefficients with a cheap fit and confirm it comes out near machine precision. Then the Stage 2 noise floor, then `splits.py` and the day 1-2 grid.
+**Gate 3.5 passed with a caveat (2026-08-27), `scripts/gate_3_5_split_axis.py`.** Aspect ratio predicted from the 80 coefficients: ridge 0.784, gradient boosting 0.988, MLP 0.983, against a std of 1.639. **Aspect ratio is input-measurable, so it is safe as the split axis** and splitting on it is a shift in the questions, not in the answers.
+
+It missed the pre-registered 0.99 bar. That bar came from the information floor implied by dropping R(0,0) per 1.5, which bounds what any model could know and says nothing about what a quick untuned fit reaches on 21k points. Everything else points one way: the 0.05% trim moved R² by 0.00002, residual correlation with R(0,0) was +0.075, and every increase in training budget raised the score, so the shortfall is budget rather than missing information. The miss is recorded rather than the bar relaxed, see decision log 3.5.
+
+Incidental, worth keeping: error tracks data density, lowest around A 9.9 to 10.1 and highest in the sparse upper tail. The extrapolation premise shows up in a purely geometric quantity before any surrogate exists.
+
+**Stage 2 gate passed (2026-08-27), `scripts/stage_2_noise_floor.py`.** One kNN index (k=10, brute force, z-scored coefficients) answered the residual-spread floor (2.3) and the tolerance duplicate check (2.2). **Aleatoric sits at the numerical floor for both candidate targets**, confirming the 2.1 prediction. Floor intercepts −0.000003 (edge rotational transform, bar 0.0012) and 0.001834 (log10 qi, bar 0.0102). The 28 pairs closer than distance 0.197 have a median target difference of **exactly 0.000000 for both targets**, which is determinism measured rather than asserted.
+
+⚠️ **Bin placement flipped a verdict.** With uniform deciles, log10 qi read ABOVE FLOOR at 0.021. The bottom decile spanned distance 0 to 1.53 while genuine near-twins live below 0.5, so the intercept was extrapolated from bins centred at 1.1 to 2.4. Rebinning with quantile edges packed into the left tail dropped it 10x and flipped the verdict. Recorded in decision log 2.3, not hidden.
+
+⚠️ **High-dimensional caveat for the write-up:** median nearest-neighbour distance is 3.84 in z-scored 80-dimensional space. Genuine near-twins barely exist outside the bottom percentile, which caps what this check can prove.
+
+**Next: the mirror-pair search** (folded into 2.2, answers the 1.7 leftover, nothing downstream depends on it), then `splits.py` and the day 1-2 grid.
 
 ---
 
@@ -127,7 +139,9 @@ Hugging Face: `proxima-fusion/constellaration`. Paper: arXiv 2506.19583 (NeurIPS
 
 ⚠️ **R(0,0) is NOT exactly 1 in the stored data**, contrary to what this file previously said. Range 0.894 to 1.016, std 0.0051, only 52.8% of rows within 1e-4 of 1.0. Dropping it is still correct: it is 6 to 20x less variable than the least-variable genuine coefficient, correlates weakly with aspect ratio (0.14), and their inverse `_x_to_surface` hardcodes `r_cos[max_toroidal_mode] = 1.0` on reconstruction. Treat it as optimizer residue around a fixed convention, not a degree of freedom.
 
-⚠️ **The encoding is not canonicalized for sign.** Negating every `z_sin` coefficient leaves R unchanged and sends Z to −Z, i.e. the mirror image through the horizontal midplane, so two different 80-vectors can describe mirror-image shapes. The pool is 89.4% / 10.6% mixed on the reference coefficient `z_sin[m=0,n=1]`. Their `_flip_z_sin_if_negative` canonicalizes this, but only inside `_augment_dataset`, which is generative-model-specific; their surrogate feature extractor `_to_X` does not. **Decision: do not canonicalize** (decision log 1.7). Mirroring should flip the sign of rotational transform, which is the primary target, so normalizing inputs without flipping targets would produce identical inputs with opposite labels.
+⚠️ **The encoding is not canonicalized for sign.** Negating every `z_sin` coefficient leaves R unchanged and sends Z to −Z, i.e. the mirror image through the horizontal midplane, so two different 80-vectors can describe mirror-image shapes. The pool is 89.4% / 10.6% mixed on the reference coefficient `z_sin[m=0,n=1]`. Their `_flip_z_sin_if_negative` canonicalizes this, but only inside `_augment_dataset`, which is generative-model-specific; their surrogate feature extractor `_to_X` does not. **Decision: do not canonicalize** (decision log 1.7). Two reasons: `_to_X` does not canonicalize and Table 7 comparability is the point, and the two handedness classes are not interchangeable (the reference sign correlates with the target at −0.29, and the classes have different aspect ratio, elongation and triangularity distributions).
+
+⚠️ **Do not say mirroring flips the sign of the target.** That was the old justification and it is wrong (corrected 2026-08-27, decision log 1.7). Verified in their repo: `forward_model.py:135-144` stores VMEC's *signed* edge iota with no `abs`; all three benchmark problems apply `np.abs()` at scoring (`problems.py` 174, 248, 384); their own ALM optimizer does not, so their scorer and their generator disagree. In the pool both handedness classes are overwhelmingly positive (24,041/24,169 and 2,848/2,853), with only 133 negative targets in 27,022. The generation optimizer selected for positive signed iota, which is why negatives are rare. Whether a genuine mirrored *pair* carries opposite iota is still unproven and parked; the pair search folded into decision log 2.2 answers it nearly free, and nothing downstream depends on it.
 
 **Field periods.** `boundary.n_field_periods` takes values 1 to 5, with 15k, 20k, 68k, 27k and 28k configurations respectively. The toroidal mode index is in units of NFP, so the coefficient vector means something different at each value. Proxima's own example filters to NFP=3.
 
@@ -145,7 +159,7 @@ Require the equilibrium solve:
 - `edge_magnetic_mirror_ratio` and `axis_magnetic_mirror_ratio`
 - `flux_compression_in_regions_of_bad_curvature` (turbulent transport proxy)
 - `minimum_normalized_magnetic_gradient_scale_length` (coil simplicity proxy)
-- `aspect_ratio_over_edge_rotational_transform`
+- `aspect_ratio_over_edge_rotational_transform` (divides by the *signed* edge transform, `forward_model.py:214`, so it inherits the sign; matters only if it is ever promoted to a target)
 
 There is **no effective ripple column**. Computing it would need the `vmecpp_wout` equilibria plus a Boozer transform and a neoclassical code. Out of scope.
 
@@ -448,7 +462,7 @@ Highest priority first. Full reasoning is in `constellaration-uq-decisions.md` i
 
 - Trimming outliers on the split axis (silently destroys the test set).
 - Filtering bad rows on `has_neurips_2025_forward_model_error` alone (misses generation-stage failures; see the null-row trap above).
-- Canonicalizing the `z_sin` sign without also flipping the target (produces identical inputs with opposite labels).
+- Canonicalizing the `z_sin` sign (destroys the handedness signal and breaks comparability with `_to_X`). Note the reason: **not** because it would create opposite labels, which is the retracted argument above.
 - Recalibrating on out-of-region data (silently invalidates the premise).
 - Splitting on the target rather than on an input-measurable quantity (confounds covariate shift with label shift).
 - Letting the early-stopping validation set include out-of-region points.

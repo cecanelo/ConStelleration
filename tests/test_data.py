@@ -16,11 +16,11 @@ from constellaration_uq.data import (
     trim_target_tails,
 )
 
-TARGET = "metrics.edge_rotational_transform_over_n_field_periods"
-DESC_ID = "desc_omnigenous_field_optimization_settings.id"
-VMEC_ID = "vmec_omnigenous_field_optimization_settings.id"
+TARGET = 'metrics.edge_rotational_transform_over_n_field_periods'
+DESC_ID = 'desc_omnigenous_field_optimization_settings.id'
+VMEC_ID = 'vmec_omnigenous_field_optimization_settings.id'
 
-STEP_ORDER = ["raw", "error_filter", "nfp_3", "pathway_filter", "null_boundary_guard"]
+STEP_ORDER = ['raw', 'error_filter', 'nfp_3', 'pathway_filter', 'null_boundary_guard']
 
 
 def nested_boundary(flat_values):
@@ -41,11 +41,11 @@ def nested_boundary(flat_values):
 def clean_row():
     """One row that survives every step of the 1.8 chain."""
     row = {flag: False for flag in ERROR_FLAG_COLUMNS}
-    row["boundary.n_field_periods"] = 3.0
-    row[DESC_ID] = "desc-001"
+    row['boundary.n_field_periods'] = 3.0
+    row[DESC_ID] = 'desc-001'
     row[VMEC_ID] = None
-    row["boundary.r_cos"] = nested_boundary(np.arange(45))
-    row["boundary.z_sin"] = nested_boundary(np.arange(45) + 100)
+    row['boundary.r_cos'] = nested_boundary(np.arange(45))
+    row['boundary.z_sin'] = nested_boundary(np.arange(45) + 100)
     row[TARGET] = 0.25
     return row
 
@@ -64,15 +64,15 @@ def test_clean_row_survives_every_step():
 
 
 @pytest.mark.parametrize(
-    "mutation, rejected_at",
+    'mutation, rejected_at',
     [
-        ({"misc.has_neurips_2025_forward_model_error": True}, "error_filter"),
-        ({"misc.has_optimize_boundary_omnigenity_desc_error": True}, "error_filter"),
-        ({"misc.has_generate_nae_initialization_from_targets_error": True}, "error_filter"),
-        ({"boundary.n_field_periods": 4.0}, "nfp_3"),
-        ({DESC_ID: None}, "pathway_filter"),
-        ({"boundary.r_cos": None}, "null_boundary_guard"),
-        ({"boundary.z_sin": None}, "null_boundary_guard"),
+        ({'misc.has_neurips_2025_forward_model_error': True}, 'error_filter'),
+        ({'misc.has_optimize_boundary_omnigenity_desc_error': True}, 'error_filter'),
+        ({'misc.has_generate_nae_initialization_from_targets_error': True}, 'error_filter'),
+        ({'boundary.n_field_periods': 4.0}, 'nfp_3'),
+        ({DESC_ID: None}, 'pathway_filter'),
+        ({'boundary.r_cos': None}, 'null_boundary_guard'),
+        ({'boundary.z_sin': None}, 'null_boundary_guard'),
     ],
 )
 def test_bad_row_is_rejected_at_the_expected_step(mutation, rejected_at):
@@ -91,14 +91,14 @@ def test_null_error_flags_count_as_no_error():
         row[flag] = None
 
     counts = step_counts(frame(row))
-    assert counts["error_filter"] == 1
+    assert counts['error_filter'] == 1
 
 
 def test_vmec_pathway_is_accepted():
     """Step 3 keeps a row if *either* settings id is populated, not just desc."""
-    row = clean_row() | {DESC_ID: None, VMEC_ID: "vmec-001"}
+    row = clean_row() | {DESC_ID: None, VMEC_ID: 'vmec-001'}
     counts = step_counts(frame(row))
-    assert counts["pathway_filter"] == 1
+    assert counts['pathway_filter'] == 1
 
 
 def test_null_boundary_guard_is_standalone():
@@ -106,11 +106,11 @@ def test_null_boundary_guard_is_standalone():
 
     Guards against the guard ever being folded into the error-flag filter.
     """
-    trap = clean_row() | {"boundary.r_cos": None, "boundary.z_sin": None}
+    trap = clean_row() | {'boundary.r_cos': None, 'boundary.z_sin': None}
     counts = step_counts(frame(clean_row(), trap))
 
-    assert counts["error_filter"] == 2
-    assert counts["null_boundary_guard"] == 1
+    assert counts['error_filter'] == 2
+    assert counts['null_boundary_guard'] == 1
 
 
 def test_extract_input_features_shape_and_layout():
@@ -119,8 +119,8 @@ def test_extract_input_features_shape_and_layout():
     z_flat = np.arange(45, dtype=float) + 100.0
 
     row = clean_row()
-    row["boundary.r_cos"] = nested_boundary(r_flat)
-    row["boundary.z_sin"] = nested_boundary(z_flat)
+    row['boundary.r_cos'] = nested_boundary(r_flat)
+    row['boundary.z_sin'] = nested_boundary(z_flat)
 
     X = extract_input_features(frame(row))
 
@@ -139,8 +139,8 @@ def test_extract_input_features_drops_the_first_five():
     z_flat[:5] = sentinel
 
     row = clean_row()
-    row["boundary.r_cos"] = nested_boundary(r_flat)
-    row["boundary.z_sin"] = nested_boundary(z_flat)
+    row['boundary.r_cos'] = nested_boundary(r_flat)
+    row['boundary.z_sin'] = nested_boundary(z_flat)
 
     X = extract_input_features(frame(row))
 
@@ -153,8 +153,8 @@ def test_extract_input_features_preserves_row_order():
     rows = []
     for i in range(3):
         row = clean_row()
-        row["boundary.r_cos"] = nested_boundary(np.full(45, float(i)))
-        row["boundary.z_sin"] = nested_boundary(np.full(45, float(i) + 0.5))
+        row['boundary.r_cos'] = nested_boundary(np.full(45, float(i)))
+        row['boundary.z_sin'] = nested_boundary(np.full(45, float(i) + 0.5))
         rows.append(row)
 
     X = extract_input_features(frame(*rows))
@@ -176,9 +176,9 @@ def test_trim_target_tails_drops_both_extremes():
 
 def test_trim_target_tails_ignores_other_columns():
     """1.4: the trim must never touch the split axis, only the target."""
-    df = pd.DataFrame({TARGET: range(100), "metrics.aspect_ratio": 5.0})
-    df.loc[50, "metrics.aspect_ratio"] = 1e6
+    df = pd.DataFrame({TARGET: range(100), 'metrics.aspect_ratio': 5.0})
+    df.loc[50, 'metrics.aspect_ratio'] = 1e6
 
     trimmed = trim_target_tails(df, TARGET, tail_fraction=0.1)
 
-    assert 1e6 in trimmed["metrics.aspect_ratio"].values
+    assert 1e6 in trimmed['metrics.aspect_ratio'].values
