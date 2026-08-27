@@ -1,0 +1,173 @@
+"""Day 1-2 grid: pick the split axis, direction, and primary target.
+
+2 axes x 3 cuts x 2 targets = 12 cheap fits. Decides 3.4 (axis), 3.6
+(direction), evidence for 3.1 and 3.2 (targets), 3.7 (the coverage tolerance
+delta) and 7.1 (diagnostic set).
+
+Pass condition: some (axis, direction) pair shows a real in/out error gap for
+the primary target AND that axis clears the coverage threshold in both a
+mid-range band and a tail band, since the main figure needs both results.
+
+A single MLP, not the ensemble and deliberately not gradient boosting. Trees
+return the boundary value outside the training range, so a tail split would
+show a large gap by construction and measure the model class rather than the
+axis. The eventual model is an MLP ensemble, so an MLP baseline is also what
+the real extrapolation behaviour will look like.
+
+The axis is never trimmed (1.4). Only the target is.
+"""
+
+import time
+from pathlib import Path
+
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.neural_network import MLPRegressor
+from sklearn.preprocessing import StandardScaler
+
+from constellaration_uq.data import (
+    extract_input_features,
+    filter_valid,
+    load_raw,
+    trim_target_tails,
+)
+from constellaration_uq.splits import (
+    distance_from_training_region,
+    hole_split,
+    tail_split,
+)
+
+DATA_DIR = Path(__file__).resolve().parents[1] / 'data_raw' / 'data'
+SEED = 0
+TEST_FRACTION = 0.2
+IN_REGION_TEST_FRACTION = 0.2
+N_DISTANCE_BINS = 8
+
+AXES = ['metrics.aspect_ratio', 'metrics.max_elongation']
+CUTS = ['tail_low', 'tail_high', 'hole']
+TARGETS = {
+    'edge_rot_transform': ('metrics.edge_rotational_transform_over_n_field_periods', None),
+    'log10_qi': ('metrics.qi', np.log10),
+}
+
+
+def load_pool():
+    for _, df in filter_valid(load_raw(DATA_DIR)):
+        pass
+    return df
+
+
+def fit_model(X_fit, y_fit):
+    """Fit once, return a predict function in physical units (5.2)."""
+    scaler = StandardScaler().fit(X_fit)
+    y_mean, y_std = y_fit.mean(), y_fit.std()
+
+    model = MLPRegressor(
+        hidden_layer_sizes=(256, 256, 256),
+        activation='tanh',
+        random_state=SEED,
+        max_iter=500,
+        early_stopping=True,
+        n_iter_no_change=20,
+    ).fit(scaler.transform(X_fit), (y_fit - y_mean) / y_std)
+
+    def predict(X):
+        return model.predict(scaler.transform(X)) * y_std + y_mean
+
+    return predict
+
+
+def rmse(y_true, y_pred):
+    return float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
+
+
+def run_combination(axis, X, y, cut):
+    if cut == 'hole':
+        train_mask, oor_mask = hole_split(axis, TEST_FRACTION)
+    else:
+        train_mask, oor_mask = tail_split(axis, cut.removeprefix('tail_'), TEST_FRACTION)
+
+    # An in-region held-out slice, carved from the training region only (3.9).
+    # Without it the in-region number would be training error and the gap would
+    # be measuring overfitting rather than extrapolation.
+    train_idx = np.flatnonzero(train_mask)
+    fit_idx, in_idx = train_test_split(
+        train_idx, test_size=IN_REGION_TEST_FRACTION, random_state=SEED
+    )
+
+    predict = fit_model(X[fit_idx], y[fit_idx])
+    rmse_in = rmse(y[in_idx], predict(X[in_idx]))
+    rmse_out = rmse(y[oor_mask], predict(X[oor_mask]))
+
+    # Equal-width distance bins, since the calibration figure bins by distance
+    # and every band needs enough points to estimate a coverage rate (3.7).
+    distance = distance_from_training_region(axis, train_mask)
+    d_oor = distance[oor_mask]
+    counts, _ = np.histogram(d_oor, bins=np.linspace(0, d_oor.max(), N_DISTANCE_BINS + 1))
+    min_count = int(counts.min())
+
+    # n = z^2 p(1-p) / delta^2 with z=1.96, p=0.5, solved for delta.
+    delta = 0.98 / np.sqrt(min_count) if min_count else float('inf')
+
+    return {
+        'n_fit': len(fit_idx),
+        'n_oor': int(oor_mask.sum()),
+        'rmse_in': rmse_in,
+        'rmse_out': rmse_out,
+        'ratio': rmse_out / rmse_in,
+        'd_max': float(d_oor.max()),
+        'min_bin': min_count,
+        'delta': delta,
+    }
+
+
+def main():
+    started = time.time()
+    df = load_pool()
+    print(f'pool: {len(df):,} rows')
+
+    total = len(TARGETS) * len(AXES) * len(CUTS)
+    print(f'{total} combinations, one MLP fit each\n')
+
+    header = (
+        f'{"":8s} {"axis":16s} {"cut":10s} {"target":18s} '
+        f'{"rmse_in":>9s} {"rmse_out":>9s} {"ratio":>7s} '
+        f'{"d_max":>7s} {"min_bin":>8s} {"delta":>7s} {"time":>7s}'
+    )
+    print(header)
+    print('-' * len(header))
+
+    step = 0
+    for target_name, (target_col, transform) in TARGETS.items():
+        trimmed = trim_target_tails(df, target_col)
+        X = extract_input_features(trimmed)
+        y = trimmed[target_col].to_numpy()
+        if transform is not None:
+            y = transform(y)
+
+        for axis_col in AXES:
+            axis = trimmed[axis_col].to_numpy()
+            for cut in CUTS:
+                step += 1
+                # Printed before the fit and flushed, so a long fit shows which
+                # combination is running rather than looking hung.
+                print(
+                    f'[{step:2d}/{total}] {axis_col.removeprefix("metrics."):16s} '
+                    f'{cut:10s} {target_name:18s} ',
+                    end='',
+                    flush=True,
+                )
+
+                t0 = time.time()
+                r = run_combination(axis, X, y, cut)
+                print(
+                    f'{r["rmse_in"]:9.5f} {r["rmse_out"]:9.5f} {r["ratio"]:7.2f} '
+                    f'{r["d_max"]:7.2f} {r["min_bin"]:8,d} {r["delta"]:7.3f} '
+                    f'{time.time() - t0:6.1f}s'
+                )
+
+    print(f'\ntotal {time.time() - started:.1f}s')
+
+
+if __name__ == '__main__':
+    main()
