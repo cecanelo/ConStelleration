@@ -11,3 +11,4 @@ matplotlib==3.8.2
 pyarrow==25.0.1
 datasets==5.0.1
 huggingface_hub==1.28.0
+pytest==8.3.4

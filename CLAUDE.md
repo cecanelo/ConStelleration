@@ -93,7 +93,7 @@ Work happens in a Lightning AI Studio, reached over SSH from local VS Code (Remo
 
 An interactive VS Code terminal activates it automatically, but a non-interactive `ssh host "command"` does not, so scripted calls must use the full path. Running bare `python3` and seeing every import fail is this trap, not a broken environment.
 
-**Installed:** torch 2.8.0+cu128, pandas 2.1.4, scikit-learn 1.3.2, numpy 1.26.4, matplotlib 3.8.2 (preinstalled by Lightning), plus pyarrow 25.0.1, datasets 5.0.1, huggingface_hub 1.28.0 (added for this project). Pinned in `requirements.txt`. **Do not reinstall or upgrade torch**, the CUDA build is matched to Lightning's GPU images.
+**Installed:** torch 2.8.0+cu128, pandas 2.1.4, scikit-learn 1.3.2, numpy 1.26.4, matplotlib 3.8.2 (preinstalled by Lightning), plus pyarrow 25.0.1, datasets 5.0.1, huggingface_hub 1.28.0, pytest 8.3.4 (added for this project). Pinned in `requirements.txt`. **Do not reinstall or upgrade torch**, the CUDA build is matched to Lightning's GPU images.
 
 **Package:** installed editable, so `import constellaration_uq` works from anywhere. Source lives in `src/constellaration_uq/`.
 
@@ -101,7 +101,15 @@ An interactive VS Code terminal activates it automatically, but a non-interactiv
 
 **Machine type:** currently CPU. `torch.cuda.is_available()` returning `False` is correct here, not a fault. Everything through the day 1-2 grid check is CPU work; switch to GPU only for the Stage 6 N-sweep, and switch back after. An attached local VS Code session prevents the studio from auto-sleeping, which is harmless on CPU and expensive on GPU.
 
-**Current position:** Phases 0, 0b and A complete (studio, repo, environment). Phase B complete (data pulled, schema verified). Data findings documented in decision log 1.5 to 1.8. **Next: write `src/constellaration_uq/data.py` against the filter chain in decision log 1.8.** Then gate 3.5, the Stage 2 noise floor, and the day 1-2 grid.
+**Current position:** Phases 0, 0b and A complete (studio, repo, environment). Phase B complete (data pulled, schema verified). Data findings documented in decision log 1.5 to 1.8.
+
+`src/constellaration_uq/data.py` is written and verified against the real files. Five functions: `load_raw`, `filter_valid` (a generator yielding `(step_name, df)` after each step, so the 1.8 table prints straight out of the code path that produces the training data), `trim_target_tails` (step 5, target-dependent, kept separate so the day 1-2 grid can trim per candidate target), `extract_input_features` (the 1.5 flatten to 80 columns), and `load_dataset` wiring the first three together. Run against the real parquet files, the printed counts land exactly on 1.8: 182,222 → 158,685 → 68,191 → 27,050 → 27,050, then 27,022 after the target trim. `X` comes out `(27050, 80)` float64, no NaNs.
+
+⚠️ **The boundary columns are nested, not `(5, 9)` blocks.** Parquet returns, per row, an object array of 5 entries, each its own 9-element float array. `np.stack` only merges the outer level, giving `(n, 5)` object dtype, and the `[:, 5:]` slice then silently returns an empty `(n, 0)` array instead of raising. The working version converts per row first: `np.array([row.tolist() for row in df[col]])`. Cost is 0.14s over 27k rows.
+
+`tests/test_data.py` covers the three functions that do real logic (16 tests, pytest). Fixtures deliberately reproduce the nested boundary structure, verified that the pre-fix implementation fails them.
+
+**Next: gate 3.5**, predict `metrics.aspect_ratio` from the 80 coefficients with a cheap fit and confirm it comes out near machine precision. Then the Stage 2 noise floor, then `splits.py` and the day 1-2 grid.
 
 ---
 
