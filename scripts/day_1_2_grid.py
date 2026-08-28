@@ -31,6 +31,7 @@ from constellaration_uq.data import (
     load_raw,
     trim_target_tails,
 )
+from constellaration_uq.results import save_results, save_table
 from constellaration_uq.splits import (
     distance_from_training_region,
     hole_split,
@@ -137,6 +138,7 @@ def main():
     print(header)
     print('-' * len(header))
 
+    rows = []
     step = 0
     for target_name, (target_col, transform) in TARGETS.items():
         trimmed = trim_target_tails(df, target_col)
@@ -160,13 +162,42 @@ def main():
 
                 t0 = time.time()
                 r = run_combination(axis, X, y, cut)
+                elapsed = time.time() - t0
                 print(
                     f'{r["rmse_in"]:9.5f} {r["rmse_out"]:9.5f} {r["ratio"]:7.2f} '
                     f'{r["d_max"]:7.2f} {r["min_bin"]:8,d} {r["delta"]:7.3f} '
-                    f'{time.time() - t0:6.1f}s'
+                    f'{elapsed:6.1f}s'
                 )
 
-    print(f'\ntotal {time.time() - started:.1f}s')
+                # Identifiers first so the CSV column order reads naturally.
+                rows.append(
+                    {
+                        'axis': axis_col.removeprefix('metrics.'),
+                        'cut': cut,
+                        'target': target_name,
+                        **r,
+                        'fit_seconds': round(elapsed, 1),
+                    }
+                )
+
+    total_seconds = time.time() - started
+    print(f'\ntotal {total_seconds:.1f}s')
+
+    constants = {
+        'SEED': SEED,
+        'TEST_FRACTION': TEST_FRACTION,
+        'IN_REGION_TEST_FRACTION': IN_REGION_TEST_FRACTION,
+        'N_DISTANCE_BINS': N_DISTANCE_BINS,
+        'AXES': AXES,
+        'CUTS': CUTS,
+        'TARGETS': {k: v[0] for k, v in TARGETS.items()},
+        'architecture': '(256, 256, 256) tanh, early stopping',
+    }
+    payload = {'pool_rows': len(df), 'total_seconds': round(total_seconds, 1), 'rows': rows}
+
+    save_results('day_1_2_grid', payload, constants=constants)
+    save_table('day_1_2_grid', rows)
+    print('saved results/day_1_2_grid.json and .csv')
 
 
 if __name__ == '__main__':

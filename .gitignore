@@ -5,6 +5,8 @@ data/
 # reading material, not part of the repo
 *.pdf
 An Introduction to Stellarators
+# but generated figures are committed, so the README renders without running code
+!figures/*.pdf
 
 # python
 __pycache__/
@@ -18,8 +20,11 @@ dist/
 *.pt
 *.pth
 *.ckpt
-figures/
 runs/
+
+# figures/ and results/ are deliberately NOT ignored. They are small text and
+# image files, they are the actual findings, and a reviewer should be able to
+# see them on GitHub without running anything.
 
 # editor / os
 .vscode/

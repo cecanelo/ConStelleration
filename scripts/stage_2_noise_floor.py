@@ -34,6 +34,7 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
 
 from constellaration_uq.data import extract_input_features, filter_valid, load_raw
+from constellaration_uq.results import save_results
 
 DATA_DIR = Path(__file__).resolve().parents[1] / 'data_raw' / 'data'
 K = 10
@@ -72,8 +73,13 @@ def main():
         'log10_qi': np.log10(df['metrics.qi']).to_numpy(),
     }
 
+    target_summary = {}
     for name, y in targets.items():
         print(f'    {name:20s}  std={np.nanstd(y):.6f}   non_finite={(~np.isfinite(y)).sum()}')
+        target_summary[name] = {
+            'std': float(np.nanstd(y)),
+            'non_finite': int((~np.isfinite(y)).sum()),
+        }
 
     nn = NearestNeighbors(n_neighbors=K + 1, algorithm='brute').fit(X_scaled)
     distances, indices = nn.kneighbors(X_scaled)
@@ -87,16 +93,41 @@ def main():
         f'min {distances[:, 0].min():.6f}'
     )
 
+    spread = {}
     for name, y in targets.items():
-        residual_spread(name, y, distances[:, 0], indices[:, 0])
+        spread[name] = residual_spread(name, y, distances[:, 0], indices[:, 0])
 
-    distance_percentiles(distances[:, 0])
+    percentiles = distance_percentiles(distances[:, 0])
 
+    duplicates = {}
     if TOLERANCE is None:
         print('\nTOLERANCE not set, skipping duplicate check. Pick it from the percentiles above.')
     else:
         for name, y in targets.items():
-            tolerance_duplicates(name, y, distances[:, 0], indices[:, 0], TOLERANCE)
+            duplicates[name] = tolerance_duplicates(
+                name, y, distances[:, 0], indices[:, 0], TOLERANCE
+            )
+
+    constants = {
+        'K': K,
+        'NEAREST_BINS_FOR_FIT': NEAREST_BINS_FOR_FIT,
+        'BIN_QUANTILES': BIN_QUANTILES,
+        'TOLERANCE': TOLERANCE,
+        'FLOOR_BAR': FLOOR_BAR,
+    }
+    payload = {
+        'pool_rows': len(df),
+        'targets': target_summary,
+        'self_matched': int(self_matched.sum()),
+        'nn_distance_median': float(np.median(distances[:, 0])),
+        'nn_distance_min': float(distances[:, 0].min()),
+        'residual_spread': spread,
+        'distance_percentiles': percentiles,
+        'tolerance_duplicates': duplicates,
+    }
+
+    save_results('stage_2_noise_floor', payload, constants=constants)
+    print('\nsaved results/stage_2_noise_floor.json')
 
 
 def residual_spread(name, y, nn_distance, nn_index):
@@ -107,6 +138,7 @@ def residual_spread(name, y, nn_distance, nn_index):
     edges = np.quantile(dist, BIN_QUANTILES)
     med_dist = []
     med_delta = []
+    bins = []
 
     print(f'\n{name}: median |delta y| by nearest-neighbour distance bin')
     for i in range(len(edges) - 1):
@@ -116,19 +148,42 @@ def residual_spread(name, y, nn_distance, nn_index):
         print(
             f'  d {edges[i]:7.4f} to {edges[i + 1]:7.4f}: {med_delta[-1]:.6f}  (n={in_bin.sum():,})'
         )
+        # Bin edges and counts are saved, not just the summary. Without them the
+        # curve cannot be redrawn and the figure would need a full rerun.
+        bins.append(
+            {
+                'lo': edges[i],
+                'hi': edges[i + 1],
+                'median_distance': med_dist[-1],
+                'median_delta': med_delta[-1],
+                'count': int(in_bin.sum()),
+            }
+        )
 
     window = NEAREST_BINS_FOR_FIT
     slope, intercept = np.polyfit(med_dist[:window], med_delta[:window], 1)
     bar = FLOOR_BAR[name]
     verdict = 'AT FLOOR' if intercept < bar else 'ABOVE FLOOR'
     print(f'  slope {slope:.6f}, intercept {intercept:.6f}, bar {bar:.6f}  -> {verdict}')
-    return intercept
+
+    return {
+        'bins': bins,
+        'slope': slope,
+        'intercept': intercept,
+        'bar': bar,
+        'verdict': verdict,
+        'n_pairs': int(finite.sum()),
+    }
 
 
 def distance_percentiles(nn_distance):
     print('\nnearest-neighbour distance percentiles')
+    percentiles = {}
     for q in (0.01, 0.05, 0.1, 0.5, 1, 2, 5, 25, 50):
-        print(f'  p{q:<5g}: {np.percentile(nn_distance, q):.6f}')
+        value = float(np.percentile(nn_distance, q))
+        percentiles[str(q)] = value
+        print(f'  p{q:<5g}: {value:.6f}')
+    return percentiles
 
 
 def tolerance_duplicates(name, y, nn_distance, nn_index, tolerance):
@@ -138,12 +193,22 @@ def tolerance_duplicates(name, y, nn_distance, nn_index, tolerance):
     print(f'\n{name}: pairs closer than {tolerance:.6f}')
     print(f'  count: {close.sum():,}')
     if not close.any():
-        return
+        return {'tolerance': tolerance, 'count': 0}
 
     d = delta[close]
     bar = FLOOR_BAR[name]
     print(f'  |dy| median {np.median(d):.6f}, p90 {np.percentile(d, 90):.6f}, max {d.max():.6f}')
     print(f'  bar {bar:.6f}, pairs over bar: {(d > bar).sum():,}')
+
+    return {
+        'tolerance': tolerance,
+        'count': int(close.sum()),
+        'median': float(np.median(d)),
+        'p90': float(np.percentile(d, 90)),
+        'max': float(d.max()),
+        'bar': bar,
+        'over_bar': int((d > bar).sum()),
+    }
 
 
 if __name__ == '__main__':

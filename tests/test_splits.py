@@ -45,7 +45,7 @@ def test_masks_are_complementary(axis, name):
 
 @pytest.mark.parametrize('name', ['random', 'tail_low', 'tail_high', 'hole'])
 def test_held_out_fraction(axis, name):
-    train, test = all_splits(axis)[name]
+    _, test = all_splits(axis)[name]
     assert test.sum() == pytest.approx(0.2 * len(axis), rel=0.02)
 
 

@@ -37,10 +37,13 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.preprocessing import StandardScaler
 
 from constellaration_uq.data import extract_input_features, filter_valid, load_raw
+from constellaration_uq.results import save_results
 
 DATA_DIR = Path(__file__).resolve().parents[1] / 'data_raw' / 'data'
 AXIS = 'metrics.aspect_ratio'
 SEED = 0
+PASS_R2 = 0.99
+INCONCLUSIVE_R2 = 0.90
 
 
 def main():
@@ -104,7 +107,9 @@ def main():
 
     best_r2 = max(gbm_r2, mlp_r2)
     best_name = 'gradient boosting' if gbm_r2 >= mlp_r2 else 'MLP'
-    verdict = 'PASS' if best_r2 >= 0.99 else 'INCONCLUSIVE' if best_r2 >= 0.90 else 'FAIL'
+    verdict = (
+        'PASS' if best_r2 >= PASS_R2 else 'INCONCLUSIVE' if best_r2 >= INCONCLUSIVE_R2 else 'FAIL'
+    )
     print(f'\nbest model: {best_name}, R2 {best_r2:.6f}')
     print(f'verdict: {verdict}')
 
@@ -112,18 +117,28 @@ def main():
     abs_err = np.abs(y_test - best_pred)
 
     print(f'\nerror distribution ({best_name})')
-    for label, value in [
-        ('median', np.median(abs_err)),
-        ('p90', np.percentile(abs_err, 90)),
-        ('p99', np.percentile(abs_err, 99)),
-        ('max', abs_err.max()),
-    ]:
+    error_distribution = {
+        'median': float(np.median(abs_err)),
+        'p90': float(np.percentile(abs_err, 90)),
+        'p99': float(np.percentile(abs_err, 99)),
+        'max': float(abs_err.max()),
+    }
+    for label, value in error_distribution.items():
         print(f'  {label:6s}: {value:.4f}')
 
     print('\nmean |error| by aspect ratio decile')
     edges = np.quantile(y_test, np.linspace(0, 1, 11))
+    deciles = []
     for i in range(10):
         in_bin = (y_test >= edges[i]) & (y_test <= edges[i + 1])
+        deciles.append(
+            {
+                'lo': float(edges[i]),
+                'hi': float(edges[i + 1]),
+                'mean_abs_error': float(abs_err[in_bin].mean()),
+                'count': int(in_bin.sum()),
+            }
+        )
         print(
             f'  A {edges[i]:5.2f} to {edges[i + 1]:5.2f}: '
             f'{abs_err[in_bin].mean():.4f}  (n={in_bin.sum()})'
@@ -131,10 +146,44 @@ def main():
 
     lo, hi = np.quantile(y, [0.0005, 0.9995])
     keep = (y_test >= lo) & (y_test <= hi)
+    trimmed_r2 = r2_score(y_test[keep], best_pred[keep])
     trimmed_rmse = np.sqrt(np.mean((y_test[keep] - best_pred[keep]) ** 2))
     print(f'\nafter 0.05% trim ({(~keep).sum()} test points dropped)')
-    print(f'  R2    : {r2_score(y_test[keep], best_pred[keep]):.6f}')
+    print(f'  R2    : {trimmed_r2:.6f}')
     print(f'  RMSE  : {trimmed_rmse:.6f}')
+
+    constants = {
+        'SEED': SEED,
+        'AXIS': AXIS,
+        'PASS_R2': PASS_R2,
+        'INCONCLUSIVE_R2': INCONCLUSIVE_R2,
+        'test_size': 0.2,
+        'architecture': '(256, 256, 256) tanh, early stopping',
+    }
+    payload = {
+        'pool_rows': len(df),
+        'y_std': float(y_test.std()),
+        'models': {
+            'ridge': {'r2': float(r2), 'rmse': float(rmse), 'alpha': float(model.alpha_)},
+            'gradient_boosting': {'r2': float(gbm_r2), 'rmse': float(gbm_rmse)},
+            'mlp': {'r2': float(mlp_r2), 'rmse': float(mlp_rmse), 'iters': int(mlp.n_iter_)},
+        },
+        'best_model': best_name,
+        'best_r2': float(best_r2),
+        'verdict': verdict,
+        'r00_residual_corr': float(corr),
+        'r00_range': [float(r00_test.min()), float(r00_test.max())],
+        'error_distribution': error_distribution,
+        'deciles': deciles,
+        'after_trim': {
+            'dropped': int((~keep).sum()),
+            'r2': float(trimmed_r2),
+            'rmse': float(trimmed_rmse),
+        },
+    }
+
+    save_results('gate_3_5_split_axis', payload, constants=constants)
+    print('\nsaved results/gate_3_5_split_axis.json')
 
 
 if __name__ == '__main__':
