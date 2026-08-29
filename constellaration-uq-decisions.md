@@ -734,13 +734,15 @@ RMSE on edge rotational transform per field period, whose pool std is 0.0786.
 
 **Where 25 comes from.** The step 0 history in `results/hp_check.json`, for the frozen recipe. Its validation loss is within 3x of its best by epoch 5, 1.5x by epoch 18, 1.2x by epoch 32, and it stops at 75. So 25 lands where the mean is substantially learned, with two thirds of the epoch budget left for the NLL phase. There is a range of defensible answers here, roughly 20 to 40, and what matters is that the number is fixed, documented, and identical at every N in the sweep. Making it a fraction of the run would vary it with N and break the recipe freeze.
 
-**Where 1e-6 comes from.** Training happens in z-scored space, where the target has unit variance, so 1e-6 is six orders of magnitude below the signal. It is safely above float32 resolution, so 1/variance cannot explode, and in physical units it is a standard deviation of 0.00008 on a target whose own spread is 0.0786. That is far below anything Stage 2 could resolve, which is the point: **the floor must be too small to manufacture an aleatoric term**, because a floor that binds would be read by the step 5 hidden-coefficient check as a working variance head.
+**Where 1e-6 comes from.** Training happens in z-scored space, where the target has unit variance, so 1e-6 is six orders of magnitude below the signal. It is safely above float32 resolution, so 1/variance cannot explode, and in physical units it is a standard deviation of 0.00008 on a target whose own spread is 0.0786. That is far below anything Stage 2 could resolve, which is the point: **the floor must be too small to manufacture an aleatoric term**, because a floor that binds would be read by the step 5 variance-head check as a working variance head.
 
 **β-NLL trigger, so this is not an open-ended option.** Adopt it if either symptom appears in the first mean-variance ensemble: the predicted variance sitting pinned on its floor across most of the in-region data, or training destabilising once warm-up ends. Both are visible in one run. If neither appears, β-NLL stays unused and is reported as considered-not-needed rather than untried.
 
-**No separate tuning run for these.** Step 5, the hidden-coefficient check, already asks the only question that matters here: does the variance head recover a magnitude that was deliberately injected. A second check for the same thing is scope this budget does not survive.
+**Neither symptom appeared, 2026-08-29.** Step 2 reported 0.00% of member variance predictions pinned on the floor, and the variance-head check found none across three injected noise levels spanning a tenfold range, with no instability after warm-up in any of the forty member networks trained so far. **β-NLL is closed as considered and not needed.** Warm-up plus floor was sufficient, and the write-up can say so with evidence rather than by omission.
 
-⚠️ **Reorder steps 2 to 5 because of this entry.** The original order built three mean-variance ensembles and then checked the variance head. If the loss is wrong that means redoing three. Run the random-split ensemble first, then the hidden-coefficient check on it, then the hole and tail ensembles. A bad loss then costs one ensemble instead of three, and the reordering costs nothing.
+**No separate tuning run for these.** Step 5, the variance-head check, already asks the only question that matters here: does the variance head recover a magnitude that was deliberately injected. A second check for the same thing is scope this budget does not survive.
+
+⚠️ **Reorder steps 2 to 5 because of this entry.** The original order built three mean-variance ensembles and then checked the variance head. If the loss is wrong that means redoing three. Run the random-split ensemble first, then the variance-head check on it, then the hole and tail ensembles. A bad loss then costs one ensemble instead of three, and the reordering costs nothing.
 
 **My decision:**
 > Warm-up 25 epochs, floor the variance at 1e-6, and write the β-NLL trigger down as an observable symptom rather than leaving it as a vague reserve. Then move the variance-head check to immediately after the first mean-variance ensemble, so if any of this is wrong I find out after one run rather than three.
@@ -906,7 +908,7 @@ So the reported aleatoric means "irreducible given this architecture and this in
 **Two consequences.**
 
 - **Never present the aleatoric value as the dataset's noise level.** It is a property of the model. The gap between it and Stage 2's zero is model misfit wearing the wrong label, and a reviewer who knows this literature will ask.
-- **The hidden-coefficient check gets stronger.** The question is no longer "does aleatoric rise off a floor of zero", which a head saturated at its floor could fake by construction. It is "does aleatoric rise by roughly the injected magnitude, on top of a visible baseline of 0.0105", and there is now room for that to come out wrong.
+- **The variance-head check gets stronger.** The question is no longer "does aleatoric rise off a floor of zero", which a head saturated at its floor could fake by construction. It is "does aleatoric rise by roughly the injected magnitude, on top of a visible baseline of 0.0105", and there is now room for that to come out wrong.
 
 ---
 
@@ -973,7 +975,51 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 **Decided:** All three original checks (epistemic shrinks with N, epistemic rises off-distribution, the two signals are not tightly correlated), but run in both input conditions from 2.4.
 
-**Why:** All three were designed as contrasts between two live signals. If aleatoric sits at the numerical floor, "aleatoric does not shrink with N" is trivially true and the correlation is measured against near-noise. Running the hidden-input condition alongside restores the contrast: epistemic decaying toward a nonzero, N-invariant aleatoric floor.
+**Why:** All three were designed as contrasts between two live signals. If aleatoric sits at the numerical floor, "aleatoric does not shrink with N" is trivially true and the correlation is measured against near-noise. Running a second input condition alongside restores the contrast: epistemic decaying toward a nonzero, N-invariant aleatoric floor.
+
+**AMENDED 2026-08-29: the second condition is added target noise, not hidden input coefficients.** `scripts/variance_check.py`. The original instrument was tried first and measured to be too weak.
+
+**What was tried.** Hide high mode-number coefficients, then price the injection by finding near-twin shapes in the reduced input space and measuring how far apart their targets are. Four hiding rules, no training needed, `--modes` reproduces the table:
+
+| candidate | dropped | inputs | injected | predicted aleatoric | rise |
+|---|---|---|---|---|---|
+| m4 | 18 | 62 | 0.00299 | 0.01090 | +4.0% |
+| n4 | 18 | 62 | 0.00338 | 0.01101 | +5.1% |
+| resolution_3 | 32 | 48 | 0.00359 | 0.01108 | +5.7% |
+| m3plus | 36 | 44 | 0.00277 | 0.01084 | +3.4% |
+
+**Every rule injects about 0.003**, a 3 to 6% predicted rise on the 0.01048 baseline, which is inside seed-to-seed variation. The check could not have distinguished a working head from a dead one. Dropping 36 of 80 coefficients injected *less* than dropping 18.
+
+**Two readings, not separable from that table.** The estimator may be biased low, because pairs near-identical in the kept coordinates are probably also near-identical in the dropped ones: every shape in this pool came from the same optimizers, so the coefficients are correlated across modes and the pairs it finds do not actually differ in what was hidden. Or the hidden coefficients genuinely carry little independent information about the rotational transform, which is dominated by low-order structure. Probably both, partly.
+
+**The replacement: add Gaussian noise of a known standard deviation to the training targets**, at three levels chosen to bracket the baseline: 0.005, 0.020, 0.050, which are 6%, 25% and 64% of the target's own spread. Aleatoric should come out near sqrt(baseline² + σ²) at each. Evaluation is against clean targets, since independent noise averages out of a fitted mean.
+
+**Why this is a better instrument.** The injected magnitude is exact rather than estimated. No pair assumption, no root-two correction, no argument about estimator bias. Three levels rather than one, so the answer is a curve rather than a coincidence, and a head that merely rescales something fails the low level while a saturating head fails the high one.
+
+**What it costs.** Realism. Missing inputs mimic an unobserved confounder, which is the situation a deployed surrogate actually faces; added homoscedastic noise does not. That was the original rationale and it still stands. But this check exists to establish whether the head can measure at all, and for that the exact instrument wins. The realism argument belongs to the interpretation, not the validation.
+
+**Worth keeping from the failed attempt.** Dropping up to 45% of the boundary description barely changes what is predictable about the edge rotational transform. That is a real observation about the dataset and it partly explains why a surrogate does as well as it does from 80 numbers. Recorded with the caveat that the estimator may be understating it.
+
+**RESULT 2026-08-29, `scripts/variance_check.py`, three ensembles in 785s: RECOVERS.**
+
+| σ | expected aleatoric | measured | ratio | RMSE vs clean | epistemic |
+|---|---|---|---|---|---|
+| 0 (baseline) | 0.01048 | 0.01048 | 1.00 | 0.01256 | 0.00768 |
+| 0.005 | 0.01161 | 0.01241 | 1.07 | 0.01301 | 0.00841 |
+| 0.020 | 0.02258 | 0.02470 | 1.09 | 0.01568 | 0.01267 |
+| 0.050 | 0.05109 | 0.04818 | 0.94 | 0.02164 | 0.02247 |
+
+**All three ratios land inside 0.94 to 1.09**, against an acceptance band of 0.75 to 1.35, across a tenfold range of injected magnitude. Monotone in σ, which rules out a head reporting a constant. The smallest level was the one at risk, since its injection is below the baseline aleatoric, and it came out at 1.07.
+
+**This is the entry that converts 5.1 from an assertion into a measurement.** The variance head reports a quantity that tracks a magnitude chosen in advance, so the aleatoric term is measuring something rather than emitting a number.
+
+**It also retires 4.4's β-NLL question.** Nothing pinned on the floor and nothing destabilised after warm-up, at any noise level. β-NLL is reported as considered and not needed, rather than untried.
+
+**Epistemic rises with σ too, 0.00768 to 0.02247, and that is correct.** Every member saw the *same* noisy targets, so this is not members disagreeing about different noise draws. Noisy labels underdetermine the fit, so different initialisations land on genuinely different functions. Epistemic behaving as its name claims.
+
+**RMSE against clean targets also rises, 0.01256 to 0.02164.** So "independent noise averages out of the fitted mean" holds only partly; at σ = 0.05 the mean is 72% worse. State that rather than glossing it.
+
+⚠️ **One reading that looks like a failure and is not, worth getting right in the write-up.** At σ = 0.05 the total predicted uncertainty is about 0.053 while the error against clean targets is 0.0216, which reads as badly over-dispersed. It is not. The model estimates uncertainty for the noisy distribution it was trained on, and is being scored against clean targets that do not contain that noise. Against noisy targets the expected error is sqrt(0.0216² + 0.05²) = 0.0545 against a predicted 0.053. Correctly calibrated for its own distribution.
 
 ---
 
@@ -999,7 +1045,7 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 - [x] Decided
 
-**Decided: the full N-sweep runs last, after Stage 7 calibration and Stage 8 deferral. The hidden-coefficient check runs early, immediately after the mean-variance ensembles exist, and costs one extra ensemble.**
+**Decided: the full N-sweep runs last, after Stage 7 calibration and Stage 8 deferral. The variance-head check runs early, immediately after the first mean-variance ensemble exists, and costs three: one per injected noise level.**
 
 **The conflict this resolves.** Stage numbering puts the sweep at 6, before calibration at 7 and deferral at 8, which implies sweep first. The end-of-week-2 calendar gate asks only for three splits, calibration figures and a drafted deferral curve, which implies sweep later. The two disagreed and nobody had reconciled them.
 
@@ -1009,7 +1055,7 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 **What the sweep uniquely tests** is narrower: whether splitting the uncertainty into ignorance and noise is a real split or two labels. Epistemic must shrink as training data grows, aleatoric must not. A signal can rank points perfectly well, and so produce valid calibration and deferral results, while failing that decomposition test. That is why the sweep can go last without putting the deliverables at risk.
 
-⚠️ **The one risk that does not wait.** The hidden-coefficient condition (6.2) is the only check that can catch a variance head pinned at its floor rather than working. Aleatoric sits at the numerical floor on this dataset by construction (Stage 2), so a variance head that always reports approximately zero looks correct and is untestable.
+⚠️ **The one risk that does not wait.** The variance-head check (6.2) is the only check that can catch a variance head pinned at its floor rather than working. Aleatoric sits at the numerical floor on this dataset by construction (Stage 2), so a variance head that always reports approximately zero looks correct and is untestable.
 
 **The mitigation: one extra ensemble.** The tail split's mean-variance ensemble already provides the all-80 reference. The check adds a single ensemble on the same split with high mode-number coefficients hidden, then compares the two aleatoric estimates. If the hidden version does not report roughly the magnitude that was removed, the variance head is not working. Ten member networks, run as soon as the tail ensemble exists.
 
@@ -1022,7 +1068,7 @@ So the reported aleatoric means "irreducible given this architecture and this in
 | 2 | mean-variance, random split | 1 | in-domain baseline, no shift |
 | 3 | mean-variance, interior hole at p30 | 1 | a gap with training data both sides |
 | 4 | mean-variance, tail-low | 1 | the extrapolation condition |
-| 5 | hidden-coefficient check | 1 | does the variance head work |
+| 5 | variance-head check | 3 | does the head recover a known injected noise |
 | 6 | Stage 7 calibration | 0 | reads runs 2 to 4 |
 | 7 | Stage 8 deferral curve | 0 | reads run 4 |
 | 8 | full N-sweep | 30, floor 12 | does the decomposition hold as N grows |

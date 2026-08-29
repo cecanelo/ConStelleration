@@ -58,6 +58,89 @@ def extract_input_features(df: pd.DataFrame) -> np.ndarray:
     return np.concatenate([r_cos, z_sin], axis=1)
 
 
+# The 80 columns are two surfaces of 40. Each 40 is the (5, 9) grid of poloidal
+# mode m = 0..4 by toroidal mode n = -4..4, raveled row-major, with the first
+# five entries dropped by the slice above: four are exactly zero under
+# stellarator symmetry and the fifth is R(0,0), fixed by convention.
+N_TOROIDAL_MODES = 9
+N_DROPPED_FROM_M0 = 5
+N_PER_SURFACE = 40
+
+
+def poloidal_mode_columns(m: int) -> np.ndarray:
+    """Column indices in the 80-vector belonging to one poloidal mode number.
+
+    ⚠️ The dropped five shift every later block, so an m block does NOT sit at
+    m * 9 in the flattened vector. m = 4 is columns 31 to 39 and 71 to 79, not
+    the last 18 of the 80. Taking the last 18 would grab one surface's m = 3
+    and m = 4 and none of the other's, which runs fine and produces plausible
+    numbers, so this is worth a function and a test rather than a slice written
+    inline at the call site.
+    """
+    if not 0 <= m < 5:
+        raise ValueError(f'poloidal mode must be 0 to 4, got {m}')
+
+    if m == 0:
+        within = np.arange(N_TOROIDAL_MODES - N_DROPPED_FROM_M0)
+    else:
+        start = m * N_TOROIDAL_MODES - N_DROPPED_FROM_M0
+        within = np.arange(start, start + N_TOROIDAL_MODES)
+
+    return np.concatenate([within, within + N_PER_SURFACE])
+
+
+def toroidal_mode_columns(n: int) -> np.ndarray:
+    """Column indices in the 80-vector belonging to one toroidal mode number.
+
+    n runs -4 to 4, so this is a column of the (5, 9) grid rather than a row,
+    and it is scattered through the flattened vector instead of contiguous.
+    The m = 0 row contributes only for n >= 1, since its n <= 0 entries are the
+    five that were dropped.
+    """
+    if not -4 <= n <= 4:
+        raise ValueError(f'toroidal mode must be -4 to 4, got {n}')
+
+    offset = n + 4  # position of this n within a row of nine
+    within = [
+        m * N_TOROIDAL_MODES + offset - N_DROPPED_FROM_M0
+        for m in range(5)
+        if m > 0 or offset >= N_DROPPED_FROM_M0
+    ]
+    within = np.array(within)
+
+    return np.concatenate([within, within + N_PER_SURFACE])
+
+
+def mode_columns_at_resolution(max_mode: int) -> np.ndarray:
+    """Columns at the outer edge of the grid: m == max_mode or |n| == max_mode.
+
+    Dropping these hands the model a lower-resolution description of the same
+    shape, resolution max_mode minus one instead of max_mode, rather than a
+    hand-picked subset of coefficients. That is both easier to defend and
+    closer to what "hide the high mode numbers" actually means.
+    """
+    blocks = [poloidal_mode_columns(max_mode)]
+    blocks += [toroidal_mode_columns(n) for n in (-max_mode, max_mode)]
+    return np.unique(np.concatenate(blocks))
+
+
+def drop_columns(X: np.ndarray, dropped: np.ndarray) -> np.ndarray:
+    """Return X without the given columns, others in their original order."""
+    kept = np.setdiff1d(np.arange(X.shape[1]), dropped)
+    return X[:, kept]
+
+
+def drop_poloidal_modes(X: np.ndarray, modes) -> tuple[np.ndarray, np.ndarray]:
+    """Hide whole poloidal mode blocks. Returns (reduced X, dropped columns).
+
+    Used by the hidden-coefficient check, which manufactures a known amount of
+    irreducible noise by withholding shape detail the target genuinely depends
+    on, then asks whether the variance head recovers that magnitude.
+    """
+    dropped = np.unique(np.concatenate([poloidal_mode_columns(m) for m in modes]))
+    return drop_columns(X, dropped), dropped
+
+
 def load_dataset(data_dir: Path, target_column: str, verbose: bool = False) -> pd.DataFrame:
     raw = load_raw(data_dir)
 

@@ -173,7 +173,22 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 ⚠️ **The "+19.4% cost of the variance head" the script prints is confounded.** Step 1 trained on 21,118 rows; step 2 carves an in-region slice first and trains on 16,794. Part of that gap is 20% less data. Treat it as an upper bound.
 
-**Next: step 3, the hidden-coefficient check** on the random split's ensemble. Three smaller items still open: the mirror-pair search (folded into decision log 2.2, the tolerance duplicate check, and nothing downstream depends on it), decision log 7.1's calibration diagnostic set, and a three-seed rerun of the narrow sweep's p30 and p90 if the U's upper arm is ever load-bearing.
+**Step 3 done (2026-08-29), `scripts/variance_check.py`, three ensembles in 785s: RECOVERS.** Gaussian noise of known σ added to the training targets, evaluated against clean ones.
+
+| σ | expected aleatoric | measured | ratio | RMSE | epistemic |
+|---|---|---|---|---|---|
+| 0 | 0.01048 | 0.01048 | 1.00 | 0.01256 | 0.00768 |
+| 0.005 | 0.01161 | 0.01241 | 1.07 | 0.01301 | 0.00841 |
+| 0.020 | 0.02258 | 0.02470 | 1.09 | 0.01568 | 0.01267 |
+| 0.050 | 0.05109 | 0.04818 | 0.94 | 0.02164 | 0.02247 |
+
+**All ratios inside 0.94 to 1.09** against a 0.75 to 1.35 band, across a tenfold range, monotone in σ. **This is what converts the epistemic/aleatoric split from an assertion into a measurement**, and it is the reason the mean-variance head is not decorative. It also closes β-NLL: nothing pinned, nothing destabilised, in any of the forty member networks trained so far.
+
+**Epistemic rises with σ too, and that is correct.** Every member saw the same noisy targets, so this is not disagreement about noise draws. Noisy labels underdetermine the fit, so different initialisations reach genuinely different functions.
+
+⚠️ **One reading that looks like failure and is not.** At σ = 0.05 total predicted uncertainty is 0.053 against a clean-target error of 0.0216, which reads as badly over-dispersed. The model estimates uncertainty for the noisy distribution it trained on, while being scored against clean targets. Against noisy targets the expected error is sqrt(0.0216² + 0.05²) = 0.0545 versus 0.053 predicted. Correctly calibrated for its own distribution.
+
+**Next: steps 4 and 5, the hole and tail mean-variance ensembles.** No new code, `scripts/mv_ensemble.py hole` then `tail`, about five minutes each. Three smaller items still open: the mirror-pair search (folded into decision log 2.2, the tolerance duplicate check, and nothing downstream depends on it), decision log 7.1's calibration diagnostic set, and a three-seed rerun of the narrow sweep's p30 and p90 if the U's upper arm is ever load-bearing.
 
 ---
 
@@ -271,9 +286,15 @@ architecture claim in either direction.
 
 **Consequence for the write-up:** never present the aleatoric number as the dataset's noise level. It is a property of the model, and the gap between it and Stage 2's zero is model misfit wearing the wrong label. This is the concrete case of the relativity note below, not a contradiction of it.
 
-**Consequence for the hidden-coefficient check:** it gets stronger, not weaker. The question is no longer "does aleatoric rise off a floor of zero", which a saturated head could fake. It is "does aleatoric rise by roughly the injected amount, on top of a visible baseline of 0.0105", and there is now room for that answer to be wrong.
+**Consequence for the variance-head check:** it gets stronger, not weaker. The question is no longer "does aleatoric rise off a floor of zero", which a saturated head could fake. It is "does aleatoric rise by roughly the injected amount, on top of a visible baseline of 0.0105", and there is now room for that answer to be wrong.
 
-**Therefore: manufacture aleatoric deliberately.** Hide the high mode-number coefficients to create a known noise floor, then check whether the variance head recovers the right magnitude. (Hiding field period is no longer a viable alternative, it's fixed at NFP=3 across the whole dataset, so there's nothing left to hide there.) This converts the decomposition from an assertion into a validated measurement, and it is the reason the mean-variance head is not decorative.
+**Therefore: manufacture aleatoric deliberately**, then check whether the variance head recovers the right magnitude. This converts the decomposition from an assertion into a validated measurement, and it is the reason the mean-variance head is not decorative.
+
+⚠️ **The instrument changed on 2026-08-29, from hiding input coefficients to adding target noise.** `scripts/variance_check.py`, decision log 6.2. Hiding was tried first and priced before training: four rules, dropping 18 to 36 of the 80 coefficients, every one injecting about 0.003, a 3 to 6% rise on the 0.01048 baseline, which is inside seed noise. Dropping 36 columns injected less than dropping 18. Either the near-twin estimator is biased low, because pairs close in the kept coordinates are also close in the dropped ones on a pool where every shape came from the same optimizers, or those coefficients genuinely carry little information about the rotational transform. The replacement adds Gaussian noise of known σ to the training targets at three levels, 0.005 / 0.020 / 0.050, so the injected magnitude is exact rather than estimated and the answer is a curve rather than one coincidence. It trades realism for an exact answer key, which is the right trade for a validation.
+
+**Keep from the failed attempt:** dropping up to 45% of the boundary description barely changes what is predictable about the edge rotational transform. A real observation about the dataset, caveated by the possible estimator bias.
+
+(Hiding field period was never viable, it's fixed at NFP=3 across the whole dataset.)
 
 **Aleatoric and epistemic are relative, not absolute.** The split is relative to model class, prior, and input representation, and only separates cleanly under correct specification. The ensemble decomposition is a law-of-total-variance statement about the mixture, not about a Bayesian posterior.
 
@@ -367,16 +388,17 @@ architecture claim in either direction.
   and aleatoric does not. A signal can rank points well, and so
   give valid calibration and deferral results, while failing
   that test.
-  ⚠️ **The one risk that does not wait** is a variance head
-  pinned at its floor. Aleatoric sits at the numerical floor on
-  this dataset by construction, so a head that always reports
-  approximately zero looks correct and is untestable. The
-  hidden-coefficient check is the only thing that catches it,
-  and it costs **one extra ensemble**: the tail split's
-  mean-variance ensemble is already the all-80 reference, so the
-  check adds one more on the same split with high mode-numbers
-  hidden. Run it as soon as the tail ensemble exists.
-  Full reasoning in decision log 6.5, when the sweep runs.
+  ⚠️ **The one risk that does not wait** is a variance head that
+  reports a number unrelated to the data. There is no ground
+  truth for aleatoric on this dataset, so a broken head looks
+  correct. The variance-head check is the only thing that
+  catches it, and it costs **three ensembles**: the random
+  split's mean-variance run is the clean-target reference, and
+  the check adds one run per injected noise level, 0.005 / 0.020
+  / 0.050. Run it as soon as the random-split ensemble exists,
+  before the hole and tail runs, so a bad loss costs one headline
+  ensemble rather than three. Full reasoning in decision log 6.5,
+  when the sweep runs, and 6.2, what the injection is.
 - Report the shape of the epistemic decay, not a fitted exponent.
 - Deferral curve needs four lines: two "mine" curves
   (epistemic-ranked and total-ranked, see below), random
@@ -497,7 +519,7 @@ architecture claim in either direction.
   1.2x by epoch 32, out of 75. The floor is six orders of
   magnitude below the signal and safely above float32 noise, so
   it stops 1/variance exploding without manufacturing an
-  aleatoric term that the step 3 hidden-coefficient check would
+  aleatoric term that the step 3 variance-head check would
   then read as real. β-NLL stays unused unless one of two
   observable symptoms appears in the first mean-variance run:
   variance pinned on the floor across most in-region data, or
@@ -638,7 +660,7 @@ ensemble.
 
 **End of week 1:** data loaded, noise floor checked, one model trained, in-region numbers near Table 7. If not met, fall back to a simpler dataset (UCI or semi-synthetic) keeping the same study design, without regret. The design is the contribution; the dataset is the setting.
 
-**End of week 2:** three splits run, calibration figures exist, deferral curve drafted. If not met, drop the second target and all optional scope. The full N-sweep is deliberately not in this gate, it runs after the deferral curve. The cheap two-ensemble hidden-coefficient check is in scope for week 2 and takes about twenty minutes.
+**End of week 2:** three splits run, calibration figures exist, deferral curve drafted. If not met, drop the second target and all optional scope. The full N-sweep is deliberately not in this gate, it runs after the deferral curve. The variance-head check is in scope for week 2 and takes about fifteen minutes.
 
 **After the deferral curve:** the full N-sweep, 30 ensembles. In scope and not droppable. If the schedule slips it shrinks to 12, never to zero.
 
@@ -648,8 +670,8 @@ ensemble.
 |---|---|---|---|
 | 0 | hyperparameter sanity check | 0, six single networks | ✅ done 2026-08-29, recipe frozen in 4.7 |
 | 1 | plain MSE ensemble | 1 | ✅ done 2026-08-29, RMSE 0.01052, missed a badly set 0.0105 bar by 0.2%, 1.75x Table 7 |
-| 2 | mean-variance, random split | 1 | in-domain baseline, no shift |
-| 3 | hidden-coefficient check | 1 | does the variance head work |
+| 2 | mean-variance, random split | 1 | ✅ done 2026-08-29, RMSE 0.01256, aleatoric 0.01048, total 4.6% over-dispersed |
+| 3 | variance-head check | 3 | ✅ done 2026-08-29, RECOVERS, ratios 0.94 to 1.09 over a 10x noise range |
 | 4 | mean-variance, interior hole at p30 | 1 | a gap with training data both sides |
 | 5 | mean-variance, tail-low | 1 | the extrapolation condition |
 | 6 | calibration figures | 0 | reads runs 2, 4 and 5 |

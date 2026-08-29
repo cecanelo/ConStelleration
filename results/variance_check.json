@@ -1,0 +1,111 @@
+{
+  "name": "variance_check",
+  "saved_at": "2026-08-29T17:26:27+00:00",
+  "git_commit": "6d63edc7331c9757c6d68972c5e4e1bd8ea69ca8",
+  "git_dirty": true,
+  "constants": {
+    "SEED": 0,
+    "TEST_FRACTION": 0.2,
+    "IN_REGION_TEST_FRACTION": 0.2,
+    "NOISE_LEVELS": [
+      0.005,
+      0.02,
+      0.05
+    ],
+    "RECOVERY_BAND": [
+      0.75,
+      1.35
+    ],
+    "TARGET_COL": "metrics.edge_rotational_transform_over_n_field_periods",
+    "AXIS_COL": "metrics.aspect_ratio",
+    "N_MEMBERS": 10,
+    "VAL_SIZE": 500,
+    "LEARNING_RATE": 0.001,
+    "BATCH_SIZE": 128,
+    "WARMUP_EPOCHS": 25,
+    "MAX_EPOCHS": 500,
+    "PATIENCE": 20,
+    "BASELINE_RESULTS": "mv_ensemble_random"
+  },
+  "results": {
+    "verdict": "RECOVERS",
+    "baseline": {
+      "set": "in-region",
+      "n": 4324,
+      "rmse": 0.012562931692585398,
+      "epistemic": 0.007679041940718889,
+      "aleatoric": 0.010478462092578411,
+      "total": 0.01314386073499918
+    },
+    "target_std": 0.0789239111480279,
+    "levels": [
+      {
+        "sigma": 0.005,
+        "expected_aleatoric": 0.011610261315991244,
+        "aleatoric": 0.012408237904310226,
+        "ratio": 1.0687302866490955,
+        "recovered": true,
+        "rmse_vs_clean": 0.013010577544637,
+        "epistemic": 0.008414438925683498,
+        "total": 0.015174224972724915,
+        "member_epochs": [
+          52,
+          50,
+          51,
+          52,
+          50,
+          58,
+          51,
+          51,
+          49,
+          52
+        ]
+      },
+      {
+        "sigma": 0.02,
+        "expected_aleatoric": 0.022578710499618942,
+        "aleatoric": 0.024698859080672264,
+        "ratio": 1.0939003394852467,
+        "recovered": true,
+        "rmse_vs_clean": 0.015678001637445472,
+        "epistemic": 0.012666587717831135,
+        "total": 0.02799595333635807,
+        "member_epochs": [
+          47,
+          47,
+          47,
+          47,
+          49,
+          47,
+          49,
+          49,
+          46,
+          47
+        ]
+      },
+      {
+        "sigma": 0.05,
+        "expected_aleatoric": 0.051086183727360214,
+        "aleatoric": 0.0481841042637825,
+        "ratio": 0.9431924788301725,
+        "recovered": true,
+        "rmse_vs_clean": 0.021637473604299094,
+        "epistemic": 0.022469643503427505,
+        "total": 0.054002296179533005,
+        "member_epochs": [
+          46,
+          46,
+          47,
+          46,
+          47,
+          47,
+          47,
+          46,
+          46,
+          46
+        ]
+      }
+    ],
+    "total_seconds": 785.1
+  }
+}

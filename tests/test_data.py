@@ -11,8 +11,11 @@ import pytest
 
 from constellaration_uq.data import (
     ERROR_FLAG_COLUMNS,
+    N_PER_SURFACE,
+    drop_poloidal_modes,
     extract_input_features,
     filter_valid,
+    poloidal_mode_columns,
     trim_target_tails,
 )
 
@@ -182,3 +185,83 @@ def test_trim_target_tails_ignores_other_columns():
     trimmed = trim_target_tails(df, TARGET, tail_fraction=0.1)
 
     assert 1e6 in trimmed['metrics.aspect_ratio'].values
+
+
+# --- poloidal mode indexing --------------------------------------------------
+#
+# The hidden-coefficient check hides whole m blocks. Getting the arithmetic
+# wrong picks a different set of coefficients, still runs, and still produces
+# plausible numbers, so it is worth pinning exactly rather than trusting a
+# slice written inline.
+
+
+def test_m4_is_not_the_last_eighteen_columns():
+    """The mistake this function exists to prevent. Five dropped entries shift
+    every later block, and the 80 is two surfaces stacked, so m = 4 is the last
+    nine of EACH forty. The last eighteen would be one surface's m = 3 and
+    m = 4 and none of the other's."""
+    columns = poloidal_mode_columns(4)
+
+    assert columns.tolist() == list(range(31, 40)) + list(range(71, 80))
+    assert columns.tolist() != list(range(62, 80))
+
+
+@pytest.mark.parametrize(
+    ('m', 'expected'),
+    [
+        (0, [0, 1, 2, 3]),
+        (1, list(range(4, 13))),
+        (2, list(range(13, 22))),
+        (3, list(range(22, 31))),
+        (4, list(range(31, 40))),
+    ],
+)
+def test_each_mode_block_lands_where_the_ravel_puts_it(m, expected):
+    """m = 0 keeps four columns because five of its nine are dropped: four are
+    exactly zero under stellarator symmetry and the fifth is R(0,0)."""
+    within_first_surface = poloidal_mode_columns(m)[: len(expected)]
+
+    assert within_first_surface.tolist() == expected
+
+
+def test_mode_blocks_tile_the_whole_vector():
+    """Every column belongs to exactly one m. A gap or an overlap would mean
+    some coefficient can never be hidden, or gets hidden twice."""
+    all_columns = np.concatenate([poloidal_mode_columns(m) for m in range(5)])
+
+    assert sorted(all_columns.tolist()) == list(range(2 * N_PER_SURFACE))
+
+
+def test_mode_columns_are_mirrored_across_the_two_surfaces():
+    """The 80 is r_cos then z_sin, so whatever is hidden on one surface must be
+    hidden at the same offset on the other."""
+    for m in range(5):
+        columns = poloidal_mode_columns(m)
+        half = len(columns) // 2
+        assert (columns[half:] - columns[:half] == N_PER_SURFACE).all()
+
+
+def test_poloidal_mode_is_validated():
+    with pytest.raises(ValueError, match='0 to 4'):
+        poloidal_mode_columns(5)
+
+
+def test_drop_poloidal_modes_removes_the_right_columns():
+    X = np.tile(np.arange(80, dtype=float), (7, 1))
+
+    reduced, dropped = drop_poloidal_modes(X, [4])
+
+    assert reduced.shape == (7, 62)
+    assert dropped.tolist() == list(range(31, 40)) + list(range(71, 80))
+    # The surviving values are their own original column indices, so this
+    # asserts the kept columns are the right ones and in the original order.
+    assert reduced[0].tolist() == [c for c in range(80) if c not in set(dropped.tolist())]
+
+
+def test_drop_poloidal_modes_accepts_several_blocks():
+    X = np.zeros((3, 80))
+
+    reduced, dropped = drop_poloidal_modes(X, [3, 4])
+
+    assert reduced.shape == (3, 44)
+    assert len(dropped) == 36
