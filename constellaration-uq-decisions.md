@@ -722,18 +722,28 @@ RMSE on edge rotational transform per field period, whose pool std is 0.0786.
 
 ---
 
-**4.4 Loss and variance-collapse fix** `OPEN`
+**4.4 Loss and variance-collapse fix** `SETTLED` ✅ 2026-08-29
 
-- [ ] Decided
+- [x] Decided
 
 **Options:** plain Gaussian NLL / MSE warm-up plus variance floor / β-NLL / warm-up plus floor, with β-NLL in reserve
 
-**Leaning:** MSE warm-up plus variance floor, β-NLL held in reserve
+**Decided: MSE warm-up of 25 epochs, then Gaussian NLL, with the predicted variance floored at 1e-6 in z-scored space. β-NLL held in reserve behind a stated trigger.** Values live in `src/constellaration_uq/nets.py` as module constants alongside the rest of the frozen recipe (4.7).
 
 **Why:** The NLL gradient on the mean is scaled by 1/σ², so points the model fits poorly get high predicted σ and are then down-weighted, which stalls learning exactly where it is most needed. Note this is not really "variance collapse" in the σ→0 sense; calling it that in an interview invites a correction. β-NLL (Seitzer et al. 2022) counteracts it directly if warm-up plus floor is not enough. If you go to β-NLL, β becomes another choice.
 
+**Where 25 comes from.** The step 0 history in `results/hp_check.json`, for the frozen recipe. Its validation loss is within 3x of its best by epoch 5, 1.5x by epoch 18, 1.2x by epoch 32, and it stops at 75. So 25 lands where the mean is substantially learned, with two thirds of the epoch budget left for the NLL phase. There is a range of defensible answers here, roughly 20 to 40, and what matters is that the number is fixed, documented, and identical at every N in the sweep. Making it a fraction of the run would vary it with N and break the recipe freeze.
+
+**Where 1e-6 comes from.** Training happens in z-scored space, where the target has unit variance, so 1e-6 is six orders of magnitude below the signal. It is safely above float32 resolution, so 1/variance cannot explode, and in physical units it is a standard deviation of 0.00008 on a target whose own spread is 0.0786. That is far below anything Stage 2 could resolve, which is the point: **the floor must be too small to manufacture an aleatoric term**, because a floor that binds would be read by the step 5 hidden-coefficient check as a working variance head.
+
+**β-NLL trigger, so this is not an open-ended option.** Adopt it if either symptom appears in the first mean-variance ensemble: the predicted variance sitting pinned on its floor across most of the in-region data, or training destabilising once warm-up ends. Both are visible in one run. If neither appears, β-NLL stays unused and is reported as considered-not-needed rather than untried.
+
+**No separate tuning run for these.** Step 5, the hidden-coefficient check, already asks the only question that matters here: does the variance head recover a magnitude that was deliberately injected. A second check for the same thing is scope this budget does not survive.
+
+⚠️ **Reorder steps 2 to 5 because of this entry.** The original order built three mean-variance ensembles and then checked the variance head. If the loss is wrong that means redoing three. Run the random-split ensemble first, then the hidden-coefficient check on it, then the hole and tail ensembles. A bad loss then costs one ensemble instead of three, and the reordering costs nothing.
+
 **My decision:**
->
+> Warm-up 25 epochs, floor the variance at 1e-6, and write the β-NLL trigger down as an observable symptom rather than leaving it as a vague reserve. Then move the variance-head check to immediately after the first mean-variance ensemble, so if any of this is wrong I find out after one run rather than three.
 
 ---
 
@@ -764,6 +774,22 @@ RMSE on edge rotational transform per field period, whose pool std is 0.0786.
 
 **Cost:** near zero. Same code path as the MSE warm-up phase the locked loss (4.4) already requires.
 
+**Pass condition, pre-registered 2026-08-29 before the run.** Ensemble RMSE on the random split's held-out set below **0.0105**, and better than any individual member.
+
+**Where that number comes from.** Table 7 reports 0.006 for this metric. The sklearn single MLP gave 0.0138 and the frozen PyTorch recipe gives 0.01149 for one network (4.10). Averaging ten members should improve on a single member comfortably, so 0.0105 is a modest bar rather than a stretch, and it still sits about 1.75x above Table 7, which is expected against a tuned ensemble. Missing it points at the pipeline, which is the only thing this run exists to test.
+
+⚠️ **Registered before seeing the result on purpose.** Gate 3.5 set its bar from an argument that did not apply, missed it, and the miss was recorded rather than the bar moved. That only works if the bar exists first. Judging afterwards always produces a pass.
+
+**RESULT 2026-08-29, `scripts/mse_ensemble.py`, ten members in 454s: MISSED by 0.2%.** Ensemble RMSE **0.01052** against the 0.0105 bar. The second condition passed cleanly: 0.01052 against a best member of 0.01223, a 14% improvement, so the ensemble is not being carried by one lucky member. Per-member RMSE spans 0.01223 to 0.01304 across ten seeds, with nothing pathological.
+
+⚠️ **The bar was badly calibrated, and that is the finding, not a pipeline defect.** 0.0105 was derived as "a modest improvement over the single network's 0.01149" and rounded, with no uncertainty attached. The run landed 0.00002 away, inside any sensible error bar on a number chosen that way. Same failure as gate 3.5's 0.99: a threshold that sounded principled and was not. The bar is recorded as missed and is **not** moved retroactively, and the run was **not** repeated with a different seed until it passed.
+
+**Proceeding anyway, on the evidence rather than on the verdict.** 1.75x Table 7 on RMSE, against their tuned ensemble, after one afternoon of bounded tuning. The sklearn single MLP was 2.3x, so the PyTorch port plus ensembling closed roughly a third of that gap. A pipeline bug does not look like 1.75x; it looks like 5x, or R² near zero.
+
+⚠️ **R² is NOT comparable to Table 7 and must not be reported as if it were.** Ours is 0.98181 against their 0.997, which reads far worse than the RMSE ratio implies. R² depends on the test set's own spread: our target has std 0.0786, while back-solving std = RMSE / NRMSE from their table gives about 0.115. Same RMSE, different denominator, different R². **RMSE is the comparable number; R² is not**, and 5.3 already restricts the comparability claim to RMSE and R² jointly, which this narrows further.
+
+**Incidental, and it is the baseline for steps 3 and 4:** in-region epistemic spread is 0.00631, which is 8% of the target's standard deviation and about 60% of the ensemble's total error. The members genuinely disagree even where the data is dense. That number has to grow off-distribution or the project has no subject.
+
 **My decision:**
 > Train the plain MSE version first. It is what A.4 actually built so it is the fair comparison, and it verifies the whole pipeline in one cheap run. After that, if the mean-variance means come out worse, I know the cause is the variance head and not the data handling.
 
@@ -775,10 +801,28 @@ RMSE on edge rotational transform per field period, whose pool std is 0.0786.
 
 **Why:** If you train longer at larger N, or early-stop against a validation set that grows with N, you have confounded "more data" with "more optimization" and the N-sweep cannot be attributed to either.
 
-⚠️ **This entry declares a freeze without recording what it froze.** Architecture comes from 4.1, but optimizer, learning rate, batch size, epoch budget, patience and weight decay are unspecified anywhere, and A.4 does not supply them. Fill them in here from the 4.10 sanity check before any ensemble is trained. Until they are written down, the freeze is not real.
+**FROZEN 2026-08-29**, from the 4.10 sanity check. Live in `src/constellaration_uq/nets.py` as module constants, deliberately not config fields (4.8).
+
+| setting | value | source |
+|---|---|---|
+| architecture | (256, 256, 256), tanh | 4.1, Appendix A.4 |
+| optimizer | Adam, no weight decay | ours, A.4 does not say |
+| learning rate | 1e-3 | 4.10 |
+| batch size | 128 | 4.10 |
+| early-stopping validation | 500 points, fixed count | 4.10, confirmed at the sweep floor |
+| max epochs | 500 | cap, not a target |
+| patience | 20, restoring best weights | ours |
+
+⚠️ **The chosen learning rate is not the sanity check's nominal winner, and that is deliberate.** 3e-4 at batch 128 scored best_val 0.02119 against 1e-3's 0.02138, a 0.9% difference at a single seed, which is noise. It cost 210 epochs against 75. The sweep trains 300 networks, so that is roughly 3.7 hours against 1.3 on CPU for a difference that would not survive a second seed. Ties on accuracy are broken on cost, and the reasoning is recorded here so the table's apparent winner does not look like an error later.
+
+**Batch 512 lost outright** across all three learning rates, which is the one unambiguous result in the check.
+
+**500 validation points confirmed sufficient, including at the sweep floor.** Jitter, the mean absolute epoch-to-epoch change in validation loss over the last 20 epochs relative to the best, was 0.030 for the chosen configuration at full training size and 0.010 at N=1000. The stopping rule is picking a real minimum, not noise, at both ends of the sweep.
+
+**Incidental, and it is the sweep's premise appearing early:** at N=1000 the same recipe gives RMSE 0.045 against 0.0115 at full size, a 4x degradation from data volume alone.
 
 **Blocks:** 6.1
-**Blocked by:** 4.10
+**Blocked by:** 4.10 `RESOLVED`
 
 ---
 

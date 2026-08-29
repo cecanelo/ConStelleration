@@ -153,7 +153,19 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 **`src/constellaration_uq/baseline.py` holds the shared single-MLP recipe** (`load_pool`, `fit_mlp`, `rmse`, and the frozen architecture constants). Three scripts fit the same network on different splits, and "same model and recipe for every split" is the premise that makes their numbers comparable at all, so three copy-pasted definitions is where that premise quietly stops being true. The hole placement sweep reproduces its previous ratios exactly after the extraction, which is the check that it changed nothing.
 
-**Next: the ensemble.** Per decision log 4.6, train a plain MSE ensemble before the mean-variance one: ten members, same architecture minus the variance head, to verify the pipeline against Table 7 before the variance head or NLL loss can confuse the diagnosis. Three smaller items still open: the mirror-pair search (folded into decision log 2.2, the tolerance duplicate check, and nothing downstream depends on it), decision log 7.1's calibration diagnostic set, and a three-seed rerun of the narrow sweep's p30 and p90 if the U's upper arm is ever load-bearing.
+**PyTorch training layer built and tested (2026-08-29).** `src/constellaration_uq/nets.py` holds the network, the training loop, `split_validation` and the frozen recipe constants. `src/constellaration_uq/ensemble.py` holds the ten-member wrapper. 25 tests across `tests/test_nets.py` and `tests/test_ensemble.py`, 68 in the suite. The one that matters most is `test_different_seeds_give_different_members`: if the per-member seed does not reach the initialisation, every member is identical, the spread is exactly zero, and the epistemic term reads as perfect confidence everywhere with nothing raising.
+
+⚠️ **`predict` un-z-scores by multiplying by `y_std`, which the mean-variance version cannot reuse**, because a variance rescales by `y_std` squared. That is why it gets its own function rather than a flag, and it is the most likely place for a silent unit error in the whole codebase.
+
+**Step 0 done (2026-08-29), `scripts/hp_check.py`, 436s.** Six single-network fits, three learning rates by two batch sizes, on the random split with selection on validation loss only. Recipe frozen, see decision log 4.7. Batch 512 lost outright at every learning rate.
+
+**Step 1 done (2026-08-29), `scripts/mse_ensemble.py`, ten members in 454s. Ensemble RMSE 0.01052 against a pre-registered bar of 0.0105: MISSED by 0.2%.** The bar was badly calibrated, derived as a round number with no uncertainty, and the miss is recorded rather than the bar moved and rather than the seed rerolled. Proceeding on the evidence: 1.75x Table 7 against their tuned ensemble, the sklearn single MLP was 2.3x, and the ensemble beats its best member by 14% so it is not carried by one lucky run.
+
+⚠️ **Do not report R² against Table 7.** Ours is 0.982 against their 0.997, which reads far worse than the RMSE ratio implies, because R² depends on the test set's own spread: 0.0786 for us against roughly 0.115 back-solved from their table. RMSE is the comparable number, R² is not.
+
+**In-region epistemic spread is 0.00631**, 8% of the target std and about 60% of the ensemble's total error. That is the baseline that has to grow in the hole and tail runs.
+
+**Next: step 2, the mean-variance ensemble on the random split**, then step 3, the hidden-coefficient check on it. Three smaller items still open: the mirror-pair search (folded into decision log 2.2, the tolerance duplicate check, and nothing downstream depends on it), decision log 7.1's calibration diagnostic set, and a three-seed rerun of the narrow sweep's p30 and p90 if the U's upper arm is ever load-bearing.
 
 ---
 
@@ -264,27 +276,30 @@ architecture claim in either direction.
 - `default` subset only, no finite-beta mixing.
 - Ensemble of mean-variance networks; epistemic from spread of means, aleatoric from mean of variances.
 - Architecture follows A.4: three layers, 256 units, tanh.
-- Recipe frozen (architecture, epochs, stopping rule) before the
-  N-sweep, so "more data" is not confounded with "more
-  optimization." ⚠️ The values are not yet written down.
-  A.4 gives architecture, loss, target scaling and ensemble size
-  but no optimizer, learning rate, batch size, epoch budget or
-  patience, and its training code is not in their public repo.
-  Those get chosen by the 4.10 sanity check and recorded in
-  decision log 4.7 before any ensemble trains.
-- Hyperparameter sanity check, not HPO: three learning rates by
-  two batch sizes, six single-network fits, Adam, lr in
-  {3e-4, 1e-3, 3e-3}, batch in {128, 512}. It exists because a
-  bad learning rate costs an order of magnitude, which would
-  make the Table 7 comparison ambiguous between a pipeline bug
-  and a bad optimizer setting, and that comparison is the only
-  reason the plain MSE ensemble exists.
-  ⚠️ **Run it on the random split and select on the in-region
-  validation set only.** Choosing hyperparameters by tail-split
+- **Recipe FROZEN 2026-08-29** by `scripts/hp_check.py`, the
+  step 0 sanity check. Values live in
+  `src/constellaration_uq/nets.py` as module constants, not
+  config fields: Adam with no weight decay, lr 1e-3, batch 128,
+  500 fixed validation points for early stopping, 500 max
+  epochs, patience 20 restoring best weights. Recorded in
+  decision log 4.7. Do not change them to make a run finish
+  faster, the N-sweep's claim is that only data volume varied.
+  ⚠️ **The chosen lr is not the check's nominal winner.** 3e-4
+  beat 1e-3 by 0.9% at one seed, which is noise, and cost 210
+  epochs against 75. Over 300 sweep networks that is 3.7 hours
+  against 1.3. Ties on accuracy break on cost.
+  Batch 512 lost outright at all three learning rates.
+  500 validation points confirmed sufficient at both ends of the
+  sweep: jitter 0.030 at full size, 0.010 at N=1000.
+  Incidental, and it is the sweep's premise arriving early: the
+  same recipe at N=1000 gives RMSE 0.045 against 0.0115 at full
+  size, a 4x degradation from data volume alone.
+  ⚠️ **The check ran on the random split, selecting on
+  validation loss only.** Choosing hyperparameters by tail-split
   performance leaks the extrapolation condition into the model
-  and invalidates the study invisibly. Same failure mode as
-  recalibrating on out-of-region data, and easier to do by
-  accident.
+  and invalidates the study invisibly. `hp_check.py` never
+  constructs a tail split, which makes that impossible rather
+  than merely discouraged.
 - Log10 transform for qi. Targets z-scored using training statistics only.
 - Input scaler fitted on training data only. Out-of-region inputs will fall outside the fitted range. Do not clip.
 - Early-stopping validation set drawn from in-region data only.
@@ -459,6 +474,18 @@ architecture claim in either direction.
   predictions, just two sort orders) while directly testing the
   "total and epistemic should be close" claim empirically
   instead of assuming it.
+- Loss FROZEN 2026-08-29: 25 epochs of plain MSE, then Gaussian
+  NLL, with the predicted variance floored at 1e-6 in z-scored
+  space. 25 comes from the step 0 history, where the frozen
+  recipe reaches 1.5x its best validation loss by epoch 18 and
+  1.2x by epoch 32, out of 75. The floor is six orders of
+  magnitude below the signal and safely above float32 noise, so
+  it stops 1/variance exploding without manufacturing an
+  aleatoric term that the step 3 hidden-coefficient check would
+  then read as real. β-NLL stays unused unless one of two
+  observable symptoms appears in the first mean-variance run:
+  variance pinned on the floor across most in-region data, or
+  training destabilising once warm-up ends.
 - Variance parameterization: log-variance with a floor, not
   softplus. Standard deep-ensemble choice, pairs directly with
   the already-locked MSE-warm-up-plus-variance-floor loss.
@@ -523,7 +550,13 @@ Highest priority first. Full reasoning is in `constellaration-uq-decisions.md` i
    making the deferral threshold defensible. PIT and
    reliability diagrams are last, needing their own binning on
    top of the distance bins.
-2. **Loss.** MSE warm-up plus variance floor, β-NLL in reserve.
+
+**Recently closed (2026-08-29):** the recipe freeze (decision
+log 4.7, Adam, lr 1e-3, batch 128, 500 validation points, 500
+max epochs, patience 20) and the loss (decision log 4.4, MSE
+warm-up of 25 epochs then Gaussian NLL, variance floored at
+1e-6 in z-scored space, β-NLL held behind an observable
+trigger).
 
 **Recently closed by the day 1-2 grid (2026-08-27):** split axis
 (aspect ratio), split direction (low), primary target (edge
@@ -597,17 +630,19 @@ ensemble.
 
 | # | run | ensembles | purpose |
 |---|---|---|---|
-| 0 | hyperparameter sanity check | 0, six single networks | pick lr and batch size, then freeze |
-| 1 | plain MSE ensemble | 1 | pipeline check against Table 7 |
+| 0 | hyperparameter sanity check | 0, six single networks | ✅ done 2026-08-29, recipe frozen in 4.7 |
+| 1 | plain MSE ensemble | 1 | ✅ done 2026-08-29, RMSE 0.01052, missed a badly set 0.0105 bar by 0.2%, 1.75x Table 7 |
 | 2 | mean-variance, random split | 1 | in-domain baseline, no shift |
-| 3 | mean-variance, interior hole at p30 | 1 | a gap with training data both sides |
-| 4 | mean-variance, tail-low | 1 | the extrapolation condition |
-| 5 | hidden-coefficient check | 1 | does the variance head work |
-| 6 | calibration figures | 0 | reads runs 2 to 4 |
-| 7 | deferral curve | 0 | reads run 4 |
+| 3 | hidden-coefficient check | 1 | does the variance head work |
+| 4 | mean-variance, interior hole at p30 | 1 | a gap with training data both sides |
+| 5 | mean-variance, tail-low | 1 | the extrapolation condition |
+| 6 | calibration figures | 0 | reads runs 2, 4 and 5 |
+| 7 | deferral curve | 0 | reads run 5 |
 | 8 | full N-sweep | 30, floor 12 | does the decomposition hold as N grows |
 
-Runs 2 to 4 are the headline result. Run 8 is validation and goes last.
+Runs 2, 4 and 5 are the headline result. Run 8 is validation and goes last.
+
+⚠️ **The variance-head check moved ahead of the hole and tail ensembles** (decision log 4.4, the loss). It used to run after all three. If the loss is wrong that meant redoing three ensembles; now it costs one, and the reorder is free.
 
 ---
 

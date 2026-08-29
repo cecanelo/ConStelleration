@@ -1,0 +1,66 @@
+{
+  "name": "mse_ensemble",
+  "saved_at": "2026-08-29T14:44:07+00:00",
+  "git_commit": "7ffb346750f524a737369f03bf5c91d1d39a209d",
+  "git_dirty": true,
+  "constants": {
+    "SEED": 0,
+    "TEST_FRACTION": 0.2,
+    "TARGET_COL": "metrics.edge_rotational_transform_over_n_field_periods",
+    "AXIS_COL": "metrics.aspect_ratio",
+    "N_MEMBERS": 10,
+    "VAL_SIZE": 500,
+    "LEARNING_RATE": 0.001,
+    "BATCH_SIZE": 128,
+    "MAX_EPOCHS": 500,
+    "PATIENCE": 20,
+    "RMSE_BAR": 0.0105,
+    "architecture": "(256, 256, 256) tanh, Adam, MSE, no variance head"
+  },
+  "results": {
+    "verdict": "FAIL",
+    "ensemble_rmse": 0.010519165167620597,
+    "ensemble_r2": 0.9818134711297626,
+    "member_rmse": [
+      0.012572075132843493,
+      0.012950363442124475,
+      0.012617396969306752,
+      0.013039508862024181,
+      0.012350154098347454,
+      0.012565619749643315,
+      0.012931633762016701,
+      0.012351536108663633,
+      0.012228030907723569,
+      0.012656713220833407
+    ],
+    "member_epochs": [
+      75,
+      79,
+      78,
+      78,
+      61,
+      85,
+      76,
+      69,
+      83,
+      83
+    ],
+    "best_val": [
+      0.02138029970228672,
+      0.020148759707808495,
+      0.019551487639546394,
+      0.022327864542603493,
+      0.019151588901877403,
+      0.022464977577328682,
+      0.02128392457962036,
+      0.022793078795075417,
+      0.020415116101503372,
+      0.023159857839345932
+    ],
+    "mean_epistemic_in_region": 0.006314180325716734,
+    "target_std": 0.0789239111480279,
+    "table_7_rmse": 0.006,
+    "table_7_r2": 0.997,
+    "total_seconds": 454.3
+  }
+}
