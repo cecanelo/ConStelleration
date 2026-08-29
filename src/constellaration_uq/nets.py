@@ -170,3 +170,149 @@ def train_one(
         return out.cpu().numpy().squeeze(-1) * y_std + y_mean
 
     return predict, history
+
+
+# The clamp is applied to the raw output before exponentiating, which enforces
+# the floor and stops exp overflowing in one step. log(1e-6) is about -13.8.
+LOG_VARIANCE_MIN = float(np.log(VARIANCE_FLOOR))
+LOG_VARIANCE_MAX = 13.8
+
+
+def variance_from_raw(raw):
+    """Turn the network's second output into a positive variance (4.5).
+
+    The output is an unconstrained real number, declared to be the natural log
+    of the variance, so exp of it is positive for any value the network can
+    produce and no constraint is needed on the head itself.
+
+    Log-variance rather than softplus because the loss needs log(variance),
+    which is then the raw value itself with no exp-then-log round trip. Kept in
+    one function so a softplus swap is a single edit rather than a search
+    through the codebase.
+    """
+    return torch.exp(raw.clamp(LOG_VARIANCE_MIN, LOG_VARIANCE_MAX))
+
+
+def gaussian_nll(raw_mean, raw_log_variance, target):
+    """Negative log likelihood of a Gaussian, up to an additive constant.
+
+    Two terms pulling against each other. The squared error divided by the
+    variance rewards claiming high uncertainty, since it shrinks the penalty.
+    The log-variance term punishes claiming it. Their balance is what makes the
+    model report calibrated uncertainty rather than saying "I do not know"
+    everywhere.
+
+    The clamped raw value is used directly as log(variance) rather than taking
+    a log of the exponentiated one, which is both cheaper and exact.
+    """
+    clamped = raw_log_variance.clamp(LOG_VARIANCE_MIN, LOG_VARIANCE_MAX)
+    variance = torch.exp(clamped)
+    return torch.mean(0.5 * (clamped + (target - raw_mean) ** 2 / variance))
+
+
+def train_one_mv(
+    X_fit,
+    y_fit,
+    X_val,
+    y_val,
+    seed=0,
+    learning_rate=LEARNING_RATE,
+    batch_size=BATCH_SIZE,
+    max_epochs=MAX_EPOCHS,
+    patience=PATIENCE,
+    warmup_epochs=WARMUP_EPOCHS,
+    device=None,
+):
+    """Train one mean-variance network. Returns (predict, history).
+
+    predict(X) returns (mean, variance), both in physical units.
+
+    ⚠️ The variance un-scales by y_std squared while the mean un-scales by
+    y_std. Getting that wrong produces entirely plausible numbers that are off
+    by the square of the target's spread, and nothing raises. It is the most
+    likely silent error in this codebase, which is why this is a separate
+    function rather than a flag on train_one.
+
+    The loss switches from MSE to Gaussian NLL at warmup_epochs (4.4). The NLL
+    gradient on the mean is scaled by 1/variance, so a model that has not
+    learned the mean yet marks its hard points as noisy and then stops learning
+    from them. Warming up on MSE gets the mean roughly right first.
+
+    history entries are (phase, validation loss). The two phases are on
+    different scales and are not comparable, which is why the phase is recorded
+    and why best-weight tracking resets at the switch.
+    """
+    device = resolve_device(device)
+
+    scaler = StandardScaler().fit(X_fit)
+    y_mean, y_std = y_fit.mean(), y_fit.std()
+
+    def tensor(a):
+        return torch.tensor(np.asarray(a), dtype=torch.float32, device=device)
+
+    x_fit = tensor(scaler.transform(X_fit))
+    t_fit = tensor((y_fit - y_mean) / y_std).unsqueeze(1)
+    x_val = tensor(scaler.transform(X_val))
+    t_val = tensor((y_val - y_mean) / y_std).unsqueeze(1)
+
+    torch.manual_seed(seed)
+    model = MLP(x_fit.shape[1], n_outputs=2).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    mse = nn.MSELoss()
+
+    def loss_for(epoch, output, target):
+        """MSE on the mean during warm-up, NLL after. The variance head is
+        untrained during warm-up and its output is simply ignored."""
+        if epoch < warmup_epochs:
+            return mse(output[:, :1], target)
+        return gaussian_nll(output[:, :1], output[:, 1:], target)
+
+    shuffle = torch.Generator().manual_seed(seed)
+    best_loss, best_state, waited = float('inf'), None, 0
+    history = []
+
+    for epoch in range(max_epochs):
+        # The two losses are on different scales, so a best-so-far carried
+        # across the switch would compare two different quantities and would
+        # usually freeze the warm-up weights forever. Reset at the boundary.
+        if epoch == warmup_epochs:
+            best_loss, best_state, waited = float('inf'), None, 0
+
+        model.train()
+        order = torch.randperm(len(x_fit), generator=shuffle).to(device)
+        for start in range(0, len(order), batch_size):
+            batch = order[start : start + batch_size]
+            optimizer.zero_grad()
+            loss_for(epoch, model(x_fit[batch]), t_fit[batch]).backward()
+            optimizer.step()
+
+        model.eval()
+        with torch.no_grad():
+            val_loss = loss_for(epoch, model(x_val), t_val).item()
+        phase = 'warmup' if epoch < warmup_epochs else 'nll'
+        history.append((phase, val_loss))
+
+        if val_loss < best_loss:
+            best_loss, waited = val_loss, 0
+            best_state = copy.deepcopy(model.state_dict())
+        else:
+            waited += 1
+            # Never stop during warm-up. Its job is to run for a fixed number
+            # of epochs so the NLL phase starts from a comparable place at
+            # every N (4.7), and stopping early would make that vary.
+            if waited >= patience and epoch >= warmup_epochs:
+                break
+
+    model.load_state_dict(best_state)
+    model.eval()
+
+    def predict(X):
+        with torch.no_grad():
+            out = model(tensor(scaler.transform(X)))
+            mean = out[:, 0].cpu().numpy() * y_std + y_mean
+            # Squared, because a variance scales with the square of a linear
+            # rescaling of the target. This is the trap the docstring names.
+            variance = variance_from_raw(out[:, 1]).cpu().numpy() * y_std**2
+        return mean, variance
+
+    return predict, history

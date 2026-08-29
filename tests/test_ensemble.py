@@ -12,7 +12,14 @@ Small ensembles and short runs throughout. These assert wiring, not accuracy.
 import numpy as np
 import pytest
 
-from constellaration_uq.ensemble import N_MEMBERS, combine, train_ensemble
+from constellaration_uq.ensemble import (
+    N_MEMBERS,
+    best_nll,
+    combine,
+    decompose,
+    train_ensemble,
+    train_mv_ensemble,
+)
 from constellaration_uq.nets import split_validation
 
 N_INPUTS = 80
@@ -115,3 +122,116 @@ def test_combine_uses_ddof_one():
     _, spread = combine(predictions)
 
     assert spread[0] == pytest.approx(np.sqrt(2.0))
+
+
+# --- mean-variance ensembles -------------------------------------------------
+
+
+def quick_mv(fit_and_val, **kwargs):
+    X_fit, y_fit, X_val, y_val = fit_and_val
+    options = {
+        'n_members': 3,
+        'max_epochs': 14,
+        'patience': 14,
+        'warmup_epochs': 5,
+        'device': 'cpu',
+    }
+    return train_mv_ensemble(X_fit, y_fit, X_val, y_val, **{**options, **kwargs})
+
+
+def test_mv_predict_returns_means_and_variances(fit_and_val):
+    _, _, X_val, _ = fit_and_val
+    predict, _ = quick_mv(fit_and_val, n_members=4)
+
+    means, variances = predict(X_val)
+
+    assert means.shape == variances.shape == (4, len(X_val))
+    assert (variances > 0).all()
+
+
+def test_mv_members_are_not_identical(fit_and_val):
+    """Same failure as the MSE case. Identical members give zero epistemic
+    spread, which reads as perfect confidence rather than a broken seed."""
+    _, _, X_val, _ = fit_and_val
+    predict, _ = quick_mv(fit_and_val)
+
+    means, _ = predict(X_val)
+
+    assert means.std(axis=0, ddof=1).mean() > 1e-4
+
+
+def test_mv_histories_carry_both_phases(fit_and_val):
+    _, histories = quick_mv(fit_and_val, n_members=2, max_epochs=10, warmup_epochs=4)
+
+    for history in histories:
+        phases = [phase for phase, _ in history]
+        assert phases == ['warmup'] * 4 + ['nll'] * 6
+
+
+def test_mv_progress_reports_the_nll_best(fit_and_val):
+    """The reported best has to come from the NLL phase. Warm-up values are MSE
+    and typically smaller, so a plain min would report one of those as the
+    model's best likelihood."""
+    seen = []
+    _, histories = quick_mv(
+        fit_and_val,
+        n_members=2,
+        progress=lambda k, epochs, best: seen.append(best),
+    )
+
+    for reported, history in zip(seen, histories, strict=True):
+        nll = [value for phase, value in history if phase == 'nll']
+        assert reported == pytest.approx(min(nll))
+
+
+def test_best_nll_ignores_the_warmup_phase():
+    history = [('warmup', 0.001), ('warmup', 0.002), ('nll', 5.0), ('nll', 3.0)]
+
+    assert best_nll(history) == 3.0
+
+
+def test_best_nll_is_nan_when_warmup_never_ended():
+    """A run that stopped inside warm-up has no likelihood to report. NaN says
+    so; returning the MSE value would quietly mislabel it."""
+    assert np.isnan(best_nll([('warmup', 0.1), ('warmup', 0.2)]))
+
+
+# --- the decomposition -------------------------------------------------------
+
+
+def test_decompose_returns_variances_that_add_up():
+    """Total is epistemic plus aleatoric (5.1), which is the law of total
+    variance and only holds in variance space. Standard deviations do not add,
+    and mixing the two produces plausible numbers that are wrong."""
+    means = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+    variances = np.array([[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]])
+
+    parts = decompose(means, variances)
+
+    assert np.allclose(parts['mean'], [3.0, 4.0])
+    assert np.allclose(parts['epistemic_variance'], means.var(axis=0, ddof=1))
+    assert np.allclose(parts['aleatoric_variance'], variances.mean(axis=0))
+    assert np.allclose(
+        parts['total_variance'],
+        parts['epistemic_variance'] + parts['aleatoric_variance'],
+    )
+
+
+def test_decompose_keys_say_variance():
+    """The names are load-bearing. Someone reading epistemic and assuming a
+    standard deviation would be wrong by a square root and never find out."""
+    parts = decompose(np.zeros((2, 3)), np.ones((2, 3)))
+
+    assert set(parts) == {'mean', 'epistemic_variance', 'aleatoric_variance', 'total_variance'}
+
+
+def test_decompose_epistemic_is_zero_when_members_agree():
+    """The degenerate case worth pinning: perfect agreement means no epistemic
+    uncertainty, and total collapses to the aleatoric term alone."""
+    means = np.full((4, 3), 2.0)
+    variances = np.full((4, 3), 0.25)
+
+    parts = decompose(means, variances)
+
+    assert np.allclose(parts['epistemic_variance'], 0.0)
+    assert np.allclose(parts['total_variance'], 0.25)

@@ -10,7 +10,7 @@ epistemic term the whole project is built on. Callers combine.
 
 import numpy as np
 
-from constellaration_uq.nets import train_one
+from constellaration_uq.nets import train_one, train_one_mv
 
 # Matching Appendix A.4, Proxima's ten-MLP ensemble baseline (4.2).
 N_MEMBERS = 10
@@ -68,3 +68,78 @@ def combine(member_predictions):
     looking more confident than the evidence supports.
     """
     return member_predictions.mean(axis=0), member_predictions.std(axis=0, ddof=1)
+
+
+def train_mv_ensemble(
+    X_fit,
+    y_fit,
+    X_val,
+    y_val,
+    n_members=N_MEMBERS,
+    base_seed=0,
+    progress=None,
+    **train_kwargs,
+):
+    """Train n_members mean-variance networks. Returns (predict, histories).
+
+    predict(X) returns (means, variances), each of shape (n_members, len(X)) in
+    physical units. Same rule as train_ensemble: no averaging inside.
+
+    progress, if given, is called with (member_index, epochs, best_nll). The
+    best is taken over the NLL phase only, since warm-up losses are MSE and on
+    a different scale, so mixing them would report a meaningless minimum.
+    """
+    members, histories = [], []
+
+    for k in range(n_members):
+        predict, history = train_one_mv(
+            X_fit, y_fit, X_val, y_val, seed=base_seed + k, **train_kwargs
+        )
+        members.append(predict)
+        histories.append(history)
+        if progress is not None:
+            progress(k, len(history), best_nll(history))
+
+    def predict_all(X):
+        pairs = [member(X) for member in members]
+        return np.stack([m for m, _ in pairs]), np.stack([v for _, v in pairs])
+
+    return predict_all, histories
+
+
+def best_nll(history):
+    """Lowest validation loss over the NLL phase of a mean-variance history.
+
+    history entries are (phase, value). The warm-up entries are MSE and the
+    rest are NLL, so a plain min over the whole thing would usually return a
+    warm-up number and report it as the model's best likelihood.
+    """
+    nll = [value for phase, value in history if phase == 'nll']
+    return min(nll) if nll else float('nan')
+
+
+def decompose(member_means, member_variances):
+    """Split ensemble uncertainty into its two parts. Returns a dict.
+
+    Everything here is a VARIANCE, never a standard deviation, and the keys say
+    so. The law of total variance only adds up in variance space, and the
+    project's definition of total as epistemic plus aleatoric (5.1) is exactly
+    that statement. Standard deviations do not add, and mixing the two is a
+    silent error that produces plausible numbers.
+
+    epistemic is the spread of the member means: what the model class disagrees
+    about, which more data can reduce. aleatoric is the average of the member
+    variances: what each member says is irreducible noise.
+
+    ddof=1 on the epistemic term for the same reason as combine, the members
+    are a sample of the model class rather than all of it.
+    """
+    epistemic = member_means.var(axis=0, ddof=1)
+    aleatoric = member_variances.mean(axis=0)
+
+    return {
+        'mean': member_means.mean(axis=0),
+        'epistemic_variance': epistemic,
+        'aleatoric_variance': aleatoric,
+        'total_variance': epistemic + aleatoric,
+    }

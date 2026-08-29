@@ -165,7 +165,15 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 **In-region epistemic spread is 0.00631**, 8% of the target std and about 60% of the ensemble's total error. That is the baseline that has to grow in the hole and tail runs.
 
-**Next: step 2, the mean-variance ensemble on the random split**, then step 3, the hidden-coefficient check on it. Three smaller items still open: the mirror-pair search (folded into decision log 2.2, the tolerance duplicate check, and nothing downstream depends on it), decision log 7.1's calibration diagnostic set, and a three-seed rerun of the narrow sweep's p30 and p90 if the U's upper arm is ever load-bearing.
+**Step 2 done (2026-08-29), `scripts/mv_ensemble.py random`, ten members in 286s.** In-region RMSE 0.01256, epistemic 0.00768, aleatoric 0.01048, total 0.01314. Out-of-region is near-identical, which is correct for a random split.
+
+**The uncertainty is well calibrated in-region on the first attempt:** total 0.01314 against an actual RMSE of 0.01256, 4.6% over-dispersed. Nothing pinned on the variance floor, 0.00%, so decision log 4.4's β-NLL trigger did not fire.
+
+⚠️ **Aleatoric came out at 0.01048, not near zero.** See the corrected commitment above. Short version: Stage 2 measured that the world has no label noise, while the variance head measures scatter *this model* cannot predict, which includes its own misfit. Both are right. Do not quote the aleatoric number as the dataset's noise level.
+
+⚠️ **The "+19.4% cost of the variance head" the script prints is confounded.** Step 1 trained on 21,118 rows; step 2 carves an in-region slice first and trains on 16,794. Part of that gap is 20% less data. Treat it as an upper bound.
+
+**Next: step 3, the hidden-coefficient check** on the random split's ensemble. Three smaller items still open: the mirror-pair search (folded into decision log 2.2, the tolerance duplicate check, and nothing downstream depends on it), decision log 7.1's calibration diagnostic set, and a three-seed rerun of the narrow sweep's p30 and p90 if the U's upper arm is ever load-bearing.
 
 ---
 
@@ -255,7 +263,15 @@ architecture claim in either direction.
 
 ## Conceptual commitments (already worked out, do not relitigate)
 
-**Aleatoric will be near zero, and that is the correct answer.** The inputs are fully observed (no truncation), the solver is deterministic, a fixed convergence tolerance produces a deterministic high-frequency function rather than noise, and the four generation pathways shift the distribution over x without changing y given x. Anyone arguing that the mixture of pathways creates aleatoric noise is confusing covariate shift with label noise.
+**Label noise is zero, and that is measured, not assumed.** The inputs are fully observed (no truncation), the solver is deterministic, a fixed convergence tolerance produces a deterministic high-frequency function rather than noise, and the four generation pathways shift the distribution over x without changing y given x. Stage 2 confirmed it: near-twin shapes differ in target by exactly 0.000000. Anyone arguing that the mixture of pathways creates aleatoric noise is confusing covariate shift with label noise.
+
+⚠️ **This does NOT mean the variance head will report near zero, and the earlier version of this file wrongly said it would.** Corrected 2026-08-29 by step 2, `scripts/mv_ensemble.py random`, which reports **aleatoric 0.01048**, 13% of the target std and larger than the epistemic term's 0.00768.
+
+**Both facts are true because they answer different questions.** Stage 2 measured whether the *world* is noisy: it is not. The variance head measures the residual scatter *this model* cannot predict, which includes its own misfit. A three-layer MLP on 80 coefficients cannot represent the function exactly, so it is consistently off by about 0.01, and from inside the model that error is indistinguishable from noise. Under NLL the honest thing is to widen the interval, so it does. What the head reports is "irreducible given this architecture and this input representation", not "irreducible in principle".
+
+**Consequence for the write-up:** never present the aleatoric number as the dataset's noise level. It is a property of the model, and the gap between it and Stage 2's zero is model misfit wearing the wrong label. This is the concrete case of the relativity note below, not a contradiction of it.
+
+**Consequence for the hidden-coefficient check:** it gets stronger, not weaker. The question is no longer "does aleatoric rise off a floor of zero", which a saturated head could fake. It is "does aleatoric rise by roughly the injected amount, on top of a visible baseline of 0.0105", and there is now room for that answer to be wrong.
 
 **Therefore: manufacture aleatoric deliberately.** Hide the high mode-number coefficients to create a known noise floor, then check whether the variance head recovers the right magnitude. (Hiding field period is no longer a viable alternative, it's fixed at NFP=3 across the whole dataset, so there's nothing left to hide there.) This converts the decomposition from an assertion into a validated measurement, and it is the reason the mean-variance head is not decorative.
 

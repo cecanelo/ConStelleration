@@ -883,6 +883,31 @@ RMSE on edge rotational transform per field period, whose pool std is 0.0786.
 
 **Why:** Standard law-of-total-variance decomposition for an ensemble. Both terms come out directly, so no subtracting one from the other. Note for the write-up: this is a decomposition of the ensemble mixture, not of a Bayesian posterior, and the split is relative to model class and input representation rather than absolute.
 
+**FIRST MEASUREMENT 2026-08-29, `scripts/mv_ensemble.py random`.** Ten members, random split, per-point terms averaged over the in-region held-out slice. Reported as standard deviations, having been added in variance space.
+
+| | in-region | out-of-region |
+|---|---|---|
+| RMSE | 0.01256 | 0.01280 |
+| epistemic | 0.00768 | 0.00776 |
+| aleatoric | 0.01048 | 0.01050 |
+| total | 0.01314 | 0.01321 |
+
+**The uncertainty is well calibrated in-region on the first attempt.** Total 0.01314 against an actual RMSE of 0.01256, 4.6% over-dispersed. In and out are near-identical, which is the correct answer for a random split and the baseline the hole and tail runs have to move.
+
+**Nothing pinned on the variance floor, 0.00%**, so the β-NLL trigger in 4.4 did not fire and warm-up plus floor was sufficient.
+
+⚠️ **Aleatoric is 0.01048, not near zero, and the prediction that it would be near zero was wrong.** It is 13% of the target's standard deviation and larger than the epistemic term. This does not contradict Stage 2, which measured near-twin shapes differing by exactly 0.000000. The two answer different questions.
+
+- **Stage 2 measured whether the world is noisy.** It is not. The solver is deterministic and the inputs are fully observed.
+- **The variance head measures residual scatter this model cannot predict**, which includes its own misfit. A three-layer MLP on 80 coefficients cannot represent the map exactly, so it is consistently off by about 0.01, and from inside the model that error is indistinguishable from noise. Under NLL the calibrated response is to widen the interval, so it does.
+
+So the reported aleatoric means "irreducible given this architecture and this input representation", not "irreducible in principle". That is exactly the relativity this entry already warned about, arriving as a number rather than a caveat.
+
+**Two consequences.**
+
+- **Never present the aleatoric value as the dataset's noise level.** It is a property of the model. The gap between it and Stage 2's zero is model misfit wearing the wrong label, and a reviewer who knows this literature will ask.
+- **The hidden-coefficient check gets stronger.** The question is no longer "does aleatoric rise off a floor of zero", which a head saturated at its floor could fake by construction. It is "does aleatoric rise by roughly the injected magnitude, on top of a visible baseline of 0.0105", and there is now room for that to come out wrong.
+
 ---
 
 **5.2 Reporting space** `SETTLED`

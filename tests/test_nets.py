@@ -16,12 +16,19 @@ import pytest
 import torch
 
 from constellaration_uq.nets import (
+    LOG_VARIANCE_MAX,
+    LOG_VARIANCE_MIN,
     MAX_EPOCHS,
     MLP,
     VAL_SIZE,
+    VARIANCE_FLOOR,
+    WARMUP_EPOCHS,
+    gaussian_nll,
     resolve_device,
     split_validation,
     train_one,
+    train_one_mv,
+    variance_from_raw,
 )
 
 N_INPUTS = 80
@@ -220,3 +227,187 @@ def test_resolve_device_honours_the_override():
 def test_resolve_device_matches_availability():
     expected = 'cuda' if torch.cuda.is_available() else 'cpu'
     assert resolve_device().type == expected
+
+
+# --- raw output to variance --------------------------------------------------
+
+
+def test_variance_from_raw_is_the_exponential():
+    raw = torch.tensor([-2.0, 0.0, 1.5])
+
+    assert torch.allclose(variance_from_raw(raw), torch.exp(raw))
+
+
+def test_variance_from_raw_is_always_positive():
+    """The head is unconstrained, so anything it emits has to come back as a
+    usable variance. A negative or zero one makes the NLL undefined."""
+    raw = torch.tensor([-500.0, -13.9, 0.0, 100.0, 1e4])
+
+    assert (variance_from_raw(raw) > 0).all()
+    assert torch.isfinite(variance_from_raw(raw)).all()
+
+
+def test_variance_from_raw_respects_the_floor():
+    """The floor stops 1/variance exploding. It must also be low enough that it
+    cannot manufacture an aleatoric term the step 3 check would read as real,
+    which is why the constant is asserted rather than just the clamping (4.4)."""
+    assert variance_from_raw(torch.tensor([-1e6])).item() == pytest.approx(VARIANCE_FLOOR)
+    assert VARIANCE_FLOOR == 1e-6
+    assert LOG_VARIANCE_MIN == pytest.approx(np.log(1e-6))
+
+
+def test_variance_from_raw_cannot_overflow():
+    """Without the upper clamp, exp of a large raw output is inf, which
+    poisons every downstream number silently."""
+    assert variance_from_raw(torch.tensor([1e4])).item() == pytest.approx(np.exp(LOG_VARIANCE_MAX))
+
+
+# --- the loss ----------------------------------------------------------------
+
+
+def test_nll_prefers_small_variance_when_the_mean_is_right():
+    """A confident correct prediction must score better than a hedged one, or
+    the model has no reason to ever report low uncertainty."""
+    target = torch.zeros(1, 1)
+    mean = torch.zeros(1, 1)
+
+    confident = gaussian_nll(mean, torch.full((1, 1), -4.0), target)
+    hedged = gaussian_nll(mean, torch.zeros(1, 1), target)
+
+    assert confident < hedged
+
+
+def test_nll_prefers_large_variance_when_the_mean_is_wrong():
+    """The mirror. A badly wrong prediction should be penalised less if the
+    model admitted it was uncertain, which is what makes the head learn."""
+    target = torch.zeros(1, 1)
+    mean = torch.full((1, 1), 5.0)
+
+    confident = gaussian_nll(mean, torch.zeros(1, 1), target)
+    hedged = gaussian_nll(mean, torch.full((1, 1), 3.0), target)
+
+    assert hedged < confident
+
+
+def test_nll_matches_the_closed_form():
+    """Guards the algebra itself, up to the dropped 0.5*log(2*pi) constant."""
+    mean = torch.tensor([[1.0]])
+    raw = torch.tensor([[0.7]])
+    target = torch.tensor([[2.5]])
+
+    variance = float(np.exp(0.7))
+    expected = 0.5 * (0.7 + (2.5 - 1.0) ** 2 / variance)
+
+    assert gaussian_nll(mean, raw, target).item() == pytest.approx(expected, rel=1e-5)
+
+
+def test_nll_is_finite_at_the_floor():
+    """The pathological case the floor exists for: a confident model that is
+    badly wrong. Without a floor this is a division by something near zero."""
+    loss = gaussian_nll(torch.zeros(1, 1), torch.full((1, 1), -1e6), torch.full((1, 1), 3.0))
+
+    assert torch.isfinite(loss)
+
+
+# --- mean-variance training --------------------------------------------------
+
+
+def quick_mv(X_fit, y_fit, X_val, y_val, **kwargs):
+    options = {'max_epochs': 20, 'patience': 20, 'warmup_epochs': 8, 'device': 'cpu'}
+    return train_one_mv(X_fit, y_fit, X_val, y_val, **{**options, **kwargs})
+
+
+def test_mv_predict_returns_a_mean_and_a_variance(fit_and_val):
+    X_fit, y_fit, X_val, y_val = fit_and_val
+    predict, _ = quick_mv(X_fit, y_fit, X_val, y_val)
+
+    mean, variance = predict(X_val)
+
+    assert mean.shape == variance.shape == (len(X_val),)
+    assert (variance > 0).all()
+
+
+def test_mv_mean_is_in_physical_units(fit_and_val):
+    """The fixture's target sits near 10, so a forgotten un-z-scoring would
+    answer near 0 with a perfectly correct shape."""
+    X_fit, y_fit, X_val, y_val = fit_and_val
+    predict, _ = quick_mv(X_fit, y_fit, X_val, y_val)
+
+    mean, _ = predict(X_val)
+
+    assert abs(mean.mean() - y_val.mean()) < 0.5 * y_val.std()
+
+
+def test_mv_variance_scales_with_y_std_squared(fit_and_val):
+    """The likeliest silent error in the codebase. A variance rescales by the
+    square of a linear change to the target, so multiplying the target by 10
+    must multiply the reported variance by 100, not 10.
+
+    Both models see identical data up to that scaling and identical seeds, so
+    the ratio isolates the un-scaling rather than any training difference.
+    """
+    X_fit, y_fit, X_val, y_val = fit_and_val
+
+    plain, _ = quick_mv(X_fit, y_fit, X_val, y_val, seed=0)
+    scaled, _ = quick_mv(X_fit, y_fit * 10.0, X_val, y_val * 10.0, seed=0)
+
+    _, variance = plain(X_val)
+    _, variance_scaled = scaled(X_val)
+
+    assert np.allclose(variance_scaled, variance * 100.0, rtol=1e-3)
+
+
+def test_mv_history_records_both_phases(fit_and_val):
+    """The two losses are on different scales, so the phase has to travel with
+    the number or a later reader will plot them as one curve."""
+    X_fit, y_fit, X_val, y_val = fit_and_val
+    _, history = quick_mv(X_fit, y_fit, X_val, y_val, max_epochs=12, warmup_epochs=5)
+
+    phases = [phase for phase, _ in history]
+
+    assert phases == ['warmup'] * 5 + ['nll'] * 7
+    assert all(np.isfinite(value) for _, value in history)
+
+
+def test_mv_warmup_runs_its_full_length(fit_and_val):
+    """Warm-up must not be cut short by patience. Its job is to run a fixed
+    number of epochs so the NLL phase starts from a comparable place at every
+    N in the sweep (4.7), and early stopping would make that vary."""
+    X_fit, y_fit, X_val, y_val = fit_and_val
+    _, history = quick_mv(X_fit, y_fit, X_val, y_val, max_epochs=30, warmup_epochs=12, patience=1)
+
+    phases = [phase for phase, _ in history]
+
+    assert phases.count('warmup') == 12
+    assert 'nll' in phases, 'stopped before the NLL phase ever started'
+
+
+def test_mv_best_weights_come_from_the_nll_phase(fit_and_val):
+    """Warm-up losses are MSE and typically much smaller than NLL values. A
+    best-so-far carried across the switch would lock in the warm-up weights and
+    the variance head would never train at all."""
+    X_fit, y_fit, X_val, y_val = fit_and_val
+    predict, history = quick_mv(X_fit, y_fit, X_val, y_val, max_epochs=25, warmup_epochs=8)
+
+    nll_losses = [value for phase, value in history if phase == 'nll']
+    _, variance = predict(X_val)
+
+    assert len(nll_losses) > 1
+    assert not np.allclose(variance, variance[0]), 'variance is constant, head did not train'
+
+
+def test_mv_is_reproducible(fit_and_val):
+    X_fit, y_fit, X_val, y_val = fit_and_val
+
+    first, _ = quick_mv(X_fit, y_fit, X_val, y_val, seed=0)
+    again, _ = quick_mv(X_fit, y_fit, X_val, y_val, seed=0)
+    other, _ = quick_mv(X_fit, y_fit, X_val, y_val, seed=1)
+
+    assert np.allclose(first(X_val)[0], again(X_val)[0])
+    assert not np.allclose(first(X_val)[0], other(X_val)[0])
+
+
+def test_warmup_default_is_the_frozen_value():
+    """Changing this silently would alter the frozen recipe for every model in
+    the project (4.4)."""
+    assert WARMUP_EPOCHS == 25
