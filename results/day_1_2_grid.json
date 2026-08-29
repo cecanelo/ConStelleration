@@ -1,0 +1,200 @@
+{
+  "name": "day_1_2_grid",
+  "saved_at": "2026-08-28T03:58:44+00:00",
+  "git_commit": "1fde990ea1f05434ee4c656d387972a5456b2837",
+  "git_dirty": true,
+  "constants": {
+    "SEED": 0,
+    "TEST_FRACTION": 0.2,
+    "IN_REGION_TEST_FRACTION": 0.2,
+    "N_DISTANCE_BINS": 8,
+    "AXES": [
+      "metrics.aspect_ratio",
+      "metrics.max_elongation"
+    ],
+    "CUTS": [
+      "tail_low",
+      "tail_high",
+      "hole"
+    ],
+    "TARGETS": {
+      "edge_rot_transform": "metrics.edge_rotational_transform_over_n_field_periods",
+      "log10_qi": "metrics.qi"
+    },
+    "architecture": "(256, 256, 256) tanh, early stopping"
+  },
+  "results": {
+    "pool_rows": 27050,
+    "total_seconds": 659.4,
+    "rows": [
+      {
+        "axis": "aspect_ratio",
+        "cut": "tail_low",
+        "target": "edge_rot_transform",
+        "n_fit": 17293,
+        "n_oor": 5405,
+        "rmse_in": 0.01378634788365768,
+        "rmse_out": 0.04156720368051644,
+        "ratio": 3.015098997305164,
+        "d_max": 2.133974850387236,
+        "min_bin": 276,
+        "delta": 0.058989068012026906,
+        "fit_seconds": 77.1
+      },
+      {
+        "axis": "aspect_ratio",
+        "cut": "tail_high",
+        "target": "edge_rot_transform",
+        "n_fit": 17293,
+        "n_oor": 5405,
+        "rmse_in": 0.015211834489671922,
+        "rmse_out": 0.01736013143786526,
+        "ratio": 1.1412253696062709,
+        "d_max": 1.351942016066366,
+        "min_bin": 196,
+        "delta": 0.06999999999999999,
+        "fit_seconds": 31.1
+      },
+      {
+        "axis": "aspect_ratio",
+        "cut": "hole",
+        "target": "edge_rot_transform",
+        "n_fit": 17294,
+        "n_oor": 5404,
+        "rmse_in": 0.014756805827820555,
+        "rmse_out": 0.014064520114088463,
+        "ratio": 0.9530870215540177,
+        "d_max": 0.20115046582236573,
+        "min_bin": 641,
+        "delta": 0.03870767277113485,
+        "fit_seconds": 46.9
+      },
+      {
+        "axis": "max_elongation",
+        "cut": "tail_low",
+        "target": "edge_rot_transform",
+        "n_fit": 17293,
+        "n_oor": 5405,
+        "rmse_in": 0.014313841858519784,
+        "rmse_out": 0.027271085818249524,
+        "ratio": 1.905224752921063,
+        "d_max": 2.275441059667331,
+        "min_bin": 12,
+        "delta": 0.2829016319029166,
+        "fit_seconds": 67.9
+      },
+      {
+        "axis": "max_elongation",
+        "cut": "tail_high",
+        "target": "edge_rot_transform",
+        "n_fit": 17293,
+        "n_oor": 5405,
+        "rmse_in": 0.014432366182853243,
+        "rmse_out": 0.018240388790206914,
+        "ratio": 1.2638529648643404,
+        "d_max": 37.22509214363102,
+        "min_bin": 0,
+        "delta": Infinity,
+        "fit_seconds": 43.1
+      },
+      {
+        "axis": "max_elongation",
+        "cut": "hole",
+        "target": "edge_rot_transform",
+        "n_fit": 17294,
+        "n_oor": 5404,
+        "rmse_in": 0.015281427408427724,
+        "rmse_out": 0.013912885552571865,
+        "ratio": 0.9104441084410015,
+        "d_max": 0.2600299588380893,
+        "min_bin": 608,
+        "delta": 0.039744248177036826,
+        "fit_seconds": 31.0
+      },
+      {
+        "axis": "aspect_ratio",
+        "cut": "tail_low",
+        "target": "log10_qi",
+        "n_fit": 17293,
+        "n_oor": 5405,
+        "rmse_in": 0.14343669162940823,
+        "rmse_out": 0.21975843517276683,
+        "ratio": 1.5320935855140059,
+        "d_max": 2.129355270003397,
+        "min_bin": 276,
+        "delta": 0.058989068012026906,
+        "fit_seconds": 115.1
+      },
+      {
+        "axis": "aspect_ratio",
+        "cut": "tail_high",
+        "target": "log10_qi",
+        "n_fit": 17293,
+        "n_oor": 5405,
+        "rmse_in": 0.14282601264639602,
+        "rmse_out": 0.2493453162599558,
+        "ratio": 1.7457976431595608,
+        "d_max": 1.3510607183406385,
+        "min_bin": 197,
+        "delta": 0.06982210898815146,
+        "fit_seconds": 81.7
+      },
+      {
+        "axis": "aspect_ratio",
+        "cut": "hole",
+        "target": "log10_qi",
+        "n_fit": 17294,
+        "n_oor": 5404,
+        "rmse_in": 0.14841761880245785,
+        "rmse_out": 0.16515339196004628,
+        "ratio": 1.1127613641333483,
+        "d_max": 0.20102974275490232,
+        "min_bin": 641,
+        "delta": 0.03870767277113485,
+        "fit_seconds": 29.5
+      },
+      {
+        "axis": "max_elongation",
+        "cut": "tail_low",
+        "target": "log10_qi",
+        "n_fit": 17293,
+        "n_oor": 5405,
+        "rmse_in": 0.13290869797574537,
+        "rmse_out": 0.2320798440458211,
+        "ratio": 1.7461599397217298,
+        "d_max": 2.276768858645899,
+        "min_bin": 12,
+        "delta": 0.2829016319029166,
+        "fit_seconds": 36.7
+      },
+      {
+        "axis": "max_elongation",
+        "cut": "tail_high",
+        "target": "log10_qi",
+        "n_fit": 17293,
+        "n_oor": 5405,
+        "rmse_in": 0.14925742614676654,
+        "rmse_out": 0.17981070104093216,
+        "ratio": 1.2047018743584808,
+        "d_max": 37.246966984032994,
+        "min_bin": 0,
+        "delta": Infinity,
+        "fit_seconds": 60.6
+      },
+      {
+        "axis": "max_elongation",
+        "cut": "hole",
+        "target": "log10_qi",
+        "n_fit": 17294,
+        "n_oor": 5404,
+        "rmse_in": 0.14604074863930888,
+        "rmse_out": 0.14420011455561532,
+        "ratio": 0.9873964348933902,
+        "d_max": 0.2597499548060087,
+        "min_bin": 614,
+        "delta": 0.039549581301291825,
+        "fit_seconds": 33.9
+      }
+    ]
+  }
+}
