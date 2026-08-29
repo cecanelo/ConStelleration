@@ -642,6 +642,31 @@ RMSE on edge rotational transform per field period, whose pool std is 0.0786.
 
 ⚠️ **Two measurement choices that would otherwise flatter the result.** Distance is computed against the fit set, not the training mask; using the mask would include the in-region slice in its own reference set and hand those points distance 0 by construction rather than by measurement. And the in-region slice is a single anchor at distance 0, not part of the binned curve: it is half the evaluation set, so quantile binning over the combined set spent three of eight bins stacking it on the y axis.
 
+---
+
+**ENSEMBLE MEASUREMENT 2026-08-29, `scripts/mv_ensemble.py`, three ten-member mean-variance ensembles.** Steps 2, 4 and 5. This is the headline result the project was built to produce.
+
+| split | region | RMSE | epistemic | aleatoric | total | total / RMSE |
+|---|---|---|---|---|---|---|
+| random | in | 0.01256 | 0.00768 | 0.01048 | 0.01314 | **1.05** |
+| random | out | 0.01280 | 0.00776 | 0.01050 | 0.01321 | **1.03** |
+| hole p30 | in | 0.01252 | 0.00703 | 0.00906 | 0.01160 | **0.93** |
+| hole p30 | out | 0.02484 | 0.01018 | 0.01118 | 0.01538 | **0.62** |
+| tail-low | in | 0.01223 | 0.00704 | 0.00919 | 0.01172 | **0.96** |
+| tail-low | out | 0.03962 | 0.01300 | 0.01727 | 0.02206 | **0.56** |
+
+**The finding: calibration holds in region and breaks out of it.** The last column is the predicted uncertainty divided by the error it is predicting. In region it sits between 0.93 and 1.05 across all three splits. Out of region it falls to 0.62 in the hole and 0.56 at the tail, so the model under-states its own error by 38% and 44%.
+
+**The sentence for a pitch.** At the compact edge the error grows 3.24x while the reported uncertainty grows only 1.88x. The surrogate is overconfident precisely where it is wrong, and nothing in its output says so.
+
+**The uncertainty does respond, which is what makes deferral viable.** Total rises 33% into the hole and 88% into the tail. The signal is real and should rank points usefully even though it cannot be read as an absolute interval off-distribution. Whether it ranks well enough is Stage 8's question, not this one.
+
+**The hole-versus-tail contrast survives the move to ensembles.** Out-of-region RMSE is 1.98x in-region for the hole against 3.24x for the tail, against 1.80 and 3.02 from the single-MLP grid. Same story, slightly compressed.
+
+⚠️ **Aleatoric rises off-distribution too**, 0.00919 to 0.01727 at the tail. Noise in the world cannot depend on where you stand, so this is further evidence that the term measures model misfit rather than label noise, consistent with 5.1's first measurement. Say it plainly in the write-up rather than being caught on it.
+
+**Nothing pinned on the variance floor in any of the three runs**, so 4.4's β-NLL question stays closed across all five ensembles trained so far.
+
 **My decision:**
 > Run all three. A random split alone just reproduces Table 7. The interesting number is the distance between the hole result and the tail result, because that separates "cannot interpolate into gaps" from "cannot extrapolate past the edge," and those two problems need different responses.
 
@@ -958,11 +983,19 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 **Fixed test sets, frozen across all N:** the tail held-out set for the off-distribution check, plus a fixed in-region slice for the shrinks-with-N check.
 
-**Both input conditions** (see 6.2), so the whole sweep runs twice.
+**Both noise conditions** (see 6.2), so the whole sweep runs twice: clean targets, and targets with Gaussian noise of σ = 0.020 added.
 
-**Budget: 5 N × 3 seeds × 2 input conditions = 30 ensembles, 300 member networks.** Written down deliberately. Read unbounded, across three splits and two targets, this is 180 ensembles and 1800 networks, which does not survive the time budget. Any expansion past 30 is a visible decision, not a drift.
+⚠️ **This used to say "both input conditions", meaning all 80 coefficients against high mode-numbers hidden. Amended 2026-08-29.** 6.2 retired the hidden-coefficient instrument after measuring that it injects about 0.003 no matter how much is dropped, which is inside seed noise. The sweep inherits the replacement: clean against added noise.
 
-**If the schedule slips, shrink the grid, never drop the sweep** (amended 2026-08-29). The floor is 3 N × 2 seeds × 2 input conditions = 12 ensembles. This decision already commits to reporting the *shape* of the epistemic decay rather than a fitted exponent, and 12 points show the shape. Dropping the sweep entirely is not an option, because nothing else can test whether the epistemic term is reducible with data, which is the only thing that earns it the name. An earlier version of 6.5 named the sweep as the first thing to cut; that was wrong and is retracted.
+**Why the sweep needs a second condition at all is unchanged.** One of its three questions is whether aleatoric stays flat as N grows. On clean targets aleatoric is the model's own misfit, which *does* shrink as the model gets more data, so the question has no content there. Adding a fixed known noise floor gives it something that genuinely should not move with N, and the contrast is the result: epistemic decaying toward a flat aleatoric floor.
+
+**σ = 0.020 for the noisy condition.** From the three levels in 6.2: 0.005 is too close to the baseline misfit to separate from it, and 0.050 dominates everything so the epistemic decay would be invisible next to it. 0.020 is 25% of the target's spread, roughly twice the baseline aleatoric, and it recovered at ratio 1.09.
+
+⚠️ **This makes the sweep's aleatoric claim sharper than it was.** Under hidden coefficients, "aleatoric stays flat" would have been checked against an injection that was itself only estimated. With added noise the floor is exact, so the claim becomes "aleatoric stays at 0.020 as N grows twentyfold", which is falsifiable to a number rather than to a trend.
+
+**Budget: 5 N × 3 seeds × 2 noise conditions = 30 ensembles, 300 member networks.** Written down deliberately. Read unbounded, across three splits and two targets, this is 180 ensembles and 1800 networks, which does not survive the time budget. Any expansion past 30 is a visible decision, not a drift.
+
+**If the schedule slips, shrink the grid, never drop the sweep** (amended 2026-08-29). The floor is 3 N × 2 seeds × 2 noise conditions = 12 ensembles. This decision already commits to reporting the *shape* of the epistemic decay rather than a fitted exponent, and 12 points show the shape. Dropping the sweep entirely is not an option, because nothing else can test whether the epistemic term is reducible with data, which is the only thing that earns it the name. An earlier version of 6.5 named the sweep as the first thing to cut; that was wrong and is retracted.
 
 ⚠️ **Do not assume the sweep is expensive before measuring it.** It was described as the largest remaining compute item on the basis of its ensemble count alone. These are small networks on GPU, so 300 of them may well be an hour or two. Time a single member network before the ensemble work starts, and settle the scheduling question with a measurement instead of a guess.
 
@@ -973,9 +1006,9 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 **6.2 Which checks survive** `SETTLED`
 
-**Decided:** All three original checks (epistemic shrinks with N, epistemic rises off-distribution, the two signals are not tightly correlated), but run in both input conditions from 2.4.
+**Decided:** All three original checks (epistemic shrinks with N, epistemic rises off-distribution, the two signals are not tightly correlated), run in both noise conditions: clean targets, and targets with Gaussian noise of σ = 0.020 added. "Input conditions" until 2026-08-29, see the amendment below.
 
-**Why:** All three were designed as contrasts between two live signals. If aleatoric sits at the numerical floor, "aleatoric does not shrink with N" is trivially true and the correlation is measured against near-noise. Running a second input condition alongside restores the contrast: epistemic decaying toward a nonzero, N-invariant aleatoric floor.
+**Why:** All three were designed as contrasts between two live signals. If aleatoric sits at the numerical floor, "aleatoric does not shrink with N" is trivially true and the correlation is measured against near-noise. Running a second noise condition alongside restores the contrast: epistemic decaying toward a nonzero, N-invariant aleatoric floor.
 
 **AMENDED 2026-08-29: the second condition is added target noise, not hidden input coefficients.** `scripts/variance_check.py`. The original instrument was tried first and measured to be too weak.
 
@@ -1321,7 +1354,7 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 - [ ] Decided
 
-**Candidates:** interior-hole versus tail calibration contrast (the main figure, 3.8) / distance-binned calibration per split / N-sweep in both input conditions / deferral curve with four lines / failure rate versus aspect ratio / reliability diagrams
+**Candidates:** interior-hole versus tail calibration contrast (the main figure, 3.8) / distance-binned calibration per split / N-sweep in both noise conditions / deferral curve with four lines / failure rate versus aspect ratio / reliability diagrams
 
 **Leaning:** three or four, cut the rest
 

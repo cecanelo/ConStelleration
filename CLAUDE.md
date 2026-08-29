@@ -188,7 +188,28 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 ⚠️ **One reading that looks like failure and is not.** At σ = 0.05 total predicted uncertainty is 0.053 against a clean-target error of 0.0216, which reads as badly over-dispersed. The model estimates uncertainty for the noisy distribution it trained on, while being scored against clean targets. Against noisy targets the expected error is sqrt(0.0216² + 0.05²) = 0.0545 versus 0.053 predicted. Correctly calibrated for its own distribution.
 
-**Next: steps 4 and 5, the hole and tail mean-variance ensembles.** No new code, `scripts/mv_ensemble.py hole` then `tail`, about five minutes each. Three smaller items still open: the mirror-pair search (folded into decision log 2.2, the tolerance duplicate check, and nothing downstream depends on it), decision log 7.1's calibration diagnostic set, and a three-seed rerun of the narrow sweep's p30 and p90 if the U's upper arm is ever load-bearing.
+**Steps 4 and 5 done (2026-08-29), `scripts/mv_ensemble.py hole` and `tail`.** All three headline ensembles now exist, and this is the result the project was built to produce.
+
+| split | region | RMSE | epistemic | aleatoric | total | total / RMSE |
+|---|---|---|---|---|---|---|
+| random | in | 0.01256 | 0.00768 | 0.01048 | 0.01314 | **1.05** |
+| random | out | 0.01280 | 0.00776 | 0.01050 | 0.01321 | **1.03** |
+| hole p30 | in | 0.01252 | 0.00703 | 0.00906 | 0.01160 | **0.93** |
+| hole p30 | out | 0.02484 | 0.01018 | 0.01118 | 0.01538 | **0.62** |
+| tail-low | in | 0.01223 | 0.00704 | 0.00919 | 0.01172 | **0.96** |
+| tail-low | out | 0.03962 | 0.01300 | 0.01727 | 0.02206 | **0.56** |
+
+**Calibration holds in region and breaks out of it.** The last column is predicted uncertainty over the error it predicts. In region it is 0.93 to 1.05 across all three splits. Out of region it falls to 0.62 and 0.56, so the model under-states its own error by 38% and 44%.
+
+**The pitch sentence:** at the compact edge the error grows 3.24x while the reported uncertainty grows only 1.88x. Overconfident precisely where it is wrong, with nothing in the output to say so.
+
+**The signal does respond**, total rising 33% into the hole and 88% into the tail, so it should rank points for deferral even though it cannot be read as an absolute interval off-distribution. Whether it ranks well enough is the deferral curve's question.
+
+**The hole-versus-tail contrast survives the move to ensembles:** out-of-region RMSE is 1.98x in-region for the hole against 3.24x for the tail, against 1.80 and 3.02 from the single-MLP grid.
+
+⚠️ **Aleatoric rises off-distribution too**, 0.00919 to 0.01727 at the tail. Noise in the world cannot depend on where you stand, so this is more evidence the term measures model misfit. Consistent with step 2, and worth stating plainly rather than being caught on.
+
+**Next: close decision log 7.1, which calibration diagnostics to run.** It is the last open decision and it blocks step 6. Coverage against nominal is what turns "under-states by 44%" into "the 90% interval contains the truth X% of the time", which is what makes a deferral threshold defensible. Steps 6 and 7 then need no training: all three `results/mv_ensemble_*_points.csv` files already carry distance, mean and the three variance terms per point. Three smaller items still open: the mirror-pair search (folded into decision log 2.2, the tolerance duplicate check, and nothing downstream depends on it), decision log 7.1's calibration diagnostic set, and a three-seed rerun of the narrow sweep's p30 and p90 if the U's upper arm is ever load-bearing.
 
 ---
 
@@ -355,19 +376,31 @@ architecture claim in either direction.
   Fixed test sets, frozen across all N: the tail held-out set
   for the off-distribution check, plus a fixed in-region slice
   for the shrinks-with-N check.
-  Run the whole sweep in **both input conditions**, all 80
-  coefficients and high mode-numbers hidden. Without the second
-  condition two of the three checks are vacuous, "aleatoric
-  stays flat as N grows" says nothing when aleatoric is already
-  at the numerical floor. The hidden condition restores the
-  contrast: epistemic decaying toward a nonzero, N-invariant
-  aleatoric floor, and lets the variance head be checked against
-  a known injected magnitude.
-  Budget: 5 N x 3 seeds x 2 input conditions = 30 ensembles,
+  Run the whole sweep in **both noise conditions**: clean
+  targets, and targets with Gaussian noise of σ = 0.020 added.
+  ⚠️ This said "both input conditions", all 80 coefficients
+  against high mode-numbers hidden, until 2026-08-29. Decision
+  log 6.2 retired that instrument after measuring it injects
+  about 0.003 however much is dropped. The sweep inherits the
+  replacement.
+  Without a second condition one of the three checks is vacuous:
+  on clean targets aleatoric is the model's own misfit, which
+  *does* shrink with N, so "aleatoric stays flat" has no content.
+  A fixed injected floor gives it something that genuinely should
+  not move, and the contrast is the result: epistemic decaying
+  toward a flat aleatoric floor.
+  σ = 0.020 because 0.005 is too close to the baseline misfit to
+  separate from it and 0.050 dominates everything, hiding the
+  epistemic decay. 0.020 is 25% of the target's spread and
+  recovered at ratio 1.09 in step 3.
+  This also sharpens the claim: the floor is exact, so it becomes
+  "aleatoric stays at 0.020 as N grows twentyfold", falsifiable
+  to a number rather than to a trend.
+  Budget: 5 N x 3 seeds x 2 noise conditions = 30 ensembles,
   300 member networks. Any expansion past that is a visible
   decision, not a drift.
 - If the schedule slips, **shrink the sweep grid, never drop
-  it**: 3 N x 2 seeds x 2 conditions = 12 ensembles. The
+  it**: 3 N x 2 seeds x 2 noise conditions = 12 ensembles. The
   reporting commitment is the shape of the epistemic decay, not
   a fitted exponent, and 12 points show the shape. Nothing else
   can test whether the epistemic term is reducible with data,
@@ -672,8 +705,8 @@ ensemble.
 | 1 | plain MSE ensemble | 1 | ✅ done 2026-08-29, RMSE 0.01052, missed a badly set 0.0105 bar by 0.2%, 1.75x Table 7 |
 | 2 | mean-variance, random split | 1 | ✅ done 2026-08-29, RMSE 0.01256, aleatoric 0.01048, total 4.6% over-dispersed |
 | 3 | variance-head check | 3 | ✅ done 2026-08-29, RECOVERS, ratios 0.94 to 1.09 over a 10x noise range |
-| 4 | mean-variance, interior hole at p30 | 1 | a gap with training data both sides |
-| 5 | mean-variance, tail-low | 1 | the extrapolation condition |
+| 4 | mean-variance, interior hole at p30 | 1 | ✅ done 2026-08-29, out/in RMSE 1.98x, calibration 0.62 out of region |
+| 5 | mean-variance, tail-low | 1 | ✅ done 2026-08-29, out/in RMSE 3.24x, calibration 0.56 out of region |
 | 6 | calibration figures | 0 | reads runs 2, 4 and 5 |
 | 7 | deferral curve | 0 | reads run 5 |
 | 8 | full N-sweep | 30, floor 12 | does the decomposition hold as N grows |

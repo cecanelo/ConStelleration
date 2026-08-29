@@ -1,0 +1,60 @@
+{
+  "name": "mv_ensemble_hole",
+  "saved_at": "2026-08-29T17:41:37+00:00",
+  "git_commit": "2d65d85d476d771a8f0100e41259e4d029f3ef3c",
+  "git_dirty": false,
+  "constants": {
+    "SEED": 0,
+    "SPLIT": "hole",
+    "TEST_FRACTION": 0.2,
+    "IN_REGION_TEST_FRACTION": 0.2,
+    "HOLE_CENTRE": 0.3,
+    "TARGET_COL": "metrics.edge_rotational_transform_over_n_field_periods",
+    "AXIS_COL": "metrics.aspect_ratio",
+    "N_MEMBERS": 10,
+    "VAL_SIZE": 500,
+    "LEARNING_RATE": 0.001,
+    "BATCH_SIZE": 128,
+    "WARMUP_EPOCHS": 25,
+    "MAX_EPOCHS": 500,
+    "PATIENCE": 20,
+    "VARIANCE_FLOOR": 1e-06,
+    "architecture": "(256, 256, 256) tanh, Adam, MSE warmup then Gaussian NLL"
+  },
+  "results": {
+    "sets": [
+      {
+        "set": "in-region",
+        "n": 4324,
+        "rmse": 0.012519321912243806,
+        "epistemic": 0.007033283822238445,
+        "aleatoric": 0.009056168608367443,
+        "total": 0.011604311875998974
+      },
+      {
+        "set": "out-of-region",
+        "n": 5404,
+        "rmse": 0.02483917335930483,
+        "epistemic": 0.010180206969380379,
+        "aleatoric": 0.011181633919477463,
+        "total": 0.015379359945654869
+      }
+    ],
+    "pinned_fraction": 0.0,
+    "floor_physical": 6.189361922272338e-09,
+    "member_epochs": [
+      55,
+      53,
+      58,
+      51,
+      55,
+      53,
+      61,
+      56,
+      53,
+      55
+    ],
+    "target_std": 0.0789239111480279,
+    "total_seconds": 308.0
+  }
+}
