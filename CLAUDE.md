@@ -294,6 +294,23 @@ architecture claim in either direction.
   Budget: 5 N x 3 seeds x 2 input conditions = 30 ensembles,
   300 member networks. Any expansion past that is a visible
   decision, not a drift.
+- N-sweep ordering: the full sweep runs **last**, after
+  calibration and the deferral curve, because those two are the
+  named deliverables and the sweep validates machinery. It is
+  also the largest remaining compute item, so it is the piece
+  most exposed to a schedule slip.
+  ⚠️ That ordering would otherwise build both deliverables on a
+  variance head never tested against a known answer, since the
+  hidden-coefficient condition is the only thing that can catch
+  one pinned at its floor. So the sweep splits in two: as soon
+  as the mean-variance ensemble exists, run the hidden-
+  coefficient check once at one N and one seed in both input
+  conditions. Two ensembles, twenty networks, about twenty
+  minutes, outside the pinned 30-ensemble budget.
+  Order of work: plain MSE ensemble, mean-variance ensemble,
+  cheap hidden-coefficient check, calibration, deferral curve,
+  full N-sweep. Full reasoning in decision log 6.5, when the
+  sweep runs.
 - Report the shape of the epistemic decay, not a fitted exponent.
 - Deferral curve needs four lines: two "mine" curves
   (epistemic-ranked and total-ranked, see below), random
@@ -536,7 +553,9 @@ ensemble.
 
 **End of week 1:** data loaded, noise floor checked, one model trained, in-region numbers near Table 7. If not met, fall back to a simpler dataset (UCI or semi-synthetic) keeping the same study design, without regret. The design is the contribution; the dataset is the setting.
 
-**End of week 2:** three splits run, calibration figures exist, deferral curve drafted. If not met, drop the second target and all optional scope.
+**End of week 2:** three splits run, calibration figures exist, deferral curve drafted. If not met, drop the second target and all optional scope. The full N-sweep is deliberately not in this gate, it runs after the deferral curve. The cheap two-ensemble hidden-coefficient check is in scope for week 2 and takes about twenty minutes.
+
+**After the deferral curve:** the full N-sweep, 30 ensembles. It is in scope, and it is the first thing to cut if the schedule slips, in which case the epistemic/aleatoric decomposition gets reported as unvalidated rather than dropped.
 
 ---
 

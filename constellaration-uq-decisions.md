@@ -894,6 +894,27 @@ RMSE on edge rotational transform per field period, whose pool std is 0.0786.
 
 ---
 
+**6.5 When the sweep runs** `SETTLED` ✅ 2026-08-29
+
+- [x] Decided
+
+**Decided: the full N-sweep runs last, after Stage 7 calibration and Stage 8 deferral. A cheap two-ensemble version of the hidden-coefficient check runs early, immediately after the mean-variance ensemble exists.**
+
+**The conflict this resolves.** Stage numbering puts the sweep at 6, before calibration at 7 and deferral at 8, which implies sweep first. The end-of-week-2 calendar gate asks only for three splits, calibration figures and a drafted deferral curve, which implies sweep later. The two disagreed and nobody had reconciled them.
+
+**Why last.** Calibration and the deferral curve are the two named headline deliverables (0.3). The sweep validates the uncertainty machinery, which is a supporting result. Under a 2.5 week budget the ordering should be the one where running out of time costs least, and losing a supporting result costs less than losing a deliverable. The sweep is also the largest remaining compute item at 30 ensembles and 300 networks, so it is the piece most exposed to a schedule slip.
+
+⚠️ **The risk this ordering creates.** The hidden-coefficient condition (6.2) is the only check that can catch a variance head pinned at its floor rather than working. Deferring the whole sweep means building the calibration figures and the deferral curve on top of a variance head that has never been tested against a known injected magnitude. If it turns out broken, both deliverables need redoing.
+
+**The mitigation, which is why the sweep splits in two.** As soon as the mean-variance ensemble exists, run the hidden-coefficient check once: one training size, one seed, both input conditions. Two ensembles, twenty member networks, roughly twenty minutes. It answers the single question "does the variance head recover the magnitude that was injected." That is a sanity check, not the sweep, and it does not touch the pinned 30-ensemble budget in 6.1.
+
+**Order of work from here:** plain MSE ensemble (4.6) → mean-variance ensemble → cheap hidden-coefficient check → Stage 7 calibration → Stage 8 deferral → full N-sweep.
+
+**My decision:**
+> Put the sweep last because the two deliverables come first, but do not defer the one check that could invalidate them. Twenty minutes early buys the right to spend the rest of the time on calibration without wondering whether the variance head works.
+
+---
+
 ## Stage 7. Calibration
 
 ---
@@ -1207,7 +1228,11 @@ RMSE on edge rotational transform per field period, whose pool std is 0.0786.
 
 **Decisions this settles:** 3.1 primary target (edge rotational transform), 3.2 secondary evidence (log10 qi viable, defers to week 2), 3.4 split axis (aspect ratio), 3.6 direction (low), 3.7 δ (0.06). 7.1 remains open, see that entry.
 
-⚠️ **The most important result is the one that looks like nothing.** Interior-hole ratios are 0.95 and 0.91, meaning the model fills a mid-range gap with **no measurable penalty at all**, while the same axis, model and recipe cost 3x at the tail. That is not a null result, it is the main figure: the model can interpolate into gaps and cannot leave the region. Per 0.4 the finding is reported whether or not a gap appears, and here the absence of a hole gap is precisely what gives the tail gap its meaning.
+⚠️ **RETRACTED 2026-08-29, see 3.7 and 3.8.** This block previously read: "the most important result is the one that looks like nothing," on the grounds that interior-hole ratios of 0.95 and 0.91 meant the model fills a mid-range gap with no measurable penalty while the same recipe cost 3x at the tail, giving a clean "can interpolate into gaps, cannot leave the region" story.
+
+**Two later measurements killed it.** The placement sweep showed 0.95 held for a hole at the median only; moving the hole toward the sparse compact end raises the penalty to 1.80 and then 1.96, so the absence of a gap penalty was a property of the placement, not of interpolation. The distance-error curves then showed that most of the remaining hole-versus-tail difference is distance rather than edge: at matched distance the tail costs about 15% more, not 200%.
+
+**What survives:** the tail-low ratio of 3.02 and the fact that the compact end degrades badly. What does not: the binary reading of interpolation as free. The kept claim is now narrower and is stated in 3.8.
 
 **Methodological note worth defending.** The grid uses an MLP rather than gradient boosting on purpose. Trees return the boundary value outside the training range, so a tail split would show a large gap by construction and would measure the model class rather than the axis. Given that the eventual model is an MLP ensemble, the MLP baseline also previews the real extrapolation behaviour. Choosing the faster model here would have produced a confidently wrong answer to the gate's central question.
 
