@@ -18,19 +18,12 @@ The axis is never trimmed (1.4). Only the target is.
 """
 
 import time
-from pathlib import Path
 
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.neural_network import MLPRegressor
-from sklearn.preprocessing import StandardScaler
 
-from constellaration_uq.data import (
-    extract_input_features,
-    filter_valid,
-    load_raw,
-    trim_target_tails,
-)
+from constellaration_uq.baseline import ARCHITECTURE, fit_mlp, load_pool, rmse
+from constellaration_uq.data import extract_input_features, trim_target_tails
 from constellaration_uq.results import save_results, save_table
 from constellaration_uq.splits import (
     distance_from_training_region,
@@ -38,7 +31,6 @@ from constellaration_uq.splits import (
     tail_split,
 )
 
-DATA_DIR = Path(__file__).resolve().parents[1] / 'data_raw' / 'data'
 SEED = 0
 TEST_FRACTION = 0.2
 IN_REGION_TEST_FRACTION = 0.2
@@ -50,36 +42,6 @@ TARGETS = {
     'edge_rot_transform': ('metrics.edge_rotational_transform_over_n_field_periods', None),
     'log10_qi': ('metrics.qi', np.log10),
 }
-
-
-def load_pool():
-    for _, df in filter_valid(load_raw(DATA_DIR)):
-        pass
-    return df
-
-
-def fit_model(X_fit, y_fit):
-    """Fit once, return a predict function in physical units (5.2)."""
-    scaler = StandardScaler().fit(X_fit)
-    y_mean, y_std = y_fit.mean(), y_fit.std()
-
-    model = MLPRegressor(
-        hidden_layer_sizes=(256, 256, 256),
-        activation='tanh',
-        random_state=SEED,
-        max_iter=500,
-        early_stopping=True,
-        n_iter_no_change=20,
-    ).fit(scaler.transform(X_fit), (y_fit - y_mean) / y_std)
-
-    def predict(X):
-        return model.predict(scaler.transform(X)) * y_std + y_mean
-
-    return predict
-
-
-def rmse(y_true, y_pred):
-    return float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
 
 
 def run_combination(axis, X, y, cut):
@@ -96,7 +58,7 @@ def run_combination(axis, X, y, cut):
         train_idx, test_size=IN_REGION_TEST_FRACTION, random_state=SEED
     )
 
-    predict = fit_model(X[fit_idx], y[fit_idx])
+    predict = fit_mlp(X[fit_idx], y[fit_idx], SEED)
     rmse_in = rmse(y[in_idx], predict(X[in_idx]))
     rmse_out = rmse(y[oor_mask], predict(X[oor_mask]))
 
@@ -191,7 +153,7 @@ def main():
         'AXES': AXES,
         'CUTS': CUTS,
         'TARGETS': {k: v[0] for k, v in TARGETS.items()},
-        'architecture': '(256, 256, 256) tanh, early stopping',
+        'architecture': ARCHITECTURE,
     }
     payload = {'pool_rows': len(df), 'total_seconds': round(total_seconds, 1), 'rows': rows}
 

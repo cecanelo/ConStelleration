@@ -29,3 +29,6 @@ runs/
 # editor / os
 .vscode/
 .DS_Store
+
+# claude code session config
+.claude/

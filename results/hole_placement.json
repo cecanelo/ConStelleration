@@ -1,0 +1,124 @@
+{
+  "name": "hole_placement",
+  "saved_at": "2026-08-29T09:08:15+00:00",
+  "git_commit": "1fde990ea1f05434ee4c656d387972a5456b2837",
+  "git_dirty": true,
+  "constants": {
+    "SEED": 0,
+    "TEST_FRACTION": 0.2,
+    "IN_REGION_TEST_FRACTION": 0.2,
+    "N_DISTANCE_BINS": 8,
+    "AXIS_COL": "metrics.aspect_ratio",
+    "TARGET_COL": "metrics.edge_rotational_transform_over_n_field_periods",
+    "CENTRES": [
+      0.2,
+      0.3,
+      0.4,
+      0.5,
+      0.6,
+      0.7,
+      0.8
+    ],
+    "architecture": "(256, 256, 256) tanh, early stopping"
+  },
+  "results": {
+    "rows": [
+      {
+        "split": "tail-low",
+        "centre": null,
+        "percentiles": "0 to 20",
+        "n_held_out": 5405,
+        "rmse_in": 0.01378634788365768,
+        "rmse_out": 0.04156720368051644,
+        "ratio": 3.015098997305164,
+        "reach": 2.133974850387236,
+        "min_bin": 276,
+        "delta": 0.058989068012026906
+      },
+      {
+        "split": "hole",
+        "centre": 0.2,
+        "percentiles": "10 to 30",
+        "n_held_out": 5404,
+        "rmse_in": 0.014171207368182948,
+        "rmse_out": 0.02776501384833534,
+        "ratio": 1.9592553497363303,
+        "reach": 0.6314513624283673,
+        "min_bin": 602,
+        "delta": 0.0399418181510219
+      },
+      {
+        "split": "hole",
+        "centre": 0.3,
+        "percentiles": "20 to 40",
+        "n_held_out": 5404,
+        "rmse_in": 0.014523316247564142,
+        "rmse_out": 0.026146887536304432,
+        "ratio": 1.8003386479096881,
+        "reach": 0.45143324812820296,
+        "min_bin": 583,
+        "delta": 0.040587452961566524
+      },
+      {
+        "split": "hole",
+        "centre": 0.4,
+        "percentiles": "30 to 50",
+        "n_held_out": 5404,
+        "rmse_in": 0.014788903297613723,
+        "rmse_out": 0.016575081011170136,
+        "ratio": 1.120778240117685,
+        "reach": 0.3128947263798491,
+        "min_bin": 586,
+        "delta": 0.04048342685382935
+      },
+      {
+        "split": "hole",
+        "centre": 0.5,
+        "percentiles": "40 to 60",
+        "n_held_out": 5404,
+        "rmse_in": 0.014756805827820555,
+        "rmse_out": 0.014064520114088463,
+        "ratio": 0.9530870215540177,
+        "reach": 0.20115046582236573,
+        "min_bin": 641,
+        "delta": 0.03870767277113485
+      },
+      {
+        "split": "hole",
+        "centre": 0.6,
+        "percentiles": "50 to 70",
+        "n_held_out": 5404,
+        "rmse_in": 0.015260647439372405,
+        "rmse_out": 0.01376702515032678,
+        "ratio": 0.9021258898104095,
+        "reach": 0.15826278659932078,
+        "min_bin": 616,
+        "delta": 0.039485325237243636
+      },
+      {
+        "split": "hole",
+        "centre": 0.7,
+        "percentiles": "60 to 80",
+        "n_held_out": 5404,
+        "rmse_in": 0.015517583382850727,
+        "rmse_out": 0.012395086456514678,
+        "ratio": 0.7987768553068076,
+        "reach": 0.1363459973587489,
+        "min_bin": 645,
+        "delta": 0.038587462316949726
+      },
+      {
+        "split": "hole",
+        "centre": 0.8,
+        "percentiles": "70 to 90",
+        "n_held_out": 5404,
+        "rmse_in": 0.015665059325548642,
+        "rmse_out": 0.012831572636605818,
+        "ratio": 0.81912058996664,
+        "reach": 0.13306614761705704,
+        "min_bin": 602,
+        "delta": 0.0399418181510219
+      }
+    ]
+  }
+}

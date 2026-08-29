@@ -1,0 +1,150 @@
+{
+  "name": "hole_placement_narrow",
+  "saved_at": "2026-08-29T09:36:51+00:00",
+  "git_commit": "1fde990ea1f05434ee4c656d387972a5456b2837",
+  "git_dirty": true,
+  "constants": {
+    "SEED": 0,
+    "TEST_FRACTION": 0.1,
+    "IN_REGION_TEST_FRACTION": 0.2,
+    "N_DISTANCE_BINS": 8,
+    "AXIS_COL": "metrics.aspect_ratio",
+    "TARGET_COL": "metrics.edge_rotational_transform_over_n_field_periods",
+    "CENTRES": [
+      0.1,
+      0.2,
+      0.3,
+      0.4,
+      0.5,
+      0.6,
+      0.7,
+      0.8,
+      0.9
+    ],
+    "architecture": "(256, 256, 256) tanh, early stopping"
+  },
+  "results": {
+    "rows": [
+      {
+        "split": "tail-low",
+        "centre": null,
+        "percentiles": "0 to 20",
+        "n_held_out": 2703,
+        "rmse_in": 0.015635140132928202,
+        "rmse_out": 0.03302761043982518,
+        "ratio": 2.112396189546634,
+        "reach": 1.3745521970425008,
+        "min_bin": 126,
+        "delta": 0.0873053390247253
+      },
+      {
+        "split": "hole",
+        "centre": 0.1,
+        "percentiles": "5 to 15",
+        "n_held_out": 2702,
+        "rmse_in": 0.01445128247495131,
+        "rmse_out": 0.02583791567451196,
+        "ratio": 1.78793236650777,
+        "reach": 0.4839232260921042,
+        "min_bin": 294,
+        "delta": 0.05715476066494082
+      },
+      {
+        "split": "hole",
+        "centre": 0.2,
+        "percentiles": "15 to 25",
+        "n_held_out": 2702,
+        "rmse_in": 0.015108087748626363,
+        "rmse_out": 0.022150755411902846,
+        "ratio": 1.466152155087715,
+        "reach": 0.28422943815002744,
+        "min_bin": 306,
+        "delta": 0.05602287114655289
+      },
+      {
+        "split": "hole",
+        "centre": 0.3,
+        "percentiles": "25 to 35",
+        "n_held_out": 2702,
+        "rmse_in": 0.013576466107316243,
+        "rmse_out": 0.020031335061989255,
+        "ratio": 1.475445443876926,
+        "reach": 0.2353546879779141,
+        "min_bin": 301,
+        "delta": 0.05648626093501503
+      },
+      {
+        "split": "hole",
+        "centre": 0.4,
+        "percentiles": "35 to 45",
+        "n_held_out": 2702,
+        "rmse_in": 0.014749572795694253,
+        "rmse_out": 0.013926876173533765,
+        "ratio": 0.9442223423311181,
+        "reach": 0.1475630865009883,
+        "min_bin": 311,
+        "delta": 0.055570701758126784
+      },
+      {
+        "split": "hole",
+        "centre": 0.5,
+        "percentiles": "45 to 55",
+        "n_held_out": 2702,
+        "rmse_in": 0.014237189767456134,
+        "rmse_out": 0.011734700486651421,
+        "ratio": 0.8242287051251511,
+        "reach": 0.09969355122201211,
+        "min_bin": 318,
+        "delta": 0.05495567110102034
+      },
+      {
+        "split": "hole",
+        "centre": 0.6,
+        "percentiles": "55 to 65",
+        "n_held_out": 2702,
+        "rmse_in": 0.015268472981145656,
+        "rmse_out": 0.01116932089970391,
+        "ratio": 0.7315283534572448,
+        "reach": 0.07516849726317464,
+        "min_bin": 309,
+        "delta": 0.055750252150880274
+      },
+      {
+        "split": "hole",
+        "centre": 0.7,
+        "percentiles": "65 to 75",
+        "n_held_out": 2702,
+        "rmse_in": 0.015197234210366395,
+        "rmse_out": 0.011915765262378648,
+        "ratio": 0.7840745952477736,
+        "reach": 0.06824153567618785,
+        "min_bin": 314,
+        "delta": 0.055304599502343836
+      },
+      {
+        "split": "hole",
+        "centre": 0.8,
+        "percentiles": "75 to 85",
+        "n_held_out": 2702,
+        "rmse_in": 0.014856963066163855,
+        "rmse_out": 0.011182167806326611,
+        "ratio": 0.7526550181573485,
+        "reach": 0.06202902990717114,
+        "min_bin": 315,
+        "delta": 0.05521674464226308
+      },
+      {
+        "split": "hole",
+        "centre": 0.9,
+        "percentiles": "85 to 95",
+        "n_held_out": 2702,
+        "rmse_in": 0.014387263611848663,
+        "rmse_out": 0.013131766472586572,
+        "ratio": 0.9127355157218275,
+        "reach": 0.19522279803969958,
+        "min_bin": 138,
+        "delta": 0.08342314001435737
+      }
+    ]
+  }
+}
