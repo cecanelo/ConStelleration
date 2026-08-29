@@ -127,17 +127,33 @@ Incidental, worth keeping: error tracks data density, lowest around A 9.9 to 10.
 
 Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-low 3.02**, tail-high 1.14, interior hole 0.95.
 
-⚠️ **The hole result is the main figure, not a null result.** Ratios of 0.95 and 0.91 mean the model fills a mid-range gap with no measurable penalty at all, while the same axis and recipe cost 3x at the tail. The absence of a hole gap is what gives the tail gap its meaning: the model can interpolate into gaps, it cannot leave the region.
+⚠️ **The "hole is free" reading did not survive, see the placement sweep below.** Ratios of 0.95 and 0.91 held for a hole at the median only, and the clean "interpolates for free, cannot extrapolate" story went with them.
 
 ⚠️ **The grid must use an MLP, never gradient boosting.** Trees return the boundary value outside the training range, so a tail split shows a large gap by construction and measures the model class rather than the axis. The faster model would have produced a confident wrong pass on any axis.
 
 ⚠️ **max_elongation was disqualified on coverage, not on gap.** It shows real gaps (1.91, 1.26) but its tail-high held-out set reaches 37 std from the training region against aspect ratio's 2.13, so an equal-width distance bin comes out empty and no coverage rate is estimable. The two-condition rule in 3.7 caught what gap size alone would have missed.
 
-⚠️ **Unresolved geometry, decide before building ensembles.** The hole reaches 0.20 std from the training region while the tail reaches 2.13, a factor of ten. "At matched distance, leaving the region costs more than filling a gap" only has 0 to 0.20 of overlap to work with. Options in decision log 3.7: widen the hole, accept the weaker claim, or place the hole somewhere sparser than the median.
+**Hole placement settled (2026-08-29), `scripts/hole_placement.py`. Centre p30, spanning p20 to p40.** It sits immediately above the tail's p0 to p20 without overlapping, so the two experiments share no held-out configuration and their sizes stay matched at 5,404 each. Reach 0.45 against the median placement's 0.20, thinnest bin 583, δ = 0.041. That is the widest reach a non-overlapping hole can have, so 0.45 caps the matched-distance claim. δ = 0.06 is unchanged, it was always set by the tail's 276-point bin. Full reasoning in decision log 3.7, held-out fraction and hole placement.
+
+⚠️ **The penalty is a U in placement, not a monotone climb.** At 20% held out the ratio runs 1.96 / 1.80 / 1.12 / 0.95 / 0.90 / 0.80 / 0.82 for centres p20 through p80. A 10% sweep, the only one that reaches p90, closes the U at 0.91. Ratio tracks reach almost monotonically, so **gap width drives most of the penalty** and sparsity matters because it makes gaps wide. Two caveats: a 20% band cannot be centred above p80 without running off the data, and the U's upper arm rests on the two thinnest bins in either table (about 130 points against roughly 310) at a single seed.
+
+⚠️ **Ratios below 1.0 are expected.** The denominator is a random in-region slice drawn from the whole training region including its thin compact end, while a dense-middle hole contains none of those hard cases. 0.80 means that gap was easier than the model's average job, not that removing data helped.
+
+**Distance-error curves measured (2026-08-29), `scripts/distance_error.py`,** three fits in 165s. Deliverable one in single-model form: per-point error binned by distance from the training region, three splits, one MLP each.
+
+**At matched distance the tail costs about 15% more than the hole**, at both 0.2 and 0.4 std out. So most of the 3.02-versus-1.80 headline is **distance, not edge**: the tail simply asks about configurations further from the data. The edge premium is what survives controlling for that, and it is real but modest. Weaker than the old claim, and far more defensible.
+
+**The number for a pitch:** at 1.83 std out, RMSE is 73% of the target's own std (0.0786). Predicting the dataset mean would score 100%. The surrogate is barely beating nothing there while still returning a confident-looking number.
+
+⚠️ **Two measurement choices that would otherwise flatter the result.** Distance is computed against the fit set, not `train_mask`; the mask contains the in-region slice, which would then get distance 0 by construction rather than by measurement. And the in-region slice is one anchor at distance 0, not part of the binned curve, since it is half the evaluation set and quantile binning spent three of eight bins stacking it on the y axis.
+
+⚠️ **Per-experiment summaries do not plot.** Three attempts to draw the placement sweep were all misread, including by their author, because nothing in a scatter of eight points tells a reader that each point is its own model fit rather than a sample from one curve. The sweep is now a table. The figure plots configurations, roughly 675 per bin, which is what made it readable.
 
 **In-region sanity anchor holds:** RMSE about 2.4x Table 7 on edge rotational transform and 2.8x on log10 qi. One untuned MLP against a tuned ten-member ensemble should land there, and a consistent factor across two unrelated metrics is positive evidence the pipeline is correct.
 
-**Next: the ensemble.** Per 4.6 the plain MSE version comes first, ten members, same architecture minus the variance head, to verify the pipeline against Table 7 before the variance head or NLL loss can confuse the diagnosis. Two smaller items still open: the mirror-pair search (folded into 2.2, nothing downstream depends on it) and 7.1's diagnostic set.
+**`src/constellaration_uq/baseline.py` holds the shared single-MLP recipe** (`load_pool`, `fit_mlp`, `rmse`, and the frozen architecture constants). Three scripts fit the same network on different splits, and "same model and recipe for every split" is the premise that makes their numbers comparable at all, so three copy-pasted definitions is where that premise quietly stops being true. The hole placement sweep reproduces its previous ratios exactly after the extraction, which is the check that it changed nothing.
+
+**Next: the ensemble.** Per decision log 4.6, train a plain MSE ensemble before the mean-variance one: ten members, same architecture minus the variance head, to verify the pipeline against Table 7 before the variance head or NLL loss can confuse the diagnosis. Three smaller items still open: the mirror-pair search (folded into decision log 2.2, the tolerance duplicate check, and nothing downstream depends on it), decision log 7.1's calibration diagnostic set, and a three-seed rerun of the narrow sweep's p30 and p90 if the U's upper arm is ever load-bearing.
 
 ---
 
@@ -455,20 +471,18 @@ Highest priority first. Full reasoning is in `constellaration-uq-decisions.md` i
    making the deferral threshold defensible. PIT and
    reliability diagrams are last, needing their own binning on
    top of the distance bins.
-2. **Hole geometry.** New, and it came out of the grid. The
-   interior hole reaches 0.20 std from the training region
-   while the tail reaches 2.13, so "at matched distance,
-   leaving the region costs more than filling a gap" has only
-   0 to 0.20 of overlap. Widen the hole, accept the weaker
-   claim, or place the hole somewhere sparser than the median.
-   Decide before building the ensembles, not while making the
-   figure. Full reasoning in decision log 3.7.
-3. **Loss.** MSE warm-up plus variance floor, β-NLL in reserve.
+2. **Loss.** MSE warm-up plus variance floor, β-NLL in reserve.
 
 **Recently closed by the day 1-2 grid (2026-08-27):** split axis
 (aspect ratio), split direction (low), primary target (edge
 rotational transform), secondary-target evidence (log10 qi
 viable, still deferred to the week 2 gate), and δ (0.06).
+
+**Recently closed by the placement sweep (2026-08-29):** hole
+geometry. Centre the interior hole at percentile 30, spanning
+p20 to p40, which is adjacent to the tail without overlapping it
+and reaches 0.45 std instead of the median placement's 0.20.
+That 0.45 is the ceiling on the matched-distance comparison.
 
 ---
 

@@ -584,9 +584,21 @@ At `test_fraction = 0.2` on the winning axis and direction, the thinnest equal-w
 
 **Do not tighten δ to 0.039 just because the hole allows it.** The figure compares the two bands, so the reportable tolerance is set by the weaker of them. Quote δ = 0.06 for both.
 
-⚠️ **One geometry problem this run exposed, still to resolve.** The hole's held-out set reaches only **0.20** standard deviations from the training region, while the tail reaches **2.13**. 3.11 predicted the hole would be shorter, and called it geometry rather than defect, but the gap is a factor of ten. The main figure's sharpest claim is "at matched distance, leaving the region costs more than filling a gap," and matched distance only exists over 0 to 0.20, where the tail has barely begun to degrade.
+**Hole placement RESOLVED (2026-08-29): centre the hole at percentile 30, spanning p20 to p40.** `scripts/hole_placement.py`.
 
-**Options, to decide before building the ensembles:** widen the hole beyond 20% so it spans more of the axis, accept the short overlap and make the weaker claim, or place the hole somewhere sparser than the median so the same fraction spans more distance. Widening trades against the tail comparison being at matched held-out size, which is currently clean. Not urgent, but it is a real design choice and it should not be discovered while making the figure.
+The geometry problem this run exposed was that the hole at the median reached only **0.20** standard deviations from the training region while the tail reached **2.13**, a factor of ten. The main figure's sharpest claim is "at matched distance, leaving the region costs more than filling a gap," and at the median that comparison existed only over 0 to 0.20, where the tail has barely begun to degrade. The three options were widen the hole, accept the weaker claim, or move the hole somewhere sparser.
+
+**Moving it won.** p30 sits immediately above the tail's p0 to p20 without overlapping it, so the two experiments never share a held-out configuration and the held-out sizes stay matched at 5,404 each. It reaches **0.45**, more than doubling the comparison range, with 583 points in the thinnest distance bin and δ = 0.041. It is the widest reach available to a non-overlapping hole, so 0.45 is the ceiling on the matched-distance claim unless the held-out fraction changes.
+
+**δ = 0.06 is unaffected.** It was always set by the tail's 276-point bin, and that band did not move.
+
+⚠️ **The sweep revised a headline finding.** The day 1-2 result had the hole at the median costing nothing, 0.95 against the tail's 3.02, which read as clean interpolation versus failed extrapolation. That held for one placement only. Across centres the penalty is a **U in percentile**, lowest in the dense middle and rising at both ends: at 20% held out, 1.96 / 1.80 / 1.12 / 0.95 / 0.90 / 0.80 / 0.82 for centres p20 through p80; at 10% held out, which is the only run that reaches p90, 1.79 / 1.47 / 1.48 / 0.94 / 0.82 / 0.73 / 0.78 / 0.75 / 0.91. Ratio tracks reach almost monotonically, so gap **width** drives most of the penalty and sparsity matters because it makes gaps wide.
+
+⚠️ **A 20% band cannot be centred above p80.** It runs off the end of the data and stops being an interior hole. Reaching p90 needs the 10% sweep, and p95 to p100 can host no interior hole at any width. That region is tail-high territory only.
+
+⚠️ **Ratios below 1.0 are expected, not anomalous.** The denominator is a random in-region slice drawn from the whole training region including its thin compact end, while a hole in the dense middle contains none of those hard cases. A ratio of 0.80 means filling that gap was easier than the model's average job, not that removing data helped.
+
+⚠️ **Two rows carry the U's upper arm and they are the weakest in either table.** The 10% sweep's p90 and tail-low bins hold about 130 points against roughly 310 elsewhere, at a single seed. Before leaning on the asymmetry, rerun p30 and p90 at seeds 0, 1, 2. Six fits, about six minutes.
 
 **Options:** fixed percentile / fixed aspect ratio value / sized to hit a target test-set count
 
@@ -612,6 +624,23 @@ At `test_fraction = 0.2` on the winning axis and direction, the thinnest equal-w
 **Why:** Same model, same recipe, three splits. Anyone can report the random split. The distance between the interior-hole result and the tail result is the actual contribution, and it separates "the model cannot fill gaps" from "the model cannot leave the region." This is the main figure.
 
 **Why it matters beyond the project:** the two failure modes have different fixes. Interior-hole failure means sparse pockets can be backfilled with a few more optimization runs. Tail failure means no amount of nearby backfilling helps and every query near the frontier needs a real solver call. That is a different resourcing answer for an R&D team, and it is the one that ties the calibration result to the deferral curve.
+
+**First measurement (2026-08-29), `scripts/distance_error.py`.** Three splits, one MLP each, per-point error binned by distance from the training region. This is deliverable one in single-model form; the ensemble later adds the uncertainty bands without changing the figure's shape.
+
+| distance out | interior hole at p30 | tail-low |
+|---|---|---|
+| 0 (in region) | 0.0145 | 0.0138 |
+| ~0.22 | 0.0243 to 0.0280 | 0.0303 |
+| ~0.40 | 0.0325 to 0.0336 | 0.0376 |
+| 1.83 | no points | 0.0577 |
+
+RMSE on edge rotational transform per field period, whose pool std is 0.0786.
+
+**At matched distance the tail costs about 15% more than the hole**, consistently at both 0.2 and 0.4 standard deviations out. So most of the headline gap, 3.02 against 1.80, is **distance rather than edge**: the tail split simply asks about configurations much further from the data. What survives after controlling for distance is the edge premium itself, and it is real but modest. That is a weaker claim than "the model interpolates for free and cannot extrapolate," and a considerably more defensible one.
+
+**The far tail number is the one to quote in a pitch.** At 1.83 standard deviations out, RMSE is 73% of the target's own standard deviation. Predicting the dataset mean and ignoring the input entirely would score 100%. The surrogate is barely beating nothing out there while still returning a confident-looking number, which is the deferral argument in one line.
+
+⚠️ **Two measurement choices that would otherwise flatter the result.** Distance is computed against the fit set, not the training mask; using the mask would include the in-region slice in its own reference set and hand those points distance 0 by construction rather than by measurement. And the in-region slice is a single anchor at distance 0, not part of the binned curve: it is half the evaluation set, so quantile binning over the combined set spent three of eight bins stacking it on the y axis.
 
 **My decision:**
 > Run all three. A random split alone just reproduces Table 7. The interesting number is the distance between the hole result and the tail result, because that separates "cannot interpolate into gaps" from "cannot extrapolate past the edge," and those two problems need different responses.
