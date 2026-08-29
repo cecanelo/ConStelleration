@@ -264,7 +264,27 @@ architecture claim in either direction.
 - `default` subset only, no finite-beta mixing.
 - Ensemble of mean-variance networks; epistemic from spread of means, aleatoric from mean of variances.
 - Architecture follows A.4: three layers, 256 units, tanh.
-- Recipe frozen (architecture, epochs, stopping rule) before the N-sweep, so "more data" is not confounded with "more optimization."
+- Recipe frozen (architecture, epochs, stopping rule) before the
+  N-sweep, so "more data" is not confounded with "more
+  optimization." ⚠️ The values are not yet written down.
+  A.4 gives architecture, loss, target scaling and ensemble size
+  but no optimizer, learning rate, batch size, epoch budget or
+  patience, and its training code is not in their public repo.
+  Those get chosen by the 4.10 sanity check and recorded in
+  decision log 4.7 before any ensemble trains.
+- Hyperparameter sanity check, not HPO: three learning rates by
+  two batch sizes, six single-network fits, Adam, lr in
+  {3e-4, 1e-3, 3e-3}, batch in {128, 512}. It exists because a
+  bad learning rate costs an order of magnitude, which would
+  make the Table 7 comparison ambiguous between a pipeline bug
+  and a bad optimizer setting, and that comparison is the only
+  reason the plain MSE ensemble exists.
+  ⚠️ **Run it on the random split and select on the in-region
+  validation set only.** Choosing hyperparameters by tail-split
+  performance leaks the extrapolation condition into the model
+  and invalidates the study invisibly. Same failure mode as
+  recalibrating on out-of-region data, and easier to do by
+  accident.
 - Log10 transform for qi. Targets z-scored using training statistics only.
 - Input scaler fitted on training data only. Out-of-region inputs will fall outside the fitted range. Do not clip.
 - Early-stopping validation set drawn from in-region data only.
@@ -524,6 +544,7 @@ That 0.45 is the ceiling on the matched-distance comparison.
 - Filtering bad rows on `has_neurips_2025_forward_model_error` alone (misses generation-stage failures; see the null-row trap above).
 - Canonicalizing the `z_sin` sign (destroys the handedness signal and breaks comparability with `_to_X`). Note the reason: **not** because it would create opposite labels, which is the retracted argument above.
 - Recalibrating on out-of-region data (silently invalidates the premise).
+- Selecting hyperparameters against tail-split performance. Same failure as the line above, one step earlier in the pipeline, and easier to commit by accident. Tune on the random split, select on in-region validation.
 - Splitting on the target rather than on an input-measurable quantity (confounds covariate shift with label shift).
 - Letting the early-stopping validation set include out-of-region points.
 - Varying training length with N during the sweep.
@@ -576,6 +597,7 @@ ensemble.
 
 | # | run | ensembles | purpose |
 |---|---|---|---|
+| 0 | hyperparameter sanity check | 0, six single networks | pick lr and batch size, then freeze |
 | 1 | plain MSE ensemble | 1 | pipeline check against Table 7 |
 | 2 | mean-variance, random split | 1 | in-domain baseline, no shift |
 | 3 | mean-variance, interior hole at p30 | 1 | a gap with training data both sides |

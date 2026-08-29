@@ -775,7 +775,10 @@ RMSE on edge rotational transform per field period, whose pool std is 0.0786.
 
 **Why:** If you train longer at larger N, or early-stop against a validation set that grows with N, you have confounded "more data" with "more optimization" and the N-sweep cannot be attributed to either.
 
+⚠️ **This entry declares a freeze without recording what it froze.** Architecture comes from 4.1, but optimizer, learning rate, batch size, epoch budget, patience and weight decay are unspecified anywhere, and A.4 does not supply them. Fill them in here from the 4.10 sanity check before any ensemble is trained. Until they are written down, the freeze is not real.
+
 **Blocks:** 6.1
+**Blocked by:** 4.10
 
 ---
 
@@ -798,6 +801,31 @@ RMSE on edge rotational transform per field period, whose pool std is 0.0786.
 
 **My decision:**
 > Separate ensembles per target. Sharing a trunk would mean member disagreement on one target partly reflects the other target, which muddies exactly the quantity I am claiming to measure. Rerunning the same recipe on a different y-column is nearly free by comparison.
+
+---
+
+**4.10 Hyperparameter sanity check** `SETTLED` ✅ 2026-08-29
+
+- [x] Decided
+
+**Decided: one bounded check, six single-network fits, run before anything else in the ensemble phase. Not hyperparameter optimization.**
+
+**Why it is needed at all.** Appendix A.4 specifies three layers, 256 units, tanh, MSE loss, z-scored targets and ten members. It says nothing about optimizer, learning rate, batch size, epoch budget, weight decay or initialisation, and the A.4 training code is not in their public repo (established in 5.3), so those values cannot be looked up. They have to be chosen here and declared as ours in the write-up.
+
+**Why not full HPO.** The contribution is the uncertainty study, not accuracy. The recipe is frozen before the sweep anyway (4.7), so tuning is a one-shot activity rather than an ongoing one, and a tuning rabbit hole is exactly the kind of scope that a 2.5 week budget does not survive.
+
+**Why not zero tuning either.** A bad learning rate can cost an order of magnitude. The MSE ensemble (4.6) exists to verify the pipeline, and if it lands far from Table 7 with the learning rate never varied, the result is ambiguous between a pipeline bug and a bad optimizer setting. That would defeat the only reason 4.6 exists.
+
+**The check.** Three learning rates by two batch sizes, six fits, single networks and not ensembles. Starting box: Adam, lr in {3e-4, 1e-3, 3e-3}, batch in {128, 512}. Select on in-region validation loss. An afternoon at most.
+
+⚠️ **The serious trap.** Run the check on the **random split only**, and select on the **in-region validation set** only. Selecting hyperparameters by looking at tail-split performance leaks the extrapolation condition into the model choice and invalidates the entire study, in a way no reviewer could detect from the results. This is the same failure mode as recalibrating on out-of-region data, and it is easier to commit by accident.
+
+**Then freeze.** The chosen values get written into 4.7, which currently declares the recipe frozen without recording what it froze, and they do not move again.
+
+**Where it lands in the execution order:** step 0, before the plain MSE ensemble.
+
+**My decision:**
+> Check the one knob that can cost an order of magnitude, on the split that cannot leak, then stop. Six fits buys the right to read the Table 7 comparison as a pipeline check rather than as a question with two possible answers.
 
 ---
 
@@ -920,6 +948,7 @@ RMSE on edge rotational transform per field period, whose pool std is 0.0786.
 
 | # | run | ensembles | purpose |
 |---|---|---|---|
+| 0 | hyperparameter sanity check (4.10) | 0, six single networks | pick lr and batch size on the random split, then freeze into 4.7 |
 | 1 | plain MSE ensemble (4.6) | 1 | pipeline check against Table 7 |
 | 2 | mean-variance, random split | 1 | in-domain baseline, no shift |
 | 3 | mean-variance, interior hole at p30 | 1 | a gap with training data both sides |
