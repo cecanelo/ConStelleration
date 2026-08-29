@@ -294,23 +294,38 @@ architecture claim in either direction.
   Budget: 5 N x 3 seeds x 2 input conditions = 30 ensembles,
   300 member networks. Any expansion past that is a visible
   decision, not a drift.
+- If the schedule slips, **shrink the sweep grid, never drop
+  it**: 3 N x 2 seeds x 2 conditions = 12 ensembles. The
+  reporting commitment is the shape of the epistemic decay, not
+  a fitted exponent, and 12 points show the shape. Nothing else
+  can test whether the epistemic term is reducible with data,
+  which is the only thing that earns it the name.
+  ⚠️ Do not assume the sweep is expensive before measuring it.
+  These are small networks on GPU. Time one member network
+  before the ensemble work starts.
 - N-sweep ordering: the full sweep runs **last**, after
   calibration and the deferral curve, because those two are the
-  named deliverables and the sweep validates machinery. It is
-  also the largest remaining compute item, so it is the piece
-  most exposed to a schedule slip.
-  ⚠️ That ordering would otherwise build both deliverables on a
-  variance head never tested against a known answer, since the
-  hidden-coefficient condition is the only thing that can catch
-  one pinned at its floor. So the sweep splits in two: as soon
-  as the mean-variance ensemble exists, run the hidden-
-  coefficient check once at one N and one seed in both input
-  conditions. Two ensembles, twenty networks, about twenty
-  minutes, outside the pinned 30-ensemble budget.
-  Order of work: plain MSE ensemble, mean-variance ensemble,
-  cheap hidden-coefficient check, calibration, deferral curve,
-  full N-sweep. Full reasoning in decision log 6.5, when the
-  sweep runs.
+  named deliverables and the sweep validates machinery.
+  **Why that is safe:** calibration and the deferral curve
+  measure the uncertainty signal rather than assuming it. A
+  useless signal puts the deferral curve flat on the random
+  floor, and bad intervals show up in the coverage plot. So a
+  broken signal surfaces at those steps, not at the sweep. What
+  the sweep uniquely tests is narrower: whether the split into
+  ignorance and noise is real, meaning epistemic shrinks with N
+  and aleatoric does not. A signal can rank points well, and so
+  give valid calibration and deferral results, while failing
+  that test.
+  ⚠️ **The one risk that does not wait** is a variance head
+  pinned at its floor. Aleatoric sits at the numerical floor on
+  this dataset by construction, so a head that always reports
+  approximately zero looks correct and is untestable. The
+  hidden-coefficient check is the only thing that catches it,
+  and it costs **one extra ensemble**: the tail split's
+  mean-variance ensemble is already the all-80 reference, so the
+  check adds one more on the same split with high mode-numbers
+  hidden. Run it as soon as the tail ensemble exists.
+  Full reasoning in decision log 6.5, when the sweep runs.
 - Report the shape of the epistemic decay, not a fitted exponent.
 - Deferral curve needs four lines: two "mine" curves
   (epistemic-ranked and total-ranked, see below), random
@@ -555,7 +570,22 @@ ensemble.
 
 **End of week 2:** three splits run, calibration figures exist, deferral curve drafted. If not met, drop the second target and all optional scope. The full N-sweep is deliberately not in this gate, it runs after the deferral curve. The cheap two-ensemble hidden-coefficient check is in scope for week 2 and takes about twenty minutes.
 
-**After the deferral curve:** the full N-sweep, 30 ensembles. It is in scope, and it is the first thing to cut if the schedule slips, in which case the epistemic/aleatoric decomposition gets reported as unvalidated rather than dropped.
+**After the deferral curve:** the full N-sweep, 30 ensembles. In scope and not droppable. If the schedule slips it shrinks to 12, never to zero.
+
+**Remaining training runs, in order.** Nothing else states this in one place.
+
+| # | run | ensembles | purpose |
+|---|---|---|---|
+| 1 | plain MSE ensemble | 1 | pipeline check against Table 7 |
+| 2 | mean-variance, random split | 1 | in-domain baseline, no shift |
+| 3 | mean-variance, interior hole at p30 | 1 | a gap with training data both sides |
+| 4 | mean-variance, tail-low | 1 | the extrapolation condition |
+| 5 | hidden-coefficient check | 1 | does the variance head work |
+| 6 | calibration figures | 0 | reads runs 2 to 4 |
+| 7 | deferral curve | 0 | reads run 4 |
+| 8 | full N-sweep | 30, floor 12 | does the decomposition hold as N grows |
+
+Runs 2 to 4 are the headline result. Run 8 is validation and goes last.
 
 ---
 

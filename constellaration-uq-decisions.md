@@ -863,6 +863,10 @@ RMSE on edge rotational transform per field period, whose pool std is 0.0786.
 
 **Budget: 5 N × 3 seeds × 2 input conditions = 30 ensembles, 300 member networks.** Written down deliberately. Read unbounded, across three splits and two targets, this is 180 ensembles and 1800 networks, which does not survive the time budget. Any expansion past 30 is a visible decision, not a drift.
 
+**If the schedule slips, shrink the grid, never drop the sweep** (amended 2026-08-29). The floor is 3 N × 2 seeds × 2 input conditions = 12 ensembles. This decision already commits to reporting the *shape* of the epistemic decay rather than a fitted exponent, and 12 points show the shape. Dropping the sweep entirely is not an option, because nothing else can test whether the epistemic term is reducible with data, which is the only thing that earns it the name. An earlier version of 6.5 named the sweep as the first thing to cut; that was wrong and is retracted.
+
+⚠️ **Do not assume the sweep is expensive before measuring it.** It was described as the largest remaining compute item on the basis of its ensemble count alone. These are small networks on GPU, so 300 of them may well be an hour or two. Time a single member network before the ensemble work starts, and settle the scheduling question with a measurement instead of a guess.
+
 **My decision:**
 > Pin it to the tail split and the primary target. The sweep exists to prove the uncertainty signal behaves, not to produce a result per metric, so once it works on one target and one split I have what I need. Writing the ensemble count down is what stops it quietly growing later.
 
@@ -898,20 +902,35 @@ RMSE on edge rotational transform per field period, whose pool std is 0.0786.
 
 - [x] Decided
 
-**Decided: the full N-sweep runs last, after Stage 7 calibration and Stage 8 deferral. A cheap two-ensemble version of the hidden-coefficient check runs early, immediately after the mean-variance ensemble exists.**
+**Decided: the full N-sweep runs last, after Stage 7 calibration and Stage 8 deferral. The hidden-coefficient check runs early, immediately after the mean-variance ensembles exist, and costs one extra ensemble.**
 
 **The conflict this resolves.** Stage numbering puts the sweep at 6, before calibration at 7 and deferral at 8, which implies sweep first. The end-of-week-2 calendar gate asks only for three splits, calibration figures and a drafted deferral curve, which implies sweep later. The two disagreed and nobody had reconciled them.
 
-**Why last.** Calibration and the deferral curve are the two named headline deliverables (0.3). The sweep validates the uncertainty machinery, which is a supporting result. Under a 2.5 week budget the ordering should be the one where running out of time costs least, and losing a supporting result costs less than losing a deliverable. The sweep is also the largest remaining compute item at 30 ensembles and 300 networks, so it is the piece most exposed to a schedule slip.
+**Why last.** Calibration and the deferral curve are the two named headline deliverables (0.3). The sweep validates the uncertainty machinery, which is a supporting result. Under a 2.5 week budget the ordering should be the one where running out of time costs least, and losing a supporting result costs less than losing a deliverable.
 
-⚠️ **The risk this ordering creates.** The hidden-coefficient condition (6.2) is the only check that can catch a variance head pinned at its floor rather than working. Deferring the whole sweep means building the calibration figures and the deferral curve on top of a variance head that has never been tested against a known injected magnitude. If it turns out broken, both deliverables need redoing.
+**Why last is safe, and this is the part that makes the whole ordering work.** Calibration and the deferral curve do not take the uncertainty signal on faith, they measure it. The deferral curve asks whether deferring the most uncertain shapes actually reduces error, and a useless signal puts the curve flat on the random floor. Calibration asks whether a 90% interval contains the truth 90% of the time. So a broken signal surfaces at Stage 7 or 8, not at the sweep.
 
-**The mitigation, which is why the sweep splits in two.** As soon as the mean-variance ensemble exists, run the hidden-coefficient check once: one training size, one seed, both input conditions. Two ensembles, twenty member networks, roughly twenty minutes. It answers the single question "does the variance head recover the magnitude that was injected." That is a sanity check, not the sweep, and it does not touch the pinned 30-ensemble budget in 6.1.
+**What the sweep uniquely tests** is narrower: whether splitting the uncertainty into ignorance and noise is a real split or two labels. Epistemic must shrink as training data grows, aleatoric must not. A signal can rank points perfectly well, and so produce valid calibration and deferral results, while failing that decomposition test. That is why the sweep can go last without putting the deliverables at risk.
 
-**Order of work from here:** plain MSE ensemble (4.6) → mean-variance ensemble → cheap hidden-coefficient check → Stage 7 calibration → Stage 8 deferral → full N-sweep.
+⚠️ **The one risk that does not wait.** The hidden-coefficient condition (6.2) is the only check that can catch a variance head pinned at its floor rather than working. Aleatoric sits at the numerical floor on this dataset by construction (Stage 2), so a variance head that always reports approximately zero looks correct and is untestable.
+
+**The mitigation: one extra ensemble.** The tail split's mean-variance ensemble already provides the all-80 reference. The check adds a single ensemble on the same split with high mode-number coefficients hidden, then compares the two aleatoric estimates. If the hidden version does not report roughly the magnitude that was removed, the variance head is not working. Ten member networks, run as soon as the tail ensemble exists.
+
+**Order of work from here:**
+
+| # | run | ensembles | purpose |
+|---|---|---|---|
+| 1 | plain MSE ensemble (4.6) | 1 | pipeline check against Table 7 |
+| 2 | mean-variance, random split | 1 | in-domain baseline, no shift |
+| 3 | mean-variance, interior hole at p30 | 1 | a gap with training data both sides |
+| 4 | mean-variance, tail-low | 1 | the extrapolation condition |
+| 5 | hidden-coefficient check | 1 | does the variance head work |
+| 6 | Stage 7 calibration | 0 | reads runs 2 to 4 |
+| 7 | Stage 8 deferral curve | 0 | reads run 4 |
+| 8 | full N-sweep | 30, floor 12 | does the decomposition hold as N grows |
 
 **My decision:**
-> Put the sweep last because the two deliverables come first, but do not defer the one check that could invalidate them. Twenty minutes early buys the right to spend the rest of the time on calibration without wondering whether the variance head works.
+> Put the sweep last, because calibration and the deferral curve measure the uncertainty signal directly rather than assuming it, so a broken signal cannot hide until step 8. The one thing that can hide is a variance head stuck at its floor, and one extra ensemble rules that out before anything is built on it.
 
 ---
 
