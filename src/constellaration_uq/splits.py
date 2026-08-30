@@ -9,6 +9,8 @@ Every function takes the axis values and returns (train_mask, test_mask) as
 boolean arrays, so the day 1-2 grid can call them interchangeably.
 """
 
+from itertools import pairwise
+
 import numpy as np
 
 
@@ -64,3 +66,35 @@ def distance_from_training_region(axis, train_mask, axis_std=None):
 
     nearest = np.minimum(np.abs(axis - left), np.abs(axis - right))
     return nearest / axis_std
+
+
+def nested_subsamples(n_pool, sizes, seed):
+    """Training subsets for the N-sweep, each nested inside the next larger one.
+
+    Returns one index array per entry in `sizes`, drawn from a single shuffle of
+    range(n_pool), so the N = 2000 set is the N = 1000 set plus 1000 more rows
+    rather than an independent draw.
+
+    ⚠️ Nesting is the point, not an implementation convenience. The sweep asks
+    whether epistemic uncertainty shrinks as data is added. With independent
+    draws per size, the difference between two rungs mixes "more data" with
+    "different data", and at the small rungs the second term is large: 1000 rows
+    out of 16,793 is a 6% sample, so two draws can differ substantially in which
+    part of the training region they cover. Nesting removes that term, leaving
+    added data as the only thing that changed. The three seeds then vary the
+    whole ladder together, which is the variation the sweep actually wants to
+    report.
+
+    Subsampling happens within the training region only, so N varies and
+    coverage of the region does not.
+    """
+    sizes = list(sizes)
+    if any(b <= a for a, b in pairwise(sizes)):
+        raise ValueError(f'sizes must be strictly ascending, got {sizes}')
+    if sizes and sizes[-1] > n_pool:
+        raise ValueError(f'largest size {sizes[-1]} exceeds pool of {n_pool}')
+    if sizes and sizes[0] < 1:
+        raise ValueError(f'sizes must be positive, got {sizes}')
+
+    order = np.random.default_rng(seed).permutation(n_pool)
+    return [order[:size] for size in sizes]

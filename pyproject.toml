@@ -21,3 +21,8 @@ ignore = ["EXE002"]
 
 [tool.ruff.format]
 quote-style = "single"
+# Code blocks in the decision log and CLAUDE.md are verbatim quotes of
+# Proxima's published source. Reformatting them, including restyling their
+# double quotes to single, would make the quotation inaccurate, and the point
+# of those blocks is that they are what their repo actually says.
+exclude = ["*.md"]

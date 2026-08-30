@@ -248,7 +248,35 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 ⚠️ **The curve assumes the solver always succeeds.** Deferred points are credited the exact value. Decision log 8.6 leaves it open as a stretch item whether VMEC++ failures cluster in the compact region, which would make this optimistic.
 
-**Next: step 8, the N-sweep.** 30 ensembles, floor 12, the only remaining training. Then figures for steps 6 and 7, then the write-up.
+**Step 8 done (2026-08-30), `scripts/n_sweep.py`, 30 ensembles in 1386s on a T4.** The last training run. 5 sizes x 3 seeds x 2 noise conditions, tail split, primary target. Everything frozen except N and the injected noise.
+
+**VERDICT: the decomposition holds.** Both terms behave as their names claim.
+
+| N | epistemic (clean) | aleatoric (clean) | aleatoric (σ=0.020) | recovered σ |
+|---|---|---|---|---|
+| 1,000 | 0.01475 | 0.03981 | 0.05145 | 0.0318 ± 0.0041 |
+| 2,000 | 0.01300 | 0.02554 | 0.03525 | 0.0241 ± 0.0023 |
+| 4,000 | 0.01121 | 0.01977 | 0.02980 | 0.0223 ± 0.0003 |
+| 8,000 | 0.00984 | 0.01431 | 0.02648 | 0.0223 ± 0.0009 |
+| 16,793 | 0.00873 | 0.01111 | 0.02362 | **0.0208 ± 0.0003** |
+
+**The clean statement of the result, and the form to use in the write-up:** the recovered σ column is the injected component pulled back out by quadrature subtraction, `sqrt(noisy² − clean²)`, within seed. **The reducible part falls from 0.0398 to 0.0111 as N grows 17x. The irreducible part sits at 0.020 and does not move**, landing at 0.0208 ± 0.0003 against a true 0.020. Epistemic shrinks monotonically in both conditions, 0.01475 to 0.00873 clean, with a per-rung seed spread around ±1% against a trend of x0.59.
+
+This is what earns the two terms their names, and it independently reproduces step 3's verdict by a different route, since step 3 compared magnitudes at one N and this tracks them across seventeenfold.
+
+⚠️ **The pre-registered prediction was correct.** Predicted ~0.023 for noisy aleatoric at full N before the run, measured 0.0236. The earlier wording, "aleatoric stays at 0.020 as N grows twentyfold", was corrected to the quadrature form before the sweep ran, not after seeing it.
+
+**Second finding, and it was not what the sweep was built for: the extrapolation gap widens with data.** Out-of-region over in-region RMSE, averaged over seeds: 1.71, 2.13, 2.53, 2.92, **3.39**. Monotone, spreads of ±0.06 to ±0.14, and the endpoints do not overlap. In-region error falls 67% over the sweep while out-of-region falls only 29%.
+
+⚠️ **State that finding narrowly.** Subsampling happens *within* the training region, so "more data" here means more of the same distribution, and more of a distribution cannot populate a region it excludes. The defensible claim is that **scaling the existing dataset does not buy extrapolation reliability**, so the answer is targeted sampling in the sparse region or deferral, not more of the same. That is also what the two 2026 compact-stellarator papers are doing.
+
+⚠️ **A third claim was drafted and then withdrawn on the evidence, before it reached any figure.** "Out-of-region calibration degrades as N grows" came from reading seed 0 alone, where the ratio ran 0.96 to 0.62. Across all three seeds it is 0.85 ± 0.11 at N = 1,000 and then **flat within noise from N = 2,000 onward: 0.62, 0.62, 0.65, 0.66.** The entire trend was the N = 1,000 point, where the model is poor everywhere and its uncertainty is honestly large. **Do not claim calibration worsens with data.** The correct statement is that out-of-region calibration is stuck near 0.65 and more data does not fix it, which is a supporting point for deferral rather than a finding of its own.
+
+⚠️ **One artifact, already understood from step 3.** Coverage in the noisy condition rises to 0.99 in-region. The model predicts for the noisy distribution it trained on and is scored against clean targets, so over-covering is correct behaviour.
+
+**No rate or exponent is reported**, per the standing decision to report the shape only. Five rungs at three seeds show a shape and nothing finer.
+
+**Next: figures for steps 6, 7 and 8, then the write-up.** All training is done.
 
 Two loose ends, neither blocking anything: the mirror-pair search (folded into decision log 2.2, the tolerance duplicate check) and a three-seed rerun of the narrow sweep's p30 and p90 if the U's upper arm is ever load-bearing.
 
@@ -433,10 +461,34 @@ architecture claim in either direction.
   σ = 0.020 because 0.005 is too close to the baseline misfit to
   separate from it and 0.050 dominates everything, hiding the
   epistemic decay. 0.020 is 25% of the target's spread and
-  recovered at ratio 1.09 in step 3.
-  This also sharpens the claim: the floor is exact, so it becomes
-  "aleatoric stays at 0.020 as N grows twentyfold", falsifiable
-  to a number rather than to a trend.
+  recovered at ratio 1.07 in step 3.
+  ⚠️ **PRE-REGISTERED 2026-08-30, before the sweep ran, and it
+  corrects an earlier over-claim.** This entry used to read
+  "aleatoric stays at 0.020 as N grows twentyfold", which is
+  wrong and would have been falsified by the run. The two terms
+  add in variance, so what the head reports under injection is
+  sqrt(misfit² + σ²), and misfit is large at the small rungs:
+  step 0 measured RMSE about 0.045 at N = 1000 against 0.0115 at
+  full size. A tiny 4-ensemble smoke run at N = 200 and 400 makes
+  it concrete, aleatoric came out 0.067 with σ = 0.020 injected,
+  because the injection is invisible next to a misfit of 0.056.
+  **Predicted, in advance:**
+
+  | N | clean aleatoric | noisy aleatoric |
+  |---|---|---|
+  | 1,000 | ~0.05 | ~0.054 |
+  | full | ~0.012 | ~0.023 |
+
+  **So the correct claim is not a flat line.** The two conditions
+  converge at small N and separate at large N, and the signature
+  to look for is **the clean curve continuing to fall while the
+  noisy one flattens near 0.023.** The floor is still exact and
+  still falsifiable to a number, it is just sqrt(misfit² + σ²)
+  rather than σ, and the misfit half is measured at each N by the
+  clean condition. That is what the two conditions are for.
+  ⚠️ Do not report "aleatoric stayed flat" if it did not. The
+  contrast between the conditions is the result, not either curve
+  on its own.
   Budget: 5 N x 3 seeds x 2 noise conditions = 30 ensembles,
   300 member networks. Any expansion past that is a visible
   decision, not a drift.
@@ -795,7 +847,7 @@ ensemble.
 | 5 | mean-variance, tail-low | 1 | ✅ done 2026-08-29, out/in RMSE 3.24x, calibration 0.66 out of region |
 | 6 | calibration figures | 0 | ✅ done 2026-08-30, coverage 0.779 at the tail against 0.956 in region, and PIT found a mean bias out there |
 | 7 | deferral curve | 0 | ✅ done 2026-08-30, solving the worst 20% cuts CRPS 41% against 20% at random, total-ranked narrowly ahead of epistemic |
-| 8 | full N-sweep | 30, floor 12 | does the decomposition hold as N grows |
+| 8 | full N-sweep | 30, floor 12 | ✅ done 2026-08-30, HOLDS: injected σ recovered at 0.0208 against 0.020 while misfit fell 3.6x, and the extrapolation gap widened 1.71 to 3.39 |
 
 Runs 2, 4 and 5 are the headline result. Run 8 is validation and goes last.
 

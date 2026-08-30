@@ -74,9 +74,7 @@ def main():
     # is what the sweep subsamples from.
     train_mask, _ = tail_split(axis, 'low', TEST_FRACTION)
     fit_pool = np.flatnonzero(train_mask)
-    X_fit_all, y_fit_all, X_val, y_val = split_validation(
-        X[fit_pool], y[fit_pool], VAL_SIZE, SEED
-    )
+    X_fit_all, y_fit_all, X_val, y_val = split_validation(X[fit_pool], y[fit_pool], VAL_SIZE, SEED)
     print(f'pool {len(trimmed):,} rows, fit set {len(X_fit_all):,}, validation {len(X_val):,}\n')
 
     header = f'{"device":>22s} {"N":>7s} {"epochs":>7s} {"seconds":>9s} {"s/epoch":>9s}'
@@ -102,10 +100,7 @@ def main():
 
             epochs = len(history)
             timings[(label, n)] = elapsed
-            print(
-                f'{label[:22]:>22s} {n:7,d} {epochs:7d} '
-                f'{elapsed:8.1f}s {elapsed / epochs:8.2f}s'
-            )
+            print(f'{label[:22]:>22s} {n:7,d} {epochs:7d} {elapsed:8.1f}s {elapsed / epochs:8.2f}s')
 
     gpu_labels = [label for label, _ in devices() if label != 'cpu']
     if not gpu_labels:

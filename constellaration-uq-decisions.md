@@ -1087,6 +1087,36 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 ---
 
+**RESULT 2026-08-30, `scripts/n_sweep.py`, step 8. 30 ensembles, 300 member networks, 1386s on a T4: THE DECOMPOSITION HOLDS.**
+
+5 sizes x 3 seeds x 2 noise conditions, tail split, primary target. Architecture, recipe, the 500-point validation set and both test sets frozen across every cell, so only N and the injected noise move.
+
+| N | epistemic (clean) | aleatoric (clean) | aleatoric (σ=0.020) | recovered σ |
+|---|---|---|---|---|
+| 1,000 | 0.01475 | 0.03981 | 0.05145 | 0.0318 ± 0.0041 |
+| 2,000 | 0.01300 | 0.02554 | 0.03525 | 0.0241 ± 0.0023 |
+| 4,000 | 0.01121 | 0.01977 | 0.02980 | 0.0223 ± 0.0003 |
+| 8,000 | 0.00984 | 0.01431 | 0.02648 | 0.0223 ± 0.0009 |
+| 16,793 | 0.00873 | 0.01111 | 0.02362 | **0.0208 ± 0.0003** |
+
+**The claim, in the form that survives scrutiny.** The recovered column is the injected component pulled back out within seed by quadrature subtraction, sqrt(noisy² − clean²), which is the right operation because the two contributions add in variance. **The reducible part of the aleatoric term falls from 0.0398 to 0.0111 as N grows seventeenfold, while the irreducible part sits at 0.020 and does not move**, converging to 0.0208 ± 0.0003. Epistemic shrinks monotonically in both conditions, x0.59 clean and x0.72 noisy, with per-rung seed spreads near ±1%.
+
+**Why this is worth more than step 3's verdict.** 6.2 compared magnitudes at a single N, which a head that scaled its output by anything monotone could have passed. This tracks the split across a seventeenfold change in data volume and asks the two halves to move in opposite ways: one decaying, one fixed. They do.
+
+**Pre-registered and correct.** The prediction of ~0.023 for noisy aleatoric at full N was written into CLAUDE.md before the run, replacing the earlier and wrong "aleatoric stays at 0.020 as N grows twentyfold". Measured 0.0236. The correction was made from a four-ensemble smoke run at N = 200 and 400 that showed aleatoric at 0.067 under a 0.020 injection, because misfit of 0.056 swamps it there.
+
+**Second finding, unplanned: the extrapolation gap widens with data.** Out-of-region over in-region RMSE, averaged over seeds: 1.71, 2.13, 2.53, 2.92, **3.39**, monotone with spreads of ±0.06 to ±0.14 and non-overlapping endpoints. In-region error falls 67% across the sweep; out-of-region falls 29%.
+
+⚠️ **Scope that finding carefully or it overreaches.** Subsampling happens within the training region, so "more data" means more of the same distribution, and more of a distribution cannot populate a region it excludes. The defensible claim is that scaling the existing dataset does not buy extrapolation reliability, which makes the remedies targeted sampling in the sparse region or deferral. That is what the two 2026 compact-stellarator papers are doing, so the finding connects to live work rather than standing alone.
+
+⚠️ **A third claim was drafted and withdrawn on the evidence, before it reached a figure.** "Out-of-region calibration degrades as N grows" was read off seed 0 alone, where the ratio runs 0.96 down to 0.62. Across all three seeds it is 0.85 ± 0.11 at N = 1,000 and then flat within noise: 0.622, 0.615, 0.652, 0.661. The whole apparent trend was the N = 1,000 rung, where the model is poor everywhere and its uncertainty is honestly large. **The correct statement is that out-of-region calibration is stuck near 0.65 and more data does not repair it**, which supports deferral without pretending to a trend. Recorded here rather than deleted, in the same spirit as 3.7's placement retraction: the single-seed reading was the mistake, and three seeds is what caught it.
+
+⚠️ **One artifact, already understood from 6.2.** In-region coverage in the noisy condition rises to 0.99. The model estimates uncertainty for the noisy distribution it trained on and is scored against clean targets, so over-covering is correct.
+
+**No exponent is fitted**, per 6.3 below.
+
+---
+
 **6.3 What to claim** `SETTLED`
 
 **Decided:** Report the shape of the decay. Do not fit an exponent.

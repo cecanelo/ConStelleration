@@ -5,12 +5,16 @@ test-set leakage that raises nothing and makes results look better than they
 are. Same category as the empty-array bug in data.py.
 """
 
+from itertools import pairwise
+from typing import ClassVar
+
 import numpy as np
 import pytest
 
 from constellaration_uq.splits import (
     distance_from_training_region,
     hole_split,
+    nested_subsamples,
     random_split,
     tail_split,
 )
@@ -157,3 +161,74 @@ def test_distance_handles_points_beyond_both_ends():
 
     assert distance[0] == 5.0
     assert distance[-1] == 5.0
+
+
+class TestNestedSubsamples:
+    """The N-sweep's training subsets.
+
+    The failure this guards against is silent and would invalidate the sweep
+    rather than break it: if the rungs were independent draws instead of nested
+    ones, every comparison between two N values would mix "more data" with
+    "different data", and the sweep would still produce a plausible decaying
+    curve that means something else.
+    """
+
+    SIZES: ClassVar[list] = [100, 250, 500, 1000]
+
+    def test_lengths_match_the_requested_sizes(self):
+        subsets = nested_subsamples(2000, self.SIZES, seed=0)
+        assert [len(s) for s in subsets] == self.SIZES
+
+    def test_each_subset_is_contained_in_the_next(self):
+        subsets = nested_subsamples(2000, self.SIZES, seed=0)
+        for smaller, larger in pairwise(subsets):
+            assert set(smaller.tolist()) <= set(larger.tolist())
+
+    def test_growth_is_pure_addition(self):
+        """Stronger than containment: going up a rung adds rows and removes
+        none, so the difference in size is exactly the number of new rows."""
+        subsets = nested_subsamples(2000, self.SIZES, seed=0)
+        for smaller, larger in pairwise(subsets):
+            added = set(larger.tolist()) - set(smaller.tolist())
+            assert len(added) == len(larger) - len(smaller)
+
+    def test_no_row_appears_twice_within_a_subset(self):
+        for subset in nested_subsamples(2000, self.SIZES, seed=0):
+            assert len(set(subset.tolist())) == len(subset)
+
+    def test_indices_stay_inside_the_pool(self):
+        for subset in nested_subsamples(2000, self.SIZES, seed=0):
+            assert subset.min() >= 0
+            assert subset.max() < 2000
+
+    def test_same_seed_reproduces(self):
+        first = nested_subsamples(2000, self.SIZES, seed=7)
+        second = nested_subsamples(2000, self.SIZES, seed=7)
+        for a, b in zip(first, second, strict=True):
+            assert np.array_equal(a, b)
+
+    def test_different_seeds_move_the_whole_ladder(self):
+        """The three sweep seeds are meant to vary which rows are drawn. If the
+        seed did not reach the shuffle, all three would be identical and the
+        sweep would report one run three times."""
+        first = nested_subsamples(2000, self.SIZES, seed=0)
+        second = nested_subsamples(2000, self.SIZES, seed=1)
+        assert not np.array_equal(first[0], second[0])
+        assert not np.array_equal(first[-1], second[-1])
+
+    def test_full_size_covers_the_pool(self):
+        (subset,) = nested_subsamples(500, [500], seed=0)
+        assert sorted(subset.tolist()) == list(range(500))
+
+    def test_rejects_a_size_larger_than_the_pool(self):
+        with pytest.raises(ValueError, match='exceeds pool'):
+            nested_subsamples(100, [50, 200], seed=0)
+
+    def test_rejects_unsorted_or_repeated_sizes(self):
+        for bad in ([100, 50], [100, 100]):
+            with pytest.raises(ValueError, match='ascending'):
+                nested_subsamples(1000, bad, seed=0)
+
+    def test_rejects_a_non_positive_size(self):
+        with pytest.raises(ValueError, match='positive'):
+            nested_subsamples(1000, [0, 100], seed=0)

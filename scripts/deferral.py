@@ -79,7 +79,7 @@ def curve(crps, signal, rates):
     cumulative = np.concatenate([[0.0], np.cumsum(np.asarray(crps)[order])])
     n = len(crps)
     total = cumulative[-1]
-    return np.array([(total - cumulative[int(round(r * n))]) / n for r in rates])
+    return np.array([(total - cumulative[round(r * n)]) / n for r in rates])
 
 
 def random_curve(crps, rates, seed):
@@ -157,7 +157,7 @@ def main():
         subset = df[df['region'] == region]
         curves, summary = run_region(subset)
 
-        payload[region] = {'n': int(len(subset)), 'rankings': summary}
+        payload[region] = {'n': len(subset), 'rankings': summary}
         print_region(f'{label}, n = {len(subset):,}', summary)
 
         for name, values in curves.items():

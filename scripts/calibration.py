@@ -76,7 +76,7 @@ def score(df):
     total = rms_uncertainty(df['total_variance'])
 
     return {
-        'n': int(len(df)),
+        'n': len(df),
         'rmse': rmse,
         'crps': float(df['crps'].mean()),
         'epistemic': rms_uncertainty(df['epistemic_variance']),

@@ -12,6 +12,8 @@ the diagnostics say "calibrated". Anything that reads miscalibrated on data that
 is calibrated by construction is a bug in the diagnostic, not a finding.
 """
 
+from itertools import pairwise
+
 import numpy as np
 import pytest
 
@@ -94,9 +96,7 @@ def test_pit_is_symmetric_about_the_mean(calibrated):
     _, mean, variance = calibrated
     y = mean + 1.7
     mirrored = mean - 1.7
-    assert pit_values(y, mean, variance) == pytest.approx(
-        1 - pit_values(mirrored, mean, variance)
-    )
+    assert pit_values(y, mean, variance) == pytest.approx(1 - pit_values(mirrored, mean, variance))
 
 
 def test_pit_piles_at_the_ends_when_overconfident(calibrated):
@@ -263,7 +263,7 @@ def test_edges_are_contiguous(distance):
     """No gap between one bin's top and the next one's bottom, so the curve has
     no invisible hole in it."""
     rows, _ = distance_bins(distance, 8)
-    for lower, upper in zip(rows, rows[1:], strict=False):
+    for lower, upper in pairwise(rows):
         assert lower['d_hi'] == pytest.approx(upper['d_lo'])
 
 

@@ -1,0 +1,909 @@
+{
+  "name": "n_sweep",
+  "saved_at": "2026-08-30T15:53:55+00:00",
+  "git_commit": "029f05f25cbbe8cf1df91787225fb42a67464077",
+  "git_dirty": true,
+  "constants": {
+    "SIZES": [
+      1000,
+      2000,
+      4000,
+      8000,
+      "full"
+    ],
+    "SEEDS": [
+      0,
+      1,
+      2
+    ],
+    "NOISE_LEVELS": [
+      0.0,
+      0.02
+    ],
+    "N_MEMBERS": 10,
+    "VAL_SIZE": 500,
+    "COVERAGE_LEVEL": 0.9,
+    "TARGET_COL": "metrics.edge_rotational_transform_over_n_field_periods",
+    "AXIS_COL": "metrics.aspect_ratio",
+    "split": "tail-low",
+    "reduced": false
+  },
+  "results": {
+    "cells": [
+      {
+        "n_train": 1000,
+        "seed": 0,
+        "sigma": 0.0,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.03993469844641683,
+          "epistemic": 0.014770718173653215,
+          "aleatoric": 0.04590359507103614,
+          "total": 0.048221511356603894,
+          "coverage": 0.9641535615171137
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.06128365927854099,
+          "epistemic": 0.021187240322459264,
+          "aleatoric": 0.05489404361100882,
+          "total": 0.05884093112318504,
+          "coverage": 0.8919518963922294
+        },
+        "mean_epochs": 51.4
+      },
+      {
+        "n_train": 1000,
+        "seed": 1,
+        "sigma": 0.0,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.03504097427897745,
+          "epistemic": 0.014861451670838181,
+          "aleatoric": 0.030456021705057925,
+          "total": 0.033888523205170946,
+          "coverage": 0.9382516188714154
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.06405088779282106,
+          "epistemic": 0.02274090996880325,
+          "aleatoric": 0.03906977179575546,
+          "total": 0.04520615062828987,
+          "coverage": 0.8038852913968547
+        },
+        "mean_epochs": 65.3
+      },
+      {
+        "n_train": 1000,
+        "seed": 2,
+        "sigma": 0.0,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.0367953389907157,
+          "epistemic": 0.014622790445641519,
+          "aleatoric": 0.043064192652176744,
+          "total": 0.04547912367690831,
+          "coverage": 0.9544403330249769
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.06489325606496689,
+          "epistemic": 0.021236960756096622,
+          "aleatoric": 0.05393290352631706,
+          "total": 0.05796349352736959,
+          "coverage": 0.8601295097132285
+        },
+        "mean_epochs": 54.8
+      },
+      {
+        "n_train": 2000,
+        "seed": 0,
+        "sigma": 0.0,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.030791674339335943,
+          "epistemic": 0.013467114730116084,
+          "aleatoric": 0.028572133265865832,
+          "total": 0.031586864013158265,
+          "coverage": 0.9620721554116559
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.05943658277460572,
+          "epistemic": 0.018609228725699534,
+          "aleatoric": 0.036039941247645646,
+          "total": 0.040560827871454756,
+          "coverage": 0.7872340425531915
+        },
+        "mean_epochs": 54.9
+      },
+      {
+        "n_train": 2000,
+        "seed": 1,
+        "sigma": 0.0,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.02747603330900131,
+          "epistemic": 0.01222220759306149,
+          "aleatoric": 0.022735923456516167,
+          "total": 0.025812876128786705,
+          "coverage": 0.9350138760407031
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.0619793667545005,
+          "epistemic": 0.01916488513522747,
+          "aleatoric": 0.031815599749994934,
+          "total": 0.03714196020560196,
+          "coverage": 0.6993524514338575
+        },
+        "mean_epochs": 59.9
+      },
+      {
+        "n_train": 2000,
+        "seed": 2,
+        "sigma": 0.0,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.028786124695963356,
+          "epistemic": 0.013302895346712815,
+          "aleatoric": 0.025325517011398707,
+          "total": 0.02860679700236037,
+          "coverage": 0.9426456984273821
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.06344558618311565,
+          "epistemic": 0.018443847297595826,
+          "aleatoric": 0.03206304743378602,
+          "total": 0.03698938382850185,
+          "coverage": 0.7483811285846439
+        },
+        "mean_epochs": 55.9
+      },
+      {
+        "n_train": 4000,
+        "seed": 0,
+        "sigma": 0.0,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.021531848607851643,
+          "epistemic": 0.01113690014221393,
+          "aleatoric": 0.020075351101887552,
+          "total": 0.022957575375540766,
+          "coverage": 0.9470397779833487
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.053038091125990304,
+          "epistemic": 0.018366901629109925,
+          "aleatoric": 0.03081550147392429,
+          "total": 0.035873920964346745,
+          "coverage": 0.7302497687326549
+        },
+        "mean_epochs": 55.6
+      },
+      {
+        "n_train": 4000,
+        "seed": 1,
+        "sigma": 0.0,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.021660885561627125,
+          "epistemic": 0.011915563914563533,
+          "aleatoric": 0.019471749083324122,
+          "total": 0.022828264862675307,
+          "coverage": 0.9537465309898242
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.05451614628417141,
+          "epistemic": 0.01906494197450078,
+          "aleatoric": 0.02786149030792119,
+          "total": 0.033759956362420636,
+          "coverage": 0.7644773358001851
+        },
+        "mean_epochs": 55.2
+      },
+      {
+        "n_train": 4000,
+        "seed": 2,
+        "sigma": 0.0,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.022307118318046534,
+          "epistemic": 0.010585620656116684,
+          "aleatoric": 0.01976372591549682,
+          "total": 0.022420085292952762,
+          "coverage": 0.9410268270120259
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.05831308043739639,
+          "epistemic": 0.016194044151850006,
+          "aleatoric": 0.02755134167207125,
+          "total": 0.03195815224446087,
+          "coverage": 0.708418131359852
+        },
+        "mean_epochs": 55.9
+      },
+      {
+        "n_train": 8000,
+        "seed": 0,
+        "sigma": 0.0,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.016054944503599265,
+          "epistemic": 0.00993192784330179,
+          "aleatoric": 0.014667563917262908,
+          "total": 0.017713853977213923,
+          "coverage": 0.9530527289546716
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.045371021269488186,
+          "epistemic": 0.0171823935453998,
+          "aleatoric": 0.028748037276155835,
+          "total": 0.03349155557145226,
+          "coverage": 0.7777983348751156
+        },
+        "mean_epochs": 53.4
+      },
+      {
+        "n_train": 8000,
+        "seed": 1,
+        "sigma": 0.0,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.01583872181328391,
+          "epistemic": 0.009734312353357895,
+          "aleatoric": 0.01336699350102852,
+          "total": 0.01653582027108256,
+          "coverage": 0.946577243293247
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.04536281986017838,
+          "epistemic": 0.017805006996811125,
+          "aleatoric": 0.021506671801585792,
+          "total": 0.02792051587512528,
+          "coverage": 0.747641073080481
+        },
+        "mean_epochs": 54.3
+      },
+      {
+        "n_train": 8000,
+        "seed": 2,
+        "sigma": 0.0,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.016727000841850873,
+          "epistemic": 0.009853226434110485,
+          "aleatoric": 0.014901038691014494,
+          "total": 0.017864126751292175,
+          "coverage": 0.9528214616096207
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.051261155732863224,
+          "epistemic": 0.01689025901839442,
+          "aleatoric": 0.02586941325012722,
+          "total": 0.03089510303753047,
+          "coverage": 0.704717853839038
+        },
+        "mean_epochs": 52.8
+      },
+      {
+        "n_train": 16793,
+        "seed": 0,
+        "sigma": 0.0,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.012349197992842965,
+          "epistemic": 0.008690043585973906,
+          "aleatoric": 0.01130667921599527,
+          "total": 0.014260359484964787,
+          "coverage": 0.9655411655874191
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.04355504434252931,
+          "epistemic": 0.015661097018582766,
+          "aleatoric": 0.022157643344101433,
+          "total": 0.027133579164852126,
+          "coverage": 0.7668825161887142
+        },
+        "mean_epochs": 52.7
+      },
+      {
+        "n_train": 16793,
+        "seed": 1,
+        "sigma": 0.0,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.012200678387870523,
+          "epistemic": 0.008656525241440737,
+          "aleatoric": 0.010962951042395882,
+          "total": 0.013968597819733258,
+          "coverage": 0.9632284921369103
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.04069779173290782,
+          "epistemic": 0.015618814252091651,
+          "aleatoric": 0.023983442185273325,
+          "total": 0.028620846556266226,
+          "coverage": 0.8044403330249769
+        },
+        "mean_epochs": 51.9
+      },
+      {
+        "n_train": 16793,
+        "seed": 2,
+        "sigma": 0.0,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.012281084752018358,
+          "epistemic": 0.00883369642541813,
+          "aleatoric": 0.011049772689391042,
+          "total": 0.014146790055909925,
+          "coverage": 0.9613783533765032
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.040493303775511615,
+          "epistemic": 0.015959486585531465,
+          "aleatoric": 0.02125856439814696,
+          "total": 0.026582546358383873,
+          "coverage": 0.7890841813135985
+        },
+        "mean_epochs": 51.4
+      },
+      {
+        "n_train": 1000,
+        "seed": 0,
+        "sigma": 0.02,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.03731806475272846,
+          "epistemic": 0.019221851107158766,
+          "aleatoric": 0.05287322662497133,
+          "total": 0.05625884511529956,
+          "coverage": 0.9775670675300647
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.05991487867463456,
+          "epistemic": 0.03150951051282423,
+          "aleatoric": 0.0628040320773739,
+          "total": 0.07026518128383383,
+          "coverage": 0.9356151711378353
+        },
+        "mean_epochs": 47.4
+      },
+      {
+        "n_train": 1000,
+        "seed": 1,
+        "sigma": 0.02,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.03725591802769007,
+          "epistemic": 0.01686327006809876,
+          "aleatoric": 0.04719896787020137,
+          "total": 0.050120978129146655,
+          "coverage": 0.9729417206290472
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.06499664707654067,
+          "epistemic": 0.025594410978289208,
+          "aleatoric": 0.05297200384791533,
+          "total": 0.05883117423167775,
+          "coverage": 0.8867715078630898
+        },
+        "mean_epochs": 50.8
+      },
+      {
+        "n_train": 1000,
+        "seed": 2,
+        "sigma": 0.02,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.03754209889229436,
+          "epistemic": 0.01807806774591592,
+          "aleatoric": 0.054271785229417516,
+          "total": 0.05720352440131199,
+          "coverage": 0.9777983348751156
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.06816008778040447,
+          "epistemic": 0.025275792189783996,
+          "aleatoric": 0.06593337780918433,
+          "total": 0.07061215177288742,
+          "coverage": 0.901572617946346
+        },
+        "mean_epochs": 50.3
+      },
+      {
+        "n_train": 2000,
+        "seed": 0,
+        "sigma": 0.02,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.0316917556025303,
+          "epistemic": 0.016733657379716438,
+          "aleatoric": 0.0353680694841583,
+          "total": 0.03912691692176476,
+          "coverage": 0.9717853839037928
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.05845391041720646,
+          "epistemic": 0.023631053747127817,
+          "aleatoric": 0.04146250745560271,
+          "total": 0.047723853838184935,
+          "coverage": 0.8662349676225717
+        },
+        "mean_epochs": 49.9
+      },
+      {
+        "n_train": 2000,
+        "seed": 1,
+        "sigma": 0.02,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.02850632517961326,
+          "epistemic": 0.017691140072660413,
+          "aleatoric": 0.033928666741562905,
+          "total": 0.03826396297813632,
+          "coverage": 0.9754856614246068
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.05686507574231376,
+          "epistemic": 0.02366453637276508,
+          "aleatoric": 0.039841490518170306,
+          "total": 0.04633955814027948,
+          "coverage": 0.866049953746531
+        },
+        "mean_epochs": 50.7
+      },
+      {
+        "n_train": 2000,
+        "seed": 2,
+        "sigma": 0.02,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.030592980777091078,
+          "epistemic": 0.017710498212584237,
+          "aleatoric": 0.03646476031785437,
+          "total": 0.040538136278636755,
+          "coverage": 0.9724791859389454
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.06682738442149379,
+          "epistemic": 0.02364755103101277,
+          "aleatoric": 0.043150290804103736,
+          "total": 0.049205225998744245,
+          "coverage": 0.8445883441258094
+        },
+        "mean_epochs": 49.1
+      },
+      {
+        "n_train": 4000,
+        "seed": 0,
+        "sigma": 0.02,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.023375675919268323,
+          "epistemic": 0.01611681949027222,
+          "aleatoric": 0.030259332995501785,
+          "total": 0.03428380235017457,
+          "coverage": 0.9826549491211841
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.05711637659435777,
+          "epistemic": 0.02197886981502621,
+          "aleatoric": 0.03665647281024229,
+          "total": 0.042740703281764846,
+          "coverage": 0.8394079555966697
+        },
+        "mean_epochs": 49.2
+      },
+      {
+        "n_train": 4000,
+        "seed": 1,
+        "sigma": 0.02,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.023990165414846578,
+          "epistemic": 0.015267564278821593,
+          "aleatoric": 0.02961697270661034,
+          "total": 0.033320618132858824,
+          "coverage": 0.9787234042553191
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.05439282718515884,
+          "epistemic": 0.02066524632028196,
+          "aleatoric": 0.03442305496319319,
+          "total": 0.04014970882641358,
+          "coverage": 0.8429232192414431
+        },
+        "mean_epochs": 49.3
+      },
+      {
+        "n_train": 4000,
+        "seed": 2,
+        "sigma": 0.02,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.024300322696538562,
+          "epistemic": 0.015993170750188995,
+          "aleatoric": 0.02953826925255292,
+          "total": 0.03359004109702941,
+          "coverage": 0.9791859389454209
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.06217817747789145,
+          "epistemic": 0.02134009492930305,
+          "aleatoric": 0.035326707559767634,
+          "total": 0.041271974963446756,
+          "coverage": 0.8259019426456984
+        },
+        "mean_epochs": 49.9
+      },
+      {
+        "n_train": 8000,
+        "seed": 0,
+        "sigma": 0.02,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.018730322715269077,
+          "epistemic": 0.014397876926824116,
+          "aleatoric": 0.026620180359264386,
+          "total": 0.030264382740968977,
+          "coverage": 0.9891304347826086
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.051129682221931774,
+          "epistemic": 0.021185060852644492,
+          "aleatoric": 0.03388944391488728,
+          "total": 0.03996625092418136,
+          "coverage": 0.8571692876965773
+        },
+        "mean_epochs": 48.4
+      },
+      {
+        "n_train": 8000,
+        "seed": 1,
+        "sigma": 0.02,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.0187955933333491,
+          "epistemic": 0.014617399935573724,
+          "aleatoric": 0.026901588497258096,
+          "total": 0.030616398288860296,
+          "coverage": 0.9900555041628122
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.04731439474915147,
+          "epistemic": 0.02067144762521661,
+          "aleatoric": 0.03237433761098245,
+          "total": 0.0384110203303077,
+          "coverage": 0.8675300647548566
+        },
+        "mean_epochs": 48.4
+      },
+      {
+        "n_train": 8000,
+        "seed": 2,
+        "sigma": 0.02,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.019210793772667423,
+          "epistemic": 0.01440688185794203,
+          "aleatoric": 0.02593196555771795,
+          "total": 0.02966521671800127,
+          "coverage": 0.9856614246068455
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.05442220940296546,
+          "epistemic": 0.020777650547832118,
+          "aleatoric": 0.030354064720813458,
+          "total": 0.03678423585410462,
+          "coverage": 0.8288621646623496
+        },
+        "mean_epochs": 48.5
+      },
+      {
+        "n_train": 16793,
+        "seed": 0,
+        "sigma": 0.02,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.01487596904184992,
+          "epistemic": 0.013108905892637036,
+          "aleatoric": 0.023335584704869357,
+          "total": 0.02676551750766056,
+          "coverage": 0.9919056429232193
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.044355162406013886,
+          "epistemic": 0.020534852778073702,
+          "aleatoric": 0.027958288996967964,
+          "total": 0.03468927936180697,
+          "coverage": 0.8799259944495837
+        },
+        "mean_epochs": 47.8
+      },
+      {
+        "n_train": 16793,
+        "seed": 1,
+        "sigma": 0.02,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.01475830481924618,
+          "epistemic": 0.012683436716460973,
+          "aleatoric": 0.0235731940181255,
+          "total": 0.02676873256439842,
+          "coverage": 0.9907493061979649
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.042019663652787594,
+          "epistemic": 0.01841927004047916,
+          "aleatoric": 0.027200041416472677,
+          "total": 0.03284983655785648,
+          "coverage": 0.87104532839963
+        },
+        "mean_epochs": 47.7
+      },
+      {
+        "n_train": 16793,
+        "seed": 2,
+        "sigma": 0.02,
+        "in_region": {
+          "set": "in-region",
+          "n": 4324,
+          "rmse": 0.015003164353878258,
+          "epistemic": 0.013098354583508222,
+          "aleatoric": 0.023938165605553702,
+          "total": 0.02728740854529442,
+          "coverage": 0.992368177613321
+        },
+        "out_region": {
+          "set": "out-of-region",
+          "n": 5405,
+          "rmse": 0.04505286838987463,
+          "epistemic": 0.019467531752522256,
+          "aleatoric": 0.029020057052005513,
+          "total": 0.03494493529782273,
+          "coverage": 0.8723404255319149
+        },
+        "mean_epochs": 47.3
+      }
+    ],
+    "averaged": [
+      {
+        "sigma": 0.0,
+        "n_train": 1000,
+        "n_seeds": 3,
+        "in_region_rmse": 0.03725700390536999,
+        "in_region_epistemic": 0.014751653430044304,
+        "in_region_aleatoric": 0.039807936476090273,
+        "in_region_total": 0.042529719412894386,
+        "in_region_coverage": 0.952281837804502,
+        "out_region_rmse": 0.06340926771210964,
+        "out_region_epistemic": 0.021721703682453047,
+        "out_region_aleatoric": 0.04929890631102712,
+        "out_region_total": 0.05400352509294817,
+        "out_region_coverage": 0.8519888991674375
+      },
+      {
+        "sigma": 0.0,
+        "n_train": 2000,
+        "n_seeds": 3,
+        "in_region_rmse": 0.02901794411476687,
+        "in_region_epistemic": 0.012997405889963462,
+        "in_region_aleatoric": 0.025544524577926903,
+        "in_region_total": 0.028668845714768448,
+        "in_region_coverage": 0.946577243293247,
+        "out_region_rmse": 0.06162051190407395,
+        "out_region_epistemic": 0.018739320386174277,
+        "out_region_aleatoric": 0.033306196143808864,
+        "out_region_total": 0.03823072396851952,
+        "out_region_coverage": 0.7449892075238976
+      },
+      {
+        "sigma": 0.0,
+        "n_train": 4000,
+        "n_seeds": 3,
+        "in_region_rmse": 0.021833284162508432,
+        "in_region_epistemic": 0.011212694904298048,
+        "in_region_aleatoric": 0.01977027536690283,
+        "in_region_total": 0.02273530851038961,
+        "in_region_coverage": 0.9472710453283996,
+        "out_region_rmse": 0.05528910594918603,
+        "out_region_epistemic": 0.017875295918486907,
+        "out_region_aleatoric": 0.028742777817972243,
+        "out_region_total": 0.033864009857076084,
+        "out_region_coverage": 0.734381745297564
+      },
+      {
+        "sigma": 0.0,
+        "n_train": 8000,
+        "n_seeds": 3,
+        "in_region_rmse": 0.016206889052911348,
+        "in_region_epistemic": 0.009839822210256722,
+        "in_region_aleatoric": 0.01431186536976864,
+        "in_region_total": 0.017371266999862887,
+        "in_region_coverage": 0.9508171446191799,
+        "out_region_rmse": 0.04733166562084326,
+        "out_region_epistemic": 0.01729255318686845,
+        "out_region_aleatoric": 0.02537470744262295,
+        "out_region_total": 0.030769058161369336,
+        "out_region_coverage": 0.7433857539315448
+      },
+      {
+        "sigma": 0.0,
+        "n_train": 16793,
+        "n_seeds": 3,
+        "in_region_rmse": 0.01227698704424395,
+        "in_region_epistemic": 0.008726755084277591,
+        "in_region_aleatoric": 0.011106467649260732,
+        "in_region_total": 0.014125249120202655,
+        "in_region_coverage": 0.9633826703669442,
+        "out_region_rmse": 0.041582046616982914,
+        "out_region_epistemic": 0.01574646595206863,
+        "out_region_aleatoric": 0.022466549975840574,
+        "out_region_total": 0.027445657359834078,
+        "out_region_coverage": 0.7868023435090965
+      },
+      {
+        "sigma": 0.02,
+        "n_train": 1000,
+        "n_seeds": 3,
+        "in_region_rmse": 0.03737202722423763,
+        "in_region_epistemic": 0.018054396307057814,
+        "in_region_aleatoric": 0.05144799324153007,
+        "in_region_total": 0.05452778254858607,
+        "in_region_coverage": 0.9761023743447425,
+        "out_region_rmse": 0.06435720451052657,
+        "out_region_epistemic": 0.027459904560299148,
+        "out_region_aleatoric": 0.06056980457815786,
+        "out_region_total": 0.06656950242946634,
+        "out_region_coverage": 0.907986432315757
+      },
+      {
+        "sigma": 0.02,
+        "n_train": 2000,
+        "n_seeds": 3,
+        "in_region_rmse": 0.030263687186411547,
+        "in_region_epistemic": 0.01737843188832036,
+        "in_region_aleatoric": 0.03525383218119186,
+        "in_region_total": 0.039309672059512614,
+        "in_region_coverage": 0.9732500770891149,
+        "out_region_rmse": 0.060715456860338,
+        "out_region_epistemic": 0.023647713716968555,
+        "out_region_aleatoric": 0.04148476292595892,
+        "out_region_total": 0.04775621265906955,
+        "out_region_coverage": 0.8589577551649707
+      },
+      {
+        "sigma": 0.02,
+        "n_train": 4000,
+        "n_seeds": 3,
+        "in_region_rmse": 0.02388872134355115,
+        "in_region_epistemic": 0.01579251817309427,
+        "in_region_aleatoric": 0.029804858318221678,
+        "in_region_total": 0.03373148719335427,
+        "in_region_coverage": 0.9801880974406414,
+        "out_region_rmse": 0.05789579375246936,
+        "out_region_epistemic": 0.021328070354870405,
+        "out_region_aleatoric": 0.03546874511106771,
+        "out_region_total": 0.041387462357208395,
+        "out_region_coverage": 0.8360777058279371
+      },
+      {
+        "sigma": 0.02,
+        "n_train": 8000,
+        "n_seeds": 3,
+        "in_region_rmse": 0.018912236607095203,
+        "in_region_epistemic": 0.014474052906779958,
+        "in_region_aleatoric": 0.026484578138080143,
+        "in_region_total": 0.030181999249276847,
+        "in_region_coverage": 0.9882824545174221,
+        "out_region_rmse": 0.050955428791349566,
+        "out_region_epistemic": 0.020878053008564407,
+        "out_region_aleatoric": 0.032205948748894396,
+        "out_region_total": 0.0383871690361979,
+        "out_region_coverage": 0.8511871723712612
+      },
+      {
+        "sigma": 0.02,
+        "n_train": 16793,
+        "n_seeds": 3,
+        "in_region_rmse": 0.01487914607165812,
+        "in_region_epistemic": 0.012963565730868744,
+        "in_region_aleatoric": 0.023615648109516187,
+        "in_region_total": 0.02694055287245113,
+        "in_region_coverage": 0.9916743755781683,
+        "out_region_rmse": 0.043809231482892036,
+        "out_region_epistemic": 0.019473884857025038,
+        "out_region_aleatoric": 0.02805946248848205,
+        "out_region_total": 0.03416135040582872,
+        "out_region_coverage": 0.8744372494603763
+      }
+    ],
+    "complete": true,
+    "total_seconds": 1385.9
+  }
+}
