@@ -1115,13 +1115,29 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 ---
 
-**7.1 Diagnostic set** `OPEN`
+**7.1 Diagnostic set** `SETTLED 2026-08-30`
 
-- [ ] Decided
+- [x] Decided
 
-**Options:** PIT histogram / coverage versus nominal level / reliability diagram / CRPS / some subset
+**Decided: coverage versus nominal, CRPS, and aggregate PIT histograms.** All computed on **total** predicted uncertainty. Coverage and CRPS are binned by distance from the training region using the same bins as the distance-error figure, and all three are reported in-region and out-of-region for all three splits. **The one thing cut is the per-distance-bin PIT histogram.**
 
-**Leaning:** pick a small fixed set and use it identically everywhere
+**Why coverage and CRPS.** Coverage versus nominal is the one diagnostic that turns the headline into something actionable: "at the 90% level the interval contains the truth X% of the time, and X falls off past this distance" is a deferral threshold, while "the score got worse" is not. CRPS is free, scores the whole predictive distribution rather than just one interval, and is already required as the deferral curve's y-axis under 8.3, so computing it here costs nothing and keeps the two deliverables on one scale.
+
+⚠️ **This entry was narrower on 2026-08-30 and initially cut too much.** The first version read "PIT histograms and reliability diagrams are out," justified as "each is itself a histogram, so it needs its own binning on top of the distance bins." Two things are wrong with that, both found by challenging the cut on the same day, before any figure was drawn.
+
+**First, "reliability diagram" named things already in the set.** In regression the term covers two distinct plots, and neither was ever a candidate for cutting. Nominal confidence against empirical hit rate **is** coverage-versus-nominal under a different name. Predicted uncertainty against realised error (the spread-skill plot) is already a standing commitment under 7.2, which requires coverage binned by predicted uncertainty. So the phrase cut nothing and only obscured what the set contains. It is struck from the decision.
+
+**Second, PIT costs nothing to compute, and the data-hunger objection applies to one variant only.** Coverage and PIT are the same numbers: PIT is where in its own predicted distribution each truth landed, on a 0 to 1 scale, and coverage at level α is just the fraction of PIT values inside the central α. Coverage is PIT counted at a few thresholds. Both are one `norm.cdf` call on arrays already in memory, so compute is zero and the incremental code is roughly 25 lines of plotting.
+
+**What the objection does establish, and where it bites.** A coverage curve is cumulative, so every point on it uses all the data up to that level and sampling noise averages out. A histogram is not: each bar rests only on the points falling in it. Per distance bin there are roughly 600 points, so 10 PIT bars rest on about 60 points each, and those bars will jump around from noise alone with no way for a reader to tell noise from signal. Twenty-four such panels is a lot of surface area for an unreadable figure. **Aggregate PIT has no such problem:** in-region and out-of-region are roughly 4,800 points each per split, about 480 per bar.
+
+**Why aggregate PIT earns its place rather than merely being affordable.** It shows the *shape* of the miscalibration in one glance, which no single number does. A U shape says the intervals are too narrow, a dome says too wide, a lean to one side says the mean is biased rather than the spread wrong. Given the headline is "under-states its error by 44% out of region," having the picture that distinguishes "too narrow" from "systematically off-centre" is worth 25 lines.
+
+**What is affordable.** δ = 0.06 at 8 bins, set by the day 1-2 grid: 276 points in the thinnest tail bin, 641 in the thinnest hole bin. Both `_points.csv` files carry 9,729 rows split roughly half in-region and half out.
+
+**Options considered:** PIT histogram / coverage versus nominal level / reliability diagram / CRPS / some subset
+
+**Leaning at the time:** pick a small fixed set and use it identically everywhere
 
 **Why:** Consistency across the three splits is what makes the comparison readable. Adding a fourth diagnostic late means regenerating every figure.
 
@@ -1129,14 +1145,12 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 - **CRPS.** One number per point, averages straight into the existing distance bins at no extra cost. Almost certainly in regardless.
 - **Coverage versus nominal.** Needs enough points to estimate a rate per nominal level, the same proportion maths as 3.7. Moderate cost.
-- **PIT histogram and reliability diagram.** Both are themselves histograms, so they need their own bins on top of the distance bins. Most data-hungry by a clear margin.
+- **PIT histogram and reliability diagram.** Both are themselves histograms, so they need their own bins on top of the distance bins. Most data-hungry by a clear margin. ⚠️ Half right, and corrected above: it holds for PIT binned by distance and for nothing else. Aggregate PIT is not data-hungry at 4,800 points a panel, and "reliability diagram" turned out to name plots already committed elsewhere.
 
 **Why coverage-versus-nominal is next after CRPS, not just next-cheapest:** CRPS is a summary, it says how badly calibrated but not which way. PIT and coverage-vs-nominal say which way, overconfident, underconfident, or biased mean. "Calibration degrades under shift because the ensemble stays overconfident when intervals should widen" is a sharper and more recognisable finding than "the score got worse," and coverage-vs-nominal is also the diagnostic most directly tied to defending the deferral threshold.
 
-**Decide the final set from the day 1-2 histogram**, once you can see what the held-out region actually affords.
-
 **My decision:**
->
+> Coverage versus nominal and CRPS on total uncertainty in the existing distance bins, plus aggregate PIT histograms per region per split. Coverage is what makes the deferral threshold defensible and it says which way the model is wrong, not just how badly. CRPS is already needed downstream. Aggregate PIT is the same numbers as coverage displayed as a shape, costs no compute and about 25 lines, and is the only one of the four that distinguishes "intervals too narrow" from "mean systematically off". The single cut is PIT binned by distance, where 10 bars on 600 points is noise a reader cannot separate from signal.
 
 ---
 
@@ -1178,16 +1192,30 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 ---
 
-**7.5 Which uncertainty signal for calibration** `SETTLED`
+**7.5 Which uncertainty signal for calibration** `AMENDED 2026-08-30` ⚠️
 
 **Decided:** Epistemic alone for the calibration-under-shift analysis.
+
+⚠️ **AMENDED 2026-08-30, before any calibration figure was drawn. Coverage and CRPS use TOTAL. Epistemic and aleatoric are reported beside them as components, not as the interval.**
+
+**Why the original is wrong for coverage specifically.** This entry was written before a mean-variance ensemble existed, when "the uncertainty signal" had no components with measured magnitudes. Coverage asks whether the truth landed inside an interval, so it needs the full predicted spread. Step 2 measured in-region epistemic at 0.00768 against an actual RMSE of 0.01256. An epistemic-only 90% interval would therefore under-cover badly **in-region**, on the random split, where step 2 already established the model is honest to within 5%. That reads as a calibration failure and is nothing of the kind: it is the arithmetic consequence of using roughly 60% of the predicted standard deviation. Worse, it would contaminate the comparison, because the in-region reference point would be broken in every split at once and the out-of-region degradation would be measured against a floor that is already wrong.
+
+**What the original was protecting, and where it now happens.** The concern was real: total uncertainty mixes model ignorance with local fitting difficulty, and telling those apart is what the region split exists to do. That attribution still happens, in the decomposition table that already exists for all three splits, where epistemic and aleatoric are reported separately and the tail's rise from 0.00704 to 0.01300 in epistemic is exactly the ignorance signal 7.5 wanted isolated. The error in the original entry was location, not principle: it put the decomposition inside the interval, where it does not belong, instead of beside it.
+
+**Consequence for the write-up:** state plainly that coverage is computed on total. It is also the honest choice for the deliverable's own purpose, since total is the interval a user of the surrogate would actually act on. Epistemic-only coverage is not a quantity anyone consumes.
+
+**Consistency check:** 8.1 already declines to pick one signal for the deferral curve, showing epistemic-ranked and total-ranked as two curves. With this amendment, total is the calibration interval, both signals are ranking candidates for deferral, and the decomposition is reported everywhere. No diagnostic now depends on epistemic alone being a complete predictive spread, which it never was.
+
+**Original reasoning, kept:**
 
 **Why:** Isolating model ignorance from local fitting difficulty is the entire point of the region split. Total uncertainty also carries the variance head's read on how locally hard-to-fit a point is, which for a deterministic solver is closer to "this part of the function is wiggly" than to label noise. Blending them means a degradation could be either "the model does not know it is extrapolating" or "this region is just harder," and telling those apart is the question.
 
 **Contrast with 8.1:** the deferral curve deliberately does not make this choice, because there the job is predicting error, not attributing it.
 
 **My decision:**
-> Epistemic only here. The split was built to isolate model ignorance, so the diagnostic should use the signal that measures it rather than one that mixes it with local difficulty.
+> ~~Epistemic only here. The split was built to isolate model ignorance, so the diagnostic should use the signal that measures it rather than one that mixes it with local difficulty.~~
+>
+> Superseded 2026-08-30. Coverage and CRPS on total, decomposition reported alongside. The reasoning above holds for attribution and fails for intervals, and coverage is an interval question.
 
 ---
 

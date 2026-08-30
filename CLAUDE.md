@@ -209,7 +209,9 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 ⚠️ **Aleatoric rises off-distribution too**, 0.00919 to 0.01727 at the tail. Noise in the world cannot depend on where you stand, so this is more evidence the term measures model misfit. Consistent with step 2, and worth stating plainly rather than being caught on.
 
-**Next: close decision log 7.1, which calibration diagnostics to run.** It is the last open decision and it blocks step 6. Coverage against nominal is what turns "under-states by 44%" into "the 90% interval contains the truth X% of the time", which is what makes a deferral threshold defensible. Steps 6 and 7 then need no training: all three `results/mv_ensemble_*_points.csv` files already carry distance, mean and the three variance terms per point. Three smaller items still open: the mirror-pair search (folded into decision log 2.2, the tolerance duplicate check, and nothing downstream depends on it), decision log 7.1's calibration diagnostic set, and a three-seed rerun of the narrow sweep's p30 and p90 if the U's upper arm is ever load-bearing.
+**Next: step 6, the calibration figures.** Decision log 7.1 closed on 2026-08-30 (coverage versus nominal, CRPS and aggregate PIT histograms, all on total uncertainty, coverage and CRPS in the existing distance bins), which was the last thing blocking it, and 7.5 was amended at the same time so coverage is computed on total rather than epistemic alone. **No decisions remain open.** Steps 6 and 7 need no training: all three `results/mv_ensemble_*_points.csv` files already carry region, distance, axis value, truth, mean and the three variance terms per point, 9,729 rows each.
+
+Two loose ends, neither blocking anything: the mirror-pair search (folded into decision log 2.2, the tolerance duplicate check) and a three-seed rerun of the narrow sweep's p30 and p90 if the U's upper arm is ever load-bearing.
 
 ---
 
@@ -534,9 +536,56 @@ architecture claim in either direction.
   x-range to be short and the tail's long: that is the geometry,
   not a defect, and it is what supports "at matched distance,
   leaving the region costs more than filling a gap."
-- Calibration-under-shift uses epistemic alone, since isolating
-  model ignorance from local fitting difficulty is the whole
-  point of the region split.
+- **Calibration diagnostics FROZEN 2026-08-30** (decision log
+  7.1): **coverage versus nominal, CRPS, and aggregate PIT
+  histograms.** All on **total** predicted uncertainty.
+  Coverage and CRPS bin by distance from the training region,
+  reusing the distance-error figure's bins. All three report
+  in-region and out-of-region across all three splits.
+  Coverage is what converts "under-states its error by 44%"
+  into "the 90% interval holds the truth X% of the time past
+  this distance", which is the sentence a deferral threshold
+  rests on. CRPS is already the deferral curve's y-axis, so it
+  costs nothing here and keeps both deliverables on one scale.
+  **The one cut is PIT binned by distance.**
+  ⚠️ **This started as a wider cut and was corrected the same
+  day, before any figure existed.** The first version cut "PIT
+  histograms and reliability diagrams" on the grounds that a
+  histogram needs its own bins on top of the distance bins.
+  Both halves were wrong. "Reliability diagram" in regression
+  names two plots already in the set: nominal-versus-empirical
+  coverage **is** coverage-versus-nominal, and predicted
+  uncertainty versus realised error is already required by
+  decision log 7.2's coverage-binned-by-predicted-uncertainty.
+  And PIT is free: it is the same numbers as coverage, since
+  coverage at level α is the fraction of PIT values inside the
+  central α. One `norm.cdf` on arrays already in memory, about
+  25 lines of plotting, zero compute.
+  **The data-hunger objection survives for one variant only.**
+  A coverage curve is cumulative so noise averages out; a
+  histogram is not. Per distance bin, 10 PIT bars rest on about
+  60 points each and jump around from sampling noise alone.
+  Aggregate PIT rests on about 480 per bar and is solid.
+  **Why aggregate PIT is in rather than merely affordable:** it
+  is the only one of the four that shows the *shape* of the
+  miscalibration. A U says the intervals are too narrow, a lean
+  says the mean is biased instead. No single number separates
+  those.
+- ⚠️ **Coverage uses TOTAL, not epistemic. This amends decision
+  log 7.5 (2026-08-30), which said epistemic alone.** That
+  entry predates any mean-variance ensemble. In-region
+  epistemic is 0.00768 against an RMSE of 0.01256, so an
+  epistemic-only 90% interval under-covers badly **in-region**,
+  on the random split, where step 2 measured the model honest
+  to within 5%. That is arithmetic from using 60% of the
+  predicted spread, not a calibration finding, and it would
+  break the in-region reference point in every split at once.
+  The attribution 7.5 wanted still happens, in the
+  decomposition table, where the tail's epistemic rise from
+  0.00704 to 0.01300 is the ignorance signal. The original
+  error was location, not principle: it put the decomposition
+  inside the interval instead of beside it. Total is also what
+  a user of the surrogate would actually act on.
 - Deferral curve does not commit to one ranking signal. Show
   epistemic-ranked and total-ranked as two separate "mine"
   curves, alongside the shared random floor and oracle ceiling.
@@ -607,20 +656,16 @@ architecture claim in either direction.
 
 ## Decisions still open
 
-Highest priority first. Full reasoning is in `constellaration-uq-decisions.md` in this repo.
+Full reasoning is in `constellaration-uq-decisions.md` in this repo.
 
-1. **Calibration diagnostic set.** Still open, but the grid
-   removed the constraint that was blocking it. δ = 0.06 is
-   affordable at 8 bins, with 276 points in the thinnest tail
-   bin and 641 in the hole, so there is more room than the
-   original δ = 0.10 hope assumed. Priority order unchanged:
-   diagnostics reusing the existing distance bins beat ones
-   needing their own. CRPS costs nothing extra and is almost
-   certainly in. Coverage-versus-nominal is next, not because
-   it is next-cheapest but because it is most directly tied to
-   making the deferral threshold defensible. PIT and
-   reliability diagrams are last, needing their own binning on
-   top of the distance bins.
+**None. Every decision is settled as of 2026-08-30.** What
+remains is execution: steps 6, 7 and 8 in the run table below,
+then figures and the write-up.
+
+**Recently closed (2026-08-30):** the calibration diagnostic
+set (decision log 7.1) and which uncertainty signal calibration
+uses (7.5, amended). See "Calibration diagnostics" under
+decisions already settled.
 
 **Recently closed (2026-08-29):** the recipe freeze (decision
 log 4.7, Adam, lr 1e-3, batch 128, 500 validation points, 500
