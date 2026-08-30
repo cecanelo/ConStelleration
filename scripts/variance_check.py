@@ -68,6 +68,7 @@ from constellaration_uq.data import (
     trim_target_tails,
 )
 from constellaration_uq.ensemble import N_MEMBERS, decompose, train_mv_ensemble
+from constellaration_uq.metrics import rms_uncertainty
 from constellaration_uq.nets import (
     BATCH_SIZE,
     LEARNING_RATE,
@@ -197,7 +198,14 @@ def run_level(sigma, X, y, fit_pool, in_idx, baseline_aleatoric):
     member_means, member_variances = predict_all(X[in_idx])
     parts = decompose(member_means, member_variances)
 
-    achieved = float(np.sqrt(parts['aleatoric_variance']).mean())
+    # ⚠️ Aggregated by metrics.rms_uncertainty, which was mean(sqrt(variance))
+    # inline here until 2026-08-30. The aggregation is not cosmetic in this
+    # script: the entire check is that injected noise adds in VARIANCE, so
+    # expected = sqrt(baseline^2 + sigma^2) is an identity about mean variances
+    # and only the mean of variances can be compared to it. Averaging standard
+    # deviations breaks the identity by an amount that changes with sigma, so
+    # the bias does not even cancel between rows of the recovery table.
+    achieved = rms_uncertainty(parts['aleatoric_variance'])
     ratio = achieved / expected
     lo, hi = RECOVERY_BAND
 
@@ -208,8 +216,8 @@ def run_level(sigma, X, y, fit_pool, in_idx, baseline_aleatoric):
         'ratio': ratio,
         'recovered': bool(lo <= ratio <= hi),
         'rmse_vs_clean': rmse(y[in_idx], parts['mean']),
-        'epistemic': float(np.sqrt(parts['epistemic_variance']).mean()),
-        'total': float(np.sqrt(parts['total_variance']).mean()),
+        'epistemic': rms_uncertainty(parts['epistemic_variance']),
+        'total': rms_uncertainty(parts['total_variance']),
         'member_epochs': [len(h) for h in histories],
     }
 

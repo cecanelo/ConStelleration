@@ -31,6 +31,7 @@ from sklearn.model_selection import train_test_split
 from constellaration_uq.baseline import load_pool, rmse
 from constellaration_uq.data import extract_input_features, trim_target_tails
 from constellaration_uq.ensemble import N_MEMBERS, decompose, train_mv_ensemble
+from constellaration_uq.metrics import rms_uncertainty
 from constellaration_uq.nets import (
     BATCH_SIZE,
     LEARNING_RATE,
@@ -96,19 +97,22 @@ def summarise(label, y_true, parts, selection):
     scale the target lives on and the only one a reader can compare against
     RMSE. The addition happened in decompose, in variance space, where it is
     valid.
+
+    ⚠️ This used mean(sqrt(variance)) until 2026-08-30, biasing every reported
+    calibration ratio low. metrics.rms_uncertainty carries the reasoning. Caught
+    by scripts/calibration.py computing the same quantity a second way and
+    disagreeing, and independently confirmed by in-region coverage reading 0.95
+    to 0.97 against a nominal 0.9 on all three splits.
     """
     mean = parts['mean'][selection]
-    epistemic = np.sqrt(parts['epistemic_variance'][selection])
-    aleatoric = np.sqrt(parts['aleatoric_variance'][selection])
-    total = np.sqrt(parts['total_variance'][selection])
 
     return {
         'set': label,
         'n': int(selection.sum()) if selection.dtype == bool else len(selection),
         'rmse': rmse(y_true, mean),
-        'epistemic': float(epistemic.mean()),
-        'aleatoric': float(aleatoric.mean()),
-        'total': float(total.mean()),
+        'epistemic': rms_uncertainty(parts['epistemic_variance'][selection]),
+        'aleatoric': rms_uncertainty(parts['aleatoric_variance'][selection]),
+        'total': rms_uncertainty(parts['total_variance'][selection]),
     }
 
 

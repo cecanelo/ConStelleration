@@ -646,24 +646,30 @@ RMSE on edge rotational transform per field period, whose pool std is 0.0786.
 
 **ENSEMBLE MEASUREMENT 2026-08-29, `scripts/mv_ensemble.py`, three ten-member mean-variance ensembles.** Steps 2, 4 and 5. This is the headline result the project was built to produce.
 
-| split | region | RMSE | epistemic | aleatoric | total | total / RMSE |
-|---|---|---|---|---|---|---|
-| random | in | 0.01256 | 0.00768 | 0.01048 | 0.01314 | **1.05** |
-| random | out | 0.01280 | 0.00776 | 0.01050 | 0.01321 | **1.03** |
-| hole p30 | in | 0.01252 | 0.00703 | 0.00906 | 0.01160 | **0.93** |
-| hole p30 | out | 0.02484 | 0.01018 | 0.01118 | 0.01538 | **0.62** |
-| tail-low | in | 0.01223 | 0.00704 | 0.00919 | 0.01172 | **0.96** |
-| tail-low | out | 0.03962 | 0.01300 | 0.01727 | 0.02206 | **0.56** |
+⚠️ **Re-aggregated 2026-08-30. Every uncertainty column below rose and no model changed.** The scripts summarised per-point variances as mean(sqrt(variance)) rather than sqrt(mean(variance)); full reasoning in 5.4 below and in `metrics.rms_uncertainty`. Reruns produced byte-identical per-point predictions, so this was a reporting fix. The superseded ratios were 1.05 / 1.03 / 0.93 / 0.62 / 0.96 / 0.56.
 
-**The finding: calibration holds in region and breaks out of it.** The last column is the predicted uncertainty divided by the error it is predicting. In region it sits between 0.93 and 1.05 across all three splits. Out of region it falls to 0.62 in the hole and 0.56 at the tail, so the model under-states its own error by 38% and 44%.
+| split | region | RMSE | epistemic | aleatoric | total | total / RMSE | cov @ 0.9 | PIT mean |
+|---|---|---|---|---|---|---|---|---|
+| random | in | 0.01256 | 0.00887 | 0.01194 | 0.01487 | **1.18** | 0.966 | 0.518 |
+| random | out | 0.01280 | 0.00895 | 0.01161 | 0.01466 | **1.15** | 0.962 | 0.514 |
+| hole p30 | in | 0.01252 | 0.00813 | 0.01010 | 0.01297 | **1.04** | 0.950 | 0.506 |
+| hole p30 | out | 0.02484 | 0.01197 | 0.01209 | 0.01702 | **0.69** | 0.871 | 0.531 |
+| tail-low | in | 0.01223 | 0.00834 | 0.01032 | 0.01327 | **1.09** | 0.956 | 0.507 |
+| tail-low | out | 0.03962 | 0.01457 | 0.02189 | 0.02630 | **0.66** | 0.779 | **0.348** |
 
-**The sentence for a pitch.** At the compact edge the error grows 3.24x while the reported uncertainty grows only 1.88x. The surrogate is overconfident precisely where it is wrong, and nothing in its output says so.
+**The finding: calibration holds in region and breaks out of it.** The ratio column is the predicted uncertainty divided by the error it is predicting. In region it sits between 1.04 and 1.18 across all three splits, slightly conservative. Out of region it falls to 0.69 in the hole and 0.66 at the tail, so the model under-states its own error by 31% and 34%.
 
-**The uncertainty does respond, which is what makes deferral viable.** Total rises 33% into the hole and 88% into the tail. The signal is real and should rank points usefully even though it cannot be read as an absolute interval off-distribution. Whether it ranks well enough is Stage 8's question, not this one.
+**The sentence for a pitch.** At the compact edge the error grows 3.24x while the reported uncertainty grows only 1.98x. The surrogate is overconfident precisely where it is wrong, and nothing in its output says so.
+
+**In coverage terms, added 2026-08-30 by step 6, which is the form a deferral threshold can use.** The nominal 90% interval holds 0.95 to 0.97 of the truth in region and 0.779 at the tail, falling to 0.587 in the furthest distance bin. A stated 90% interval is closer to a 60% interval at the compact edge.
+
+**The uncertainty does respond, which is what makes deferral viable.** Total rises 31% into the hole and 98% into the tail. The signal is real and should rank points usefully even though it cannot be read as an absolute interval off-distribution. Whether it ranks well enough is Stage 8's question, not this one.
 
 **The hole-versus-tail contrast survives the move to ensembles.** Out-of-region RMSE is 1.98x in-region for the hole against 3.24x for the tail, against 1.80 and 3.02 from the single-MLP grid. Same story, slightly compressed.
 
-⚠️ **Aleatoric rises off-distribution too**, 0.00919 to 0.01727 at the tail. Noise in the world cannot depend on where you stand, so this is further evidence that the term measures model misfit rather than label noise, consistent with 5.1's first measurement. Say it plainly in the write-up rather than being caught on it.
+⚠️ **Aleatoric rises off-distribution too**, 0.01032 to 0.02189 at the tail, and by a larger factor than epistemic does (2.1x against 1.7x). Noise in the world cannot depend on where you stand, so this is further evidence that the term measures model misfit rather than label noise, consistent with 5.1's first measurement. Say it plainly in the write-up rather than being caught on it.
+
+⚠️ **The tail is BIASED, not merely overconfident. Found 2026-08-30 by step 6, and it is new.** PIT mean out of region is 0.348 at the tail against 0.51 to 0.53 in every other cell, dropping to 0.223 in the furthest bin. PIT below 0.5 means the truth lands below the predicted mean, so the model **systematically over-predicts** edge rotational transform at the compact edge. That is a fault of the mean, not of the interval, and widening the error bars would not address it. The hole shows nothing comparable at 0.531, so this separates the hole and tail conditions a second time and independently of the coverage gap. Consequence for the write-up: do not describe the tail's calibration failure as purely a variance problem. Consequence for method: this came from the aggregate PIT histogram, which was cut from 7.1 and reinstated the same day, and it justified itself on its first run.
 
 **Nothing pinned on the variance floor in any of the three runs**, so 4.4's β-NLL question stays closed across all five ensembles trained so far.
 
@@ -915,15 +921,17 @@ RMSE on edge rotational transform per field period, whose pool std is 0.0786.
 | | in-region | out-of-region |
 |---|---|---|
 | RMSE | 0.01256 | 0.01280 |
-| epistemic | 0.00768 | 0.00776 |
-| aleatoric | 0.01048 | 0.01050 |
-| total | 0.01314 | 0.01321 |
+| epistemic | 0.00887 | 0.00895 |
+| aleatoric | 0.01194 | 0.01161 |
+| total | 0.01487 | 0.01466 |
 
-**The uncertainty is well calibrated in-region on the first attempt.** Total 0.01314 against an actual RMSE of 0.01256, 4.6% over-dispersed. In and out are near-identical, which is the correct answer for a random split and the baseline the hole and tail runs have to move.
+⚠️ **Re-aggregated 2026-08-30, see 5.4.** The originally reported values were epistemic 0.00768, aleatoric 0.01048, total 0.01314, all biased low by averaging standard deviations instead of variances.
+
+**The uncertainty is slightly conservative in-region.** Total 0.01487 against an actual RMSE of 0.01256, 18% over-dispersed, and confirmed independently by coverage at nominal 0.9 landing at 0.966. In and out are near-identical, which is the correct answer for a random split and the baseline the hole and tail runs have to move. ⚠️ The first version of this entry read "well calibrated on the first attempt, 4.6% over-dispersed", which was the aggregation bug flattering the result. Slightly conservative is a more plausible claim anyway, since a fresh ensemble landing exactly on calibrated invites the question of what was tuned.
 
 **Nothing pinned on the variance floor, 0.00%**, so the β-NLL trigger in 4.4 did not fire and warm-up plus floor was sufficient.
 
-⚠️ **Aleatoric is 0.01048, not near zero, and the prediction that it would be near zero was wrong.** It is 13% of the target's standard deviation and larger than the epistemic term. This does not contradict Stage 2, which measured near-twin shapes differing by exactly 0.000000. The two answer different questions.
+⚠️ **Aleatoric is 0.01194, not near zero, and the prediction that it would be near zero was wrong.** It is 15% of the target's standard deviation and larger than the epistemic term. This does not contradict Stage 2, which measured near-twin shapes differing by exactly 0.000000. The two answer different questions.
 
 - **Stage 2 measured whether the world is noisy.** It is not. The solver is deterministic and the inputs are fully observed.
 - **The variance head measures residual scatter this model cannot predict**, which includes its own misfit. A three-layer MLP on 80 coefficients cannot represent the map exactly, so it is consistently off by about 0.01, and from inside the model that error is indistinguishable from noise. Under NLL the calibrated response is to widen the interval, so it does.
@@ -933,7 +941,28 @@ So the reported aleatoric means "irreducible given this architecture and this in
 **Two consequences.**
 
 - **Never present the aleatoric value as the dataset's noise level.** It is a property of the model. The gap between it and Stage 2's zero is model misfit wearing the wrong label, and a reviewer who knows this literature will ask.
-- **The variance-head check gets stronger.** The question is no longer "does aleatoric rise off a floor of zero", which a head saturated at its floor could fake by construction. It is "does aleatoric rise by roughly the injected magnitude, on top of a visible baseline of 0.0105", and there is now room for that to come out wrong.
+- **The variance-head check gets stronger.** The question is no longer "does aleatoric rise off a floor of zero", which a head saturated at its floor could fake by construction. It is "does aleatoric rise by roughly the injected magnitude, on top of a visible baseline of 0.0119", and there is now room for that to come out wrong.
+
+---
+
+**5.4 How the uncertainty terms are aggregated over a set of points** `SETTLED 2026-08-30` ⚠️
+
+- [x] Decided
+
+**Decided: sqrt(mean(variance)), the root mean square of the per-point standard deviations. NOT mean(sqrt(variance)).** Implemented once in `metrics.rms_uncertainty` and used by `mv_ensemble.py`, `variance_check.py` and `calibration.py`.
+
+**This is a correction, not a fresh choice.** Two scripts computed the average standard deviation until 2026-08-30, which biased every calibration ratio and every variance-recovery ratio in the project low.
+
+**Why the RMS is the right one.** It follows from what the calibration ratio claims to measure. A calibrated point satisfies E[(y − mu)²] = sigma². Averaging over points gives RMSE² = mean(sigma²), so the quantity that should equal RMSE is sqrt(mean(sigma²)). By Jensen's inequality mean(sigma) sits strictly below that whenever sigma varies, by a margin that grows with the spread of sigma across points, which is precisely the off-distribution case this project exists to study. It also breaks the variance-check identity outright: injected noise adds in variance, so expected = sqrt(baseline² + sigma²) is a statement about mean variances and only mean variances can be compared to it. The bias therefore did not even cancel between rows of the recovery table.
+
+**How it was caught.** `scripts/calibration.py` computed the same quantity a second way and disagreed, 0.01487 against 0.01314 on the random split's in-region set. Independently corroborated by in-region coverage reading 0.95 to 0.97 against a nominal 0.9 on all three splits, which is over-dispersion that the old ratio of 1.05 could not account for. Two diagnostics disagreeing with a third is what surfaced it, which is an argument for computing important numbers twice by different routes.
+
+**What moved and what did not.** Every epistemic, aleatoric and total figure rose. In-region ratios went from 0.93 to 1.05 up to 1.04 to 1.18; out-of-region from 0.56 and 0.62 up to 0.66 and 0.69; the tail's under-statement from 44% to 34%. RMSE did not move, no per-point prediction moved, and no finding changed direction. Reruns of steps 2 through 5 produced byte-identical `_points.csv` files, which was the check that this was a reporting fix and not a modelling one. The variance-head verdict stayed RECOVERS with ratios moving 1.07/1.09/0.94 to 1.05/1.07/0.94.
+
+**Why it lives in metrics rather than inline.** The same bug was written twice, independently, in two scripts. That is what a missing shared definition looks like, and the same argument that pulled the distance binning out. Four tests now pin it, including one asserting the aggregated uncertainty equals realised RMSE on data drawn from the claimed distribution, which is the test that would have caught it.
+
+**My decision:**
+> Fix it in one place, rerun everything downstream, and record the wrong numbers next to the right ones rather than quietly replacing them. The corrected in-region reading is also the more defensible one: an untuned ensemble landing exactly on calibrated was always going to invite the question of what had been tuned, and slightly conservative is what an honest model actually looks like.
 
 ---
 
@@ -1021,7 +1050,7 @@ So the reported aleatoric means "irreducible given this architecture and this in
 | resolution_3 | 32 | 48 | 0.00359 | 0.01108 | +5.7% |
 | m3plus | 36 | 44 | 0.00277 | 0.01084 | +3.4% |
 
-**Every rule injects about 0.003**, a 3 to 6% predicted rise on the 0.01048 baseline, which is inside seed-to-seed variation. The check could not have distinguished a working head from a dead one. Dropping 36 of 80 coefficients injected *less* than dropping 18.
+**Every rule injects about 0.003**, a 3 to 6% predicted rise on the then-reported 0.01048 baseline (0.01194 after the 5.4 aggregation fix, which lowers the predicted rise further and so strengthens this conclusion), which is inside seed-to-seed variation. The check could not have distinguished a working head from a dead one. Dropping 36 of 80 coefficients injected *less* than dropping 18.
 
 **Two readings, not separable from that table.** The estimator may be biased low, because pairs near-identical in the kept coordinates are probably also near-identical in the dropped ones: every shape in this pool came from the same optimizers, so the coefficients are correlated across modes and the pairs it finds do not actually differ in what was hidden. Or the hidden coefficients genuinely carry little independent information about the rotational transform, which is dominated by low-order structure. Probably both, partly.
 
@@ -1033,22 +1062,24 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 **Worth keeping from the failed attempt.** Dropping up to 45% of the boundary description barely changes what is predictable about the edge rotational transform. That is a real observation about the dataset and it partly explains why a surrogate does as well as it does from 80 numbers. Recorded with the caveat that the estimator may be understating it.
 
-**RESULT 2026-08-29, `scripts/variance_check.py`, three ensembles in 785s: RECOVERS.**
+**RESULT 2026-08-29, `scripts/variance_check.py`, three ensembles, re-aggregated 2026-08-30 (1101s): RECOVERS.**
 
 | σ | expected aleatoric | measured | ratio | RMSE vs clean | epistemic |
 |---|---|---|---|---|---|
-| 0 (baseline) | 0.01048 | 0.01048 | 1.00 | 0.01256 | 0.00768 |
-| 0.005 | 0.01161 | 0.01241 | 1.07 | 0.01301 | 0.00841 |
-| 0.020 | 0.02258 | 0.02470 | 1.09 | 0.01568 | 0.01267 |
-| 0.050 | 0.05109 | 0.04818 | 0.94 | 0.02164 | 0.02247 |
+| 0 (baseline) | 0.01194 | 0.01194 | 1.00 | 0.01256 | 0.00887 |
+| 0.005 | 0.01294 | 0.01356 | 1.05 | 0.01301 | 0.00958 |
+| 0.020 | 0.02329 | 0.02490 | 1.07 | 0.01568 | 0.01360 |
+| 0.050 | 0.05141 | 0.04838 | 0.94 | 0.02164 | 0.02444 |
 
-**All three ratios land inside 0.94 to 1.09**, against an acceptance band of 0.75 to 1.35, across a tenfold range of injected magnitude. Monotone in σ, which rules out a head reporting a constant. The smallest level was the one at risk, since its injection is below the baseline aleatoric, and it came out at 1.07.
+**All three ratios land inside 0.94 to 1.07**, against an acceptance band of 0.75 to 1.35, across a tenfold range of injected magnitude. Monotone in σ, which rules out a head reporting a constant. The smallest level was the one at risk, since its injection is below the baseline aleatoric, and it came out at 1.05.
+
+⚠️ **Re-aggregated per 5.4.** The originally reported ratios were 1.07 / 1.09 / 0.94, so the verdict never depended on the fix. Both `expected` and `measured` shifted, which is mild evidence the check is robust to how it is summarised, though the shift was not identical across rows: the aggregation bias changes with σ, so it could not have cancelled cleanly and the agreement is not automatic.
 
 **This is the entry that converts 5.1 from an assertion into a measurement.** The variance head reports a quantity that tracks a magnitude chosen in advance, so the aleatoric term is measuring something rather than emitting a number.
 
 **It also retires 4.4's β-NLL question.** Nothing pinned on the floor and nothing destabilised after warm-up, at any noise level. β-NLL is reported as considered and not needed, rather than untried.
 
-**Epistemic rises with σ too, 0.00768 to 0.02247, and that is correct.** Every member saw the *same* noisy targets, so this is not members disagreeing about different noise draws. Noisy labels underdetermine the fit, so different initialisations land on genuinely different functions. Epistemic behaving as its name claims.
+**Epistemic rises with σ too, 0.00887 to 0.02444, and that is correct.** Every member saw the *same* noisy targets, so this is not members disagreeing about different noise draws. Noisy labels underdetermine the fit, so different initialisations land on genuinely different functions. Epistemic behaving as its name claims.
 
 **RMSE against clean targets also rises, 0.01256 to 0.02164.** So "independent noise averages out of the fitted mean" holds only partly; at σ = 0.05 the mean is 72% worse. State that rather than glossing it.
 
@@ -1154,6 +1185,30 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 ---
 
+**RESULT 2026-08-30, `scripts/calibration.py`, step 6. No training, reads the three `mv_ensemble_*_points.csv` in seconds.**
+
+Coverage at six nominal levels, CRPS, and PIT, all on total uncertainty per the 7.5 amendment, with coverage and CRPS binned by distance through `metrics.distance_bins` so the curves share the distance-error figure's x axis.
+
+**Coverage at nominal 0.9, in region versus out:**
+
+| split | in | out | gap |
+|---|---|---|---|
+| random | 0.966 | 0.962 | −0.004 |
+| hole p30 | 0.950 | 0.871 | −0.079 |
+| tail-low | 0.956 | 0.779 | **−0.177** |
+
+**Coverage degrades monotonically with distance, which is the deliverable.** The tail runs 0.928 at the nearest bin down to 0.587 at 1.63 to 2.13 std out, so a stated 90% interval is closer to a 60% interval there. The hole runs 0.916 to 0.806, shallower and flattening. **At matched distance around 0.4 std the tail is worse than the hole**, 0.78 against 0.81, consistent with the distance-matched premium measured on single MLPs in 3.11.
+
+**CRPS tracks it,** 0.00544 in region at the tail rising to 0.03207 in the furthest bin, a factor of 5.9. Reported in the target's physical units and on the same scale the deferral curve will use.
+
+**Random is the control and behaves.** In and out differ by 0.004 in coverage, which is the correct answer for a split with no shift, and it is what makes the other two rows readable as shift rather than as a quirk of the diagnostic.
+
+⚠️ **In-region coverage is 0.95 to 0.97 against a nominal 0.9 on all three splits, so the model is conservative in region, not exactly calibrated.** This was the independent corroboration that surfaced the 5.4 aggregation bug, since the previously reported ratio of 1.05 could not produce coverage that high.
+
+**PIT found something coverage did not: the tail is biased.** Full statement in 3.8 above. Mean PIT 0.348 out of region at the tail against 0.51 to 0.53 everywhere else. The model over-predicts at the compact edge, which is a fault of the mean rather than the interval. This is the diagnostic that was cut from 7.1 and reinstated the same day, and it justified itself on its first run.
+
+---
+
 **7.2 Conditional, not just marginal** `SETTLED`
 
 **Decided:** Report coverage binned by predicted uncertainty, by region, and by distance from the training region (3.11), not just aggregate coverage.
@@ -1198,7 +1253,7 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 ⚠️ **AMENDED 2026-08-30, before any calibration figure was drawn. Coverage and CRPS use TOTAL. Epistemic and aleatoric are reported beside them as components, not as the interval.**
 
-**Why the original is wrong for coverage specifically.** This entry was written before a mean-variance ensemble existed, when "the uncertainty signal" had no components with measured magnitudes. Coverage asks whether the truth landed inside an interval, so it needs the full predicted spread. Step 2 measured in-region epistemic at 0.00768 against an actual RMSE of 0.01256. An epistemic-only 90% interval would therefore under-cover badly **in-region**, on the random split, where step 2 already established the model is honest to within 5%. That reads as a calibration failure and is nothing of the kind: it is the arithmetic consequence of using roughly 60% of the predicted standard deviation. Worse, it would contaminate the comparison, because the in-region reference point would be broken in every split at once and the out-of-region degradation would be measured against a floor that is already wrong.
+**Why the original is wrong for coverage specifically.** This entry was written before a mean-variance ensemble existed, when "the uncertainty signal" had no components with measured magnitudes. Coverage asks whether the truth landed inside an interval, so it needs the full predicted spread. Step 2 measured in-region epistemic at 0.00887 against an actual RMSE of 0.01256. An epistemic-only 90% interval would therefore under-cover badly **in-region**, on the random split, where step 2 established the model is honest to within 18% and coverage later confirmed it at 0.966 against a nominal 0.9. That reads as a calibration failure and is nothing of the kind: it is the arithmetic consequence of using roughly 60% of the predicted standard deviation. Worse, it would contaminate the comparison, because the in-region reference point would be broken in every split at once and the out-of-region degradation would be measured against a floor that is already wrong.
 
 **What the original was protecting, and where it now happens.** The concern was real: total uncertainty mixes model ignorance with local fitting difficulty, and telling those apart is what the region split exists to do. That attribution still happens, in the decomposition table that already exists for all three splits, where epistemic and aleatoric are reported separately and the tail's rise from 0.00704 to 0.01300 in epistemic is exactly the ignorance signal 7.5 wanted isolated. The error in the original entry was location, not principle: it put the decomposition inside the interval, where it does not belong, instead of beside it.
 

@@ -1,7 +1,7 @@
 {
   "name": "mv_ensemble_tail",
-  "saved_at": "2026-08-29T17:46:22+00:00",
-  "git_commit": "2d65d85d476d771a8f0100e41259e4d029f3ef3c",
+  "saved_at": "2026-08-30T14:13:08+00:00",
+  "git_commit": "cae0bd50c88097bf2b4b1ce11fcf2709fc77337d",
   "git_dirty": true,
   "constants": {
     "SEED": 0,
@@ -27,17 +27,17 @@
         "set": "in-region",
         "n": 4324,
         "rmse": 0.01222666480765582,
-        "epistemic": 0.0070428973995149136,
-        "aleatoric": 0.009193995036184788,
-        "total": 0.01172416191548109
+        "epistemic": 0.008341406027907474,
+        "aleatoric": 0.01031573751084195,
+        "total": 0.013266253987501286
       },
       {
         "set": "out-of-region",
         "n": 5405,
         "rmse": 0.039619152986527406,
-        "epistemic": 0.012997264042496681,
-        "aleatoric": 0.017265427857637405,
-        "total": 0.02206016145646572
+        "epistemic": 0.014569284312574173,
+        "aleatoric": 0.021892680762976652,
+        "total": 0.026297405130891842
       }
     ],
     "pinned_fraction": 0.0,
@@ -55,6 +55,6 @@
       56
     ],
     "target_std": 0.0789239111480279,
-    "total_seconds": 281.2
+    "total_seconds": 403.3
   }
 }

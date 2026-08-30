@@ -1,8 +1,8 @@
 {
   "name": "mv_ensemble_hole",
-  "saved_at": "2026-08-29T17:41:37+00:00",
-  "git_commit": "2d65d85d476d771a8f0100e41259e4d029f3ef3c",
-  "git_dirty": false,
+  "saved_at": "2026-08-30T14:06:21+00:00",
+  "git_commit": "cae0bd50c88097bf2b4b1ce11fcf2709fc77337d",
+  "git_dirty": true,
   "constants": {
     "SEED": 0,
     "SPLIT": "hole",
@@ -27,17 +27,17 @@
         "set": "in-region",
         "n": 4324,
         "rmse": 0.012519321912243806,
-        "epistemic": 0.007033283822238445,
-        "aleatoric": 0.009056168608367443,
-        "total": 0.011604311875998974
+        "epistemic": 0.008132297223883088,
+        "aleatoric": 0.010104360664766412,
+        "total": 0.012970441880862464
       },
       {
         "set": "out-of-region",
         "n": 5404,
         "rmse": 0.02483917335930483,
-        "epistemic": 0.010180206969380379,
-        "aleatoric": 0.011181633919477463,
-        "total": 0.015379359945654869
+        "epistemic": 0.011973803215596483,
+        "aleatoric": 0.012093545526131044,
+        "total": 0.01701839613669608
       }
     ],
     "pinned_fraction": 0.0,
@@ -55,6 +55,6 @@
       55
     ],
     "target_std": 0.0789239111480279,
-    "total_seconds": 308.0
+    "total_seconds": 415.6
   }
 }

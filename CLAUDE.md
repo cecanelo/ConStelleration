@@ -165,24 +165,26 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 **In-region epistemic spread is 0.00631**, 8% of the target std and about 60% of the ensemble's total error. That is the baseline that has to grow in the hole and tail runs.
 
-**Step 2 done (2026-08-29), `scripts/mv_ensemble.py random`, ten members in 286s.** In-region RMSE 0.01256, epistemic 0.00768, aleatoric 0.01048, total 0.01314. Out-of-region is near-identical, which is correct for a random split.
+**Step 2 done (2026-08-29, renumbered 2026-08-30), `scripts/mv_ensemble.py random`, ten members.** In-region RMSE 0.01256, epistemic 0.00887, aleatoric 0.01194, total 0.01487. Out-of-region is near-identical, which is correct for a random split.
 
-**The uncertainty is well calibrated in-region on the first attempt:** total 0.01314 against an actual RMSE of 0.01256, 4.6% over-dispersed. Nothing pinned on the variance floor, 0.00%, so decision log 4.4's β-NLL trigger did not fire.
+⚠️ **All uncertainty numbers on this page were re-aggregated on 2026-08-30 and every one of them rose.** See "the aggregation fix" below. RMSE never moved and the per-point predictions are byte-identical, so nothing here required retraining a model, only re-summarising one.
 
-⚠️ **Aleatoric came out at 0.01048, not near zero.** See the corrected commitment above. Short version: Stage 2 measured that the world has no label noise, while the variance head measures scatter *this model* cannot predict, which includes its own misfit. Both are right. Do not quote the aleatoric number as the dataset's noise level.
+**The uncertainty is slightly conservative in-region:** total 0.01487 against an actual RMSE of 0.01256, 18% over-dispersed, confirmed independently by coverage at nominal 0.9 coming out 0.966. Nothing pinned on the variance floor, 0.00%, so decision log 4.4's β-NLL trigger did not fire.
+
+⚠️ **Aleatoric came out at 0.01194, not near zero.** See the corrected commitment above. Short version: Stage 2 measured that the world has no label noise, while the variance head measures scatter *this model* cannot predict, which includes its own misfit. Both are right. Do not quote the aleatoric number as the dataset's noise level.
 
 ⚠️ **The "+19.4% cost of the variance head" the script prints is confounded.** Step 1 trained on 21,118 rows; step 2 carves an in-region slice first and trains on 16,794. Part of that gap is 20% less data. Treat it as an upper bound.
 
-**Step 3 done (2026-08-29), `scripts/variance_check.py`, three ensembles in 785s: RECOVERS.** Gaussian noise of known σ added to the training targets, evaluated against clean ones.
+**Step 3 done (2026-08-29, re-aggregated 2026-08-30), `scripts/variance_check.py`, three ensembles in 1101s: RECOVERS.** Gaussian noise of known σ added to the training targets, evaluated against clean ones.
 
 | σ | expected aleatoric | measured | ratio | RMSE | epistemic |
 |---|---|---|---|---|---|
-| 0 | 0.01048 | 0.01048 | 1.00 | 0.01256 | 0.00768 |
-| 0.005 | 0.01161 | 0.01241 | 1.07 | 0.01301 | 0.00841 |
-| 0.020 | 0.02258 | 0.02470 | 1.09 | 0.01568 | 0.01267 |
-| 0.050 | 0.05109 | 0.04818 | 0.94 | 0.02164 | 0.02247 |
+| 0 | 0.01194 | 0.01194 | 1.00 | 0.01256 | 0.00887 |
+| 0.005 | 0.01294 | 0.01356 | 1.05 | 0.01301 | 0.00958 |
+| 0.020 | 0.02329 | 0.02490 | 1.07 | 0.01568 | 0.01360 |
+| 0.050 | 0.05141 | 0.04838 | 0.94 | 0.02164 | 0.02444 |
 
-**All ratios inside 0.94 to 1.09** against a 0.75 to 1.35 band, across a tenfold range, monotone in σ. **This is what converts the epistemic/aleatoric split from an assertion into a measurement**, and it is the reason the mean-variance head is not decorative. It also closes β-NLL: nothing pinned, nothing destabilised, in any of the forty member networks trained so far.
+**All ratios inside 0.94 to 1.07** against a 0.75 to 1.35 band, across a tenfold range, monotone in σ. The verdict was unchanged by the aggregation fix (previously 1.07 / 1.09 / 0.94), because expected and measured both shifted, which is itself mild evidence the check is robust to how it is summarised. **This is what converts the epistemic/aleatoric split from an assertion into a measurement**, and it is the reason the mean-variance head is not decorative. It also closes β-NLL: nothing pinned, nothing destabilised, in any of the forty member networks trained so far.
 
 **Epistemic rises with σ too, and that is correct.** Every member saw the same noisy targets, so this is not disagreement about noise draws. Noisy labels underdetermine the fit, so different initialisations reach genuinely different functions.
 
@@ -190,26 +192,44 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 **Steps 4 and 5 done (2026-08-29), `scripts/mv_ensemble.py hole` and `tail`.** All three headline ensembles now exist, and this is the result the project was built to produce.
 
-| split | region | RMSE | epistemic | aleatoric | total | total / RMSE |
-|---|---|---|---|---|---|---|
-| random | in | 0.01256 | 0.00768 | 0.01048 | 0.01314 | **1.05** |
-| random | out | 0.01280 | 0.00776 | 0.01050 | 0.01321 | **1.03** |
-| hole p30 | in | 0.01252 | 0.00703 | 0.00906 | 0.01160 | **0.93** |
-| hole p30 | out | 0.02484 | 0.01018 | 0.01118 | 0.01538 | **0.62** |
-| tail-low | in | 0.01223 | 0.00704 | 0.00919 | 0.01172 | **0.96** |
-| tail-low | out | 0.03962 | 0.01300 | 0.01727 | 0.02206 | **0.56** |
+| split | region | RMSE | epistemic | aleatoric | total | total / RMSE | cov @ 0.9 | PIT mean |
+|---|---|---|---|---|---|---|---|---|
+| random | in | 0.01256 | 0.00887 | 0.01194 | 0.01487 | **1.18** | 0.966 | 0.518 |
+| random | out | 0.01280 | 0.00895 | 0.01161 | 0.01466 | **1.15** | 0.962 | 0.514 |
+| hole p30 | in | 0.01252 | 0.00813 | 0.01010 | 0.01297 | **1.04** | 0.950 | 0.506 |
+| hole p30 | out | 0.02484 | 0.01197 | 0.01209 | 0.01702 | **0.69** | 0.871 | 0.531 |
+| tail-low | in | 0.01223 | 0.00834 | 0.01032 | 0.01327 | **1.09** | 0.956 | 0.507 |
+| tail-low | out | 0.03962 | 0.01457 | 0.02189 | 0.02630 | **0.66** | 0.779 | **0.348** |
 
-**Calibration holds in region and breaks out of it.** The last column is predicted uncertainty over the error it predicts. In region it is 0.93 to 1.05 across all three splits. Out of region it falls to 0.62 and 0.56, so the model under-states its own error by 38% and 44%.
+**Calibration holds in region and breaks out of it.** The ratio column is predicted uncertainty over the error it predicts. In region it is 1.04 to 1.18 across all three splits, so slightly conservative. Out of region it falls to 0.69 and 0.66, so the model under-states its own error by 31% and 34%.
 
-**The pitch sentence:** at the compact edge the error grows 3.24x while the reported uncertainty grows only 1.88x. Overconfident precisely where it is wrong, with nothing in the output to say so.
+**The pitch sentence:** at the compact edge the error grows 3.24x while the reported uncertainty grows only 1.98x. Overconfident precisely where it is wrong, with nothing in the output to say so.
 
-**The signal does respond**, total rising 33% into the hole and 88% into the tail, so it should rank points for deferral even though it cannot be read as an absolute interval off-distribution. Whether it ranks well enough is the deferral curve's question.
+**In coverage terms, which is the form a deferral threshold can use:** the nominal 90% interval holds 0.95 to 0.97 of the truth in region, and 0.779 at the tail, falling to **0.587 in the furthest distance bin**. So at the compact edge a stated 90% interval is closer to a 60% interval.
+
+**The signal does respond**, total rising 31% into the hole and 98% into the tail, so it should rank points for deferral even though it cannot be read as an absolute interval off-distribution. Whether it ranks well enough is the deferral curve's question.
 
 **The hole-versus-tail contrast survives the move to ensembles:** out-of-region RMSE is 1.98x in-region for the hole against 3.24x for the tail, against 1.80 and 3.02 from the single-MLP grid.
 
-⚠️ **Aleatoric rises off-distribution too**, 0.00919 to 0.01727 at the tail. Noise in the world cannot depend on where you stand, so this is more evidence the term measures model misfit. Consistent with step 2, and worth stating plainly rather than being caught on.
+⚠️ **Aleatoric rises off-distribution too**, 0.01032 to 0.02189 at the tail, and it rises *more* than epistemic does (2.1x against 1.7x). Noise in the world cannot depend on where you stand, so this is more evidence the term measures model misfit. Consistent with step 2, and worth stating plainly rather than being caught on.
 
-**Next: step 6, the calibration figures.** Decision log 7.1 closed on 2026-08-30 (coverage versus nominal, CRPS and aggregate PIT histograms, all on total uncertainty, coverage and CRPS in the existing distance bins), which was the last thing blocking it, and 7.5 was amended at the same time so coverage is computed on total rather than epistemic alone. **No decisions remain open.** Steps 6 and 7 need no training: all three `results/mv_ensemble_*_points.csv` files already carry region, distance, axis value, truth, mean and the three variance terms per point, 9,729 rows each.
+⚠️ **The tail is BIASED, not merely overconfident, and this is new (2026-08-30, step 6).** PIT mean out of region is **0.348** at the tail against 0.51 to 0.53 everywhere else, falling to 0.223 in the furthest bin. PIT below 0.5 means the truth keeps landing below the predicted mean, so **the model systematically over-predicts edge rotational transform at the compact edge.** That is a different fault from a too-narrow interval and widening the error bars would not fix it. The hole shows nothing like it (0.531), so this separates the hole and tail conditions a second time, independently of the coverage gap. ⚠️ It also means the calibration failure at the tail is not purely a variance problem, so do not describe it as one. This came from the aggregate PIT histogram, the diagnostic that was cut from decision log 7.1 and reinstated the same day.
+
+⚠️ **THE AGGREGATION FIX (2026-08-30). Every uncertainty number in this file changed and none of the models did.** `mv_ensemble.summarise` and `variance_check.run_level` both summarised per-point variances as `mean(sqrt(variance))`, the average standard deviation. The correct quantity is `sqrt(mean(variance))`, the root mean square, and it follows directly from what the calibration ratio claims: a calibrated point satisfies E[(y − mu)²] = sigma², so averaging over points gives RMSE² = mean(sigma²), and the thing that should equal RMSE is sqrt(mean(sigma²)). By Jensen, mean(sigma) sits below that, by a margin that grows with how much sigma varies across points, which is exactly the off-distribution case this project is about.
+
+**How it was caught:** `scripts/calibration.py` computed the same quantity a second way and disagreed, 0.01487 against 0.01314 on random in-region. Independently confirmed by in-region coverage reading 0.95 to 0.97 against a nominal 0.9 on all three splits, which is over-dispersion the old ratio of 1.05 could not explain.
+
+**What moved:** every epistemic, aleatoric and total figure rose. Calibration ratios went from 0.93 to 1.05 in region and 0.56 to 0.62 out, to 1.04 to 1.18 and 0.66 to 0.69. The tail's under-statement is 34%, not 44%. "Well calibrated in region" became "slightly conservative in region", which is a better claim anyway, since perfect calibration on the first attempt invites suspicion.
+
+**What did not move:** RMSE, every per-point prediction, and the direction of every finding. Reruns produced byte-identical `_points.csv` files, which was the check that this was a reporting fix and not a modelling one. The variance-head verdict is still RECOVERS.
+
+**The fix lives in `metrics.rms_uncertainty`,** used by all three scripts, with four tests. It was inline in two places, which is what a missing shared definition looks like: the same bug written twice, independently.
+
+**Step 6 done (2026-08-30), `scripts/calibration.py`.** No training, reads the three `_points.csv` in seconds. Coverage versus nominal at six levels, CRPS, and PIT, all on total uncertainty, with coverage and CRPS binned by distance using `metrics.distance_bins` so the curves share the distance-error figure's x axis. Writes `results/calibration.json`, `_bins.csv` and `_points.csv`.
+
+**Coverage degrades monotonically with distance, which is the deliverable.** Tail: 0.928 at the nearest bin falling to 0.587 at 1.63 to 2.13 std out. Hole: 0.916 to 0.806, shallower and it flattens. At matched distance around 0.4 std the tail is worse than the hole (0.78 against 0.81), consistent with the single-MLP distance-matched premium.
+
+**Next: step 7, the deferral curve.** Also no training, reads the tail points file. Then step 8, the N-sweep.
 
 Two loose ends, neither blocking anything: the mirror-pair search (folded into decision log 2.2, the tolerance duplicate check) and a three-seed rerun of the narrow sweep's p30 and p90 if the U's upper arm is ever load-bearing.
 
@@ -303,17 +323,17 @@ architecture claim in either direction.
 
 **Label noise is zero, and that is measured, not assumed.** The inputs are fully observed (no truncation), the solver is deterministic, a fixed convergence tolerance produces a deterministic high-frequency function rather than noise, and the four generation pathways shift the distribution over x without changing y given x. Stage 2 confirmed it: near-twin shapes differ in target by exactly 0.000000. Anyone arguing that the mixture of pathways creates aleatoric noise is confusing covariate shift with label noise.
 
-⚠️ **This does NOT mean the variance head will report near zero, and the earlier version of this file wrongly said it would.** Corrected 2026-08-29 by step 2, `scripts/mv_ensemble.py random`, which reports **aleatoric 0.01048**, 13% of the target std and larger than the epistemic term's 0.00768.
+⚠️ **This does NOT mean the variance head will report near zero, and the earlier version of this file wrongly said it would.** Corrected 2026-08-29 by step 2, `scripts/mv_ensemble.py random`, which reports **aleatoric 0.01194**, 15% of the target std and larger than the epistemic term's 0.00887.
 
 **Both facts are true because they answer different questions.** Stage 2 measured whether the *world* is noisy: it is not. The variance head measures the residual scatter *this model* cannot predict, which includes its own misfit. A three-layer MLP on 80 coefficients cannot represent the function exactly, so it is consistently off by about 0.01, and from inside the model that error is indistinguishable from noise. Under NLL the honest thing is to widen the interval, so it does. What the head reports is "irreducible given this architecture and this input representation", not "irreducible in principle".
 
 **Consequence for the write-up:** never present the aleatoric number as the dataset's noise level. It is a property of the model, and the gap between it and Stage 2's zero is model misfit wearing the wrong label. This is the concrete case of the relativity note below, not a contradiction of it.
 
-**Consequence for the variance-head check:** it gets stronger, not weaker. The question is no longer "does aleatoric rise off a floor of zero", which a saturated head could fake. It is "does aleatoric rise by roughly the injected amount, on top of a visible baseline of 0.0105", and there is now room for that answer to be wrong.
+**Consequence for the variance-head check:** it gets stronger, not weaker. The question is no longer "does aleatoric rise off a floor of zero", which a saturated head could fake. It is "does aleatoric rise by roughly the injected amount, on top of a visible baseline of 0.0119", and there is now room for that answer to be wrong.
 
 **Therefore: manufacture aleatoric deliberately**, then check whether the variance head recovers the right magnitude. This converts the decomposition from an assertion into a validated measurement, and it is the reason the mean-variance head is not decorative.
 
-⚠️ **The instrument changed on 2026-08-29, from hiding input coefficients to adding target noise.** `scripts/variance_check.py`, decision log 6.2. Hiding was tried first and priced before training: four rules, dropping 18 to 36 of the 80 coefficients, every one injecting about 0.003, a 3 to 6% rise on the 0.01048 baseline, which is inside seed noise. Dropping 36 columns injected less than dropping 18. Either the near-twin estimator is biased low, because pairs close in the kept coordinates are also close in the dropped ones on a pool where every shape came from the same optimizers, or those coefficients genuinely carry little information about the rotational transform. The replacement adds Gaussian noise of known σ to the training targets at three levels, 0.005 / 0.020 / 0.050, so the injected magnitude is exact rather than estimated and the answer is a curve rather than one coincidence. It trades realism for an exact answer key, which is the right trade for a validation.
+⚠️ **The instrument changed on 2026-08-29, from hiding input coefficients to adding target noise.** `scripts/variance_check.py`, decision log 6.2. Hiding was tried first and priced before training: four rules, dropping 18 to 36 of the 80 coefficients, every one injecting about 0.003, a 3 to 6% rise on the then-reported 0.01048 baseline (0.01194 after the aggregation fix, which does not change the conclusion), which is inside seed noise. Dropping 36 columns injected less than dropping 18. Either the near-twin estimator is biased low, because pairs close in the kept coordinates are also close in the dropped ones on a pool where every shape came from the same optimizers, or those coefficients genuinely carry little information about the rotational transform. The replacement adds Gaussian noise of known σ to the training targets at three levels, 0.005 / 0.020 / 0.050, so the injected magnitude is exact rather than estimated and the answer is a curve rather than one coincidence. It trades realism for an exact answer key, which is the right trade for a validation.
 
 **Keep from the failed attempt:** dropping up to 45% of the boundary description barely changes what is predictable about the edge rotational transform. A real observation about the dataset, caveated by the possible estimator bias.
 
@@ -542,10 +562,12 @@ architecture claim in either direction.
   Coverage and CRPS bin by distance from the training region,
   reusing the distance-error figure's bins. All three report
   in-region and out-of-region across all three splits.
-  Coverage is what converts "under-states its error by 44%"
+  Coverage is what converts "under-states its error by 34%"
   into "the 90% interval holds the truth X% of the time past
   this distance", which is the sentence a deferral threshold
-  rests on. CRPS is already the deferral curve's y-axis, so it
+  rests on. Measured 2026-08-30: 0.779 at the tail overall,
+  0.587 in the furthest bin.
+  CRPS is already the deferral curve's y-axis, so it
   costs nothing here and keeps both deliverables on one scale.
   **The one cut is PIT binned by distance.**
   ⚠️ **This started as a wider cut and was corrected the same
@@ -574,7 +596,7 @@ architecture claim in either direction.
 - ⚠️ **Coverage uses TOTAL, not epistemic. This amends decision
   log 7.5 (2026-08-30), which said epistemic alone.** That
   entry predates any mean-variance ensemble. In-region
-  epistemic is 0.00768 against an RMSE of 0.01256, so an
+  epistemic is 0.00887 against an RMSE of 0.01256, so an
   epistemic-only 90% interval under-covers badly **in-region**,
   on the random split, where step 2 measured the model honest
   to within 5%. That is arithmetic from using 60% of the
@@ -748,15 +770,17 @@ ensemble.
 |---|---|---|---|
 | 0 | hyperparameter sanity check | 0, six single networks | ✅ done 2026-08-29, recipe frozen in 4.7 |
 | 1 | plain MSE ensemble | 1 | ✅ done 2026-08-29, RMSE 0.01052, missed a badly set 0.0105 bar by 0.2%, 1.75x Table 7 |
-| 2 | mean-variance, random split | 1 | ✅ done 2026-08-29, RMSE 0.01256, aleatoric 0.01048, total 4.6% over-dispersed |
-| 3 | variance-head check | 3 | ✅ done 2026-08-29, RECOVERS, ratios 0.94 to 1.09 over a 10x noise range |
-| 4 | mean-variance, interior hole at p30 | 1 | ✅ done 2026-08-29, out/in RMSE 1.98x, calibration 0.62 out of region |
-| 5 | mean-variance, tail-low | 1 | ✅ done 2026-08-29, out/in RMSE 3.24x, calibration 0.56 out of region |
-| 6 | calibration figures | 0 | reads runs 2, 4 and 5 |
+| 2 | mean-variance, random split | 1 | ✅ done 2026-08-29, RMSE 0.01256, aleatoric 0.01194, total 18% over-dispersed |
+| 3 | variance-head check | 3 | ✅ done 2026-08-29, RECOVERS, ratios 0.94 to 1.07 over a 10x noise range |
+| 4 | mean-variance, interior hole at p30 | 1 | ✅ done 2026-08-29, out/in RMSE 1.98x, calibration 0.69 out of region |
+| 5 | mean-variance, tail-low | 1 | ✅ done 2026-08-29, out/in RMSE 3.24x, calibration 0.66 out of region |
+| 6 | calibration figures | 0 | ✅ done 2026-08-30, coverage 0.779 at the tail against 0.956 in region, and PIT found a mean bias out there |
 | 7 | deferral curve | 0 | reads run 5 |
 | 8 | full N-sweep | 30, floor 12 | does the decomposition hold as N grows |
 
 Runs 2, 4 and 5 are the headline result. Run 8 is validation and goes last.
+
+⚠️ **Runs 2 through 5 were retrained on 2026-08-30 after the aggregation fix.** Seeds are fixed, so every per-point prediction came back byte-identical and only the summaries moved. The dates above are when each run was first done; the numbers are the corrected ones.
 
 ⚠️ **The variance-head check moved ahead of the hole and tail ensembles** (decision log 4.4, the loss). It used to run after all three. If the loss is wrong that meant redoing three ensembles; now it costs one, and the reorder is free.
 

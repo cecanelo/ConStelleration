@@ -1,7 +1,7 @@
 {
   "name": "variance_check",
-  "saved_at": "2026-08-29T17:26:27+00:00",
-  "git_commit": "6d63edc7331c9757c6d68972c5e4e1bd8ea69ca8",
+  "saved_at": "2026-08-30T14:32:02+00:00",
+  "git_commit": "cae0bd50c88097bf2b4b1ce11fcf2709fc77337d",
   "git_dirty": true,
   "constants": {
     "SEED": 0,
@@ -33,21 +33,21 @@
       "set": "in-region",
       "n": 4324,
       "rmse": 0.012562931692585398,
-      "epistemic": 0.007679041940718889,
-      "aleatoric": 0.010478462092578411,
-      "total": 0.01314386073499918
+      "epistemic": 0.008869445015864294,
+      "aleatoric": 0.01193705506946634,
+      "total": 0.014871460533935999
     },
     "target_std": 0.0789239111480279,
     "levels": [
       {
         "sigma": 0.005,
-        "expected_aleatoric": 0.011610261315991244,
-        "aleatoric": 0.012408237904310226,
-        "ratio": 1.0687302866490955,
+        "expected_aleatoric": 0.012941919630853532,
+        "aleatoric": 0.013561419382053356,
+        "ratio": 1.047867686469242,
         "recovered": true,
         "rmse_vs_clean": 0.013010577544637,
-        "epistemic": 0.008414438925683498,
-        "total": 0.015174224972724915,
+        "epistemic": 0.009581498996330194,
+        "total": 0.016604734818588596,
         "member_epochs": [
           52,
           50,
@@ -63,13 +63,13 @@
       },
       {
         "sigma": 0.02,
-        "expected_aleatoric": 0.022578710499618942,
-        "aleatoric": 0.024698859080672264,
-        "ratio": 1.0939003394852467,
+        "expected_aleatoric": 0.023291485219527588,
+        "aleatoric": 0.024896876612485238,
+        "ratio": 1.0689261065933096,
         "recovered": true,
         "rmse_vs_clean": 0.015678001637445472,
-        "epistemic": 0.012666587717831135,
-        "total": 0.02799595333635807,
+        "epistemic": 0.013604614660422528,
+        "total": 0.028371464631093756,
         "member_epochs": [
           47,
           47,
@@ -85,13 +85,13 @@
       },
       {
         "sigma": 0.05,
-        "expected_aleatoric": 0.051086183727360214,
-        "aleatoric": 0.0481841042637825,
-        "ratio": 0.9431924788301725,
+        "expected_aleatoric": 0.0514051873231824,
+        "aleatoric": 0.04838412531962425,
+        "ratio": 0.9412304057066293,
         "recovered": true,
         "rmse_vs_clean": 0.021637473604299094,
-        "epistemic": 0.022469643503427505,
-        "total": 0.054002296179533005,
+        "epistemic": 0.02444093244581242,
+        "total": 0.054206851621240136,
         "member_epochs": [
           46,
           46,
@@ -106,6 +106,6 @@
         ]
       }
     ],
-    "total_seconds": 785.1
+    "total_seconds": 1101.1
   }
 }
