@@ -276,7 +276,16 @@ This is what earns the two terms their names, and it independently reproduces st
 
 **No rate or exponent is reported**, per the standing decision to report the shape only. Five rungs at three seeds show a shape and nothing finer.
 
-**Next: figures for steps 6, 7 and 8, then the write-up.** All training is done.
+**Next: work through `audit-findings.md`.** All training is done and the figures exist.
+
+⚠️ **Three adversarial audits ran on 2026-08-30** (data and leakage, uncertainty mathematics, claims against artifacts), by a separate model told to treat this file and the decision log as claims under test. **Every table recomputed reproduced to the printed digit, and the core machinery came back clean:** units, variance-space aggregation, the closed forms, the NLL, set disjointness. The risk sits in the reporting, where prose compressed curves into single numbers the bins contradict.
+
+**Findings not yet fixed, so parts of this file are known to be wrong until they are.** Full list, with fixes and reasoning, in `audit-findings.md`. The four that matter:
+
+- **The 0.05% target trim reads held-out labels** and deletes 22 rows from the tail's held-out set, 9 of them sign-flipped configurations. The headline is flattered by roughly 20%, not the 2% first estimated. Fix is a sensitivity run, not a retrain of everything, and the trimmed number stays the headline for A.4 comparability.
+- **PIT "0.223 in the furthest bin" was never computed by anything.** The real value is 0.153.
+- **"About 15% at matched distance" is wrong**, an artifact of unequal bin widths. The premium is about 3% at 0.2 std and 27% at 0.4, so it grows with distance rather than being flat.
+- **Everything except the N-sweep is one seed**, which the headline table does not say.
 
 Two loose ends, neither blocking anything: the mirror-pair search (folded into decision log 2.2, the tolerance duplicate check) and a three-seed rerun of the narrow sweep's p30 and p90 if the U's upper arm is ever load-bearing.
 
