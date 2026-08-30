@@ -1,7 +1,7 @@
 {
   "name": "distance_error",
-  "saved_at": "2026-08-29T10:19:21+00:00",
-  "git_commit": "1fde990ea1f05434ee4c656d387972a5456b2837",
+  "saved_at": "2026-08-30T13:31:45+00:00",
+  "git_commit": "a4c0360e1dc2c4fd2e19d1e13bb439a7924aafc5",
   "git_dirty": true,
   "constants": {
     "SEED": 0,
@@ -14,7 +14,7 @@
     "architecture": "(256, 256, 256) tanh, early stopping"
   },
   "results": {
-    "total_seconds": 165.2,
+    "total_seconds": 262.8,
     "splits": {
       "random": {
         "n_fit": 17294,

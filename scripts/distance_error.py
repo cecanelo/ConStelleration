@@ -31,6 +31,7 @@ from sklearn.model_selection import train_test_split
 
 from constellaration_uq.baseline import ARCHITECTURE, fit_mlp, load_pool
 from constellaration_uq.data import extract_input_features, trim_target_tails
+from constellaration_uq.metrics import distance_bins
 from constellaration_uq.results import save_results, save_table
 from constellaration_uq.splits import (
     distance_from_training_region,
@@ -58,34 +59,16 @@ SPLITS = {
 
 
 def bin_by_distance(distance, abs_error, n_bins):
-    """Summarise error in quantile bins of distance.
+    """Summarise error in the shared quantile bins of distance.
 
-    Equal-count bins rather than equal-width, so every point on the curve rests
-    on the same amount of evidence and the thin far tail cannot produce a bin of
-    two configurations masquerading as a measurement.
+    The bin geometry comes from metrics.distance_bins so the calibration curves
+    land on exactly these edges. Only the two error columns are added here.
     """
-    edges = np.quantile(distance, np.linspace(0, 1, n_bins + 1))
-    edges[-1] = np.nextafter(edges[-1], np.inf)
-    which = np.clip(np.searchsorted(edges, distance, side='right') - 1, 0, n_bins - 1)
-
-    bins = []
-    for b in range(n_bins):
-        sel = which == b
-        if not sel.any():
-            # Duplicate quantile edges collapse a bin. Happens on the random
-            # split, where most distances are identical and tiny.
-            continue
-        bins.append(
-            {
-                'n': int(sel.sum()),
-                'd_lo': float(edges[b]),
-                'd_hi': float(edges[b + 1]),
-                'd_median': float(np.median(distance[sel])),
-                'rmse': float(np.sqrt(np.mean(abs_error[sel] ** 2))),
-                'mae': float(np.mean(abs_error[sel])),
-            }
-        )
-    return bins
+    rows, masks = distance_bins(distance, n_bins)
+    for row, sel in zip(rows, masks, strict=True):
+        row['rmse'] = float(np.sqrt(np.mean(abs_error[sel] ** 2)))
+        row['mae'] = float(np.mean(abs_error[sel]))
+    return rows
 
 
 def run_split(axis, X, y, make_split):
