@@ -229,7 +229,26 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 **Coverage degrades monotonically with distance, which is the deliverable.** Tail: 0.928 at the nearest bin falling to 0.587 at 1.63 to 2.13 std out. Hole: 0.916 to 0.806, shallower and it flattens. At matched distance around 0.4 std the tail is worse than the hole (0.78 against 0.81), consistent with the single-MLP distance-matched premium.
 
-**Next: step 7, the deferral curve.** Also no training, reads the tail points file. Then step 8, the N-sweep.
+**Step 7 done (2026-08-30), `scripts/deferral.py`.** Deliverable two, no training, reads the tail points file in seconds. Rank the held-out shapes by uncertainty, defer the worst fraction to VMEC++, credit those exact, score the hybrid system by CRPS in physical units.
+
+| ranking | 0% | 10% | 20% | 30% | 50% | AUC | halve at |
+|---|---|---|---|---|---|---|---|
+| epistemic | 0.01947 | 0.01526 | 0.01181 | 0.00908 | 0.00525 | 0.00667 | 27.4% |
+| total | 0.01947 | 0.01467 | 0.01150 | 0.00892 | 0.00497 | **0.00642** | **26.9%** |
+| random | 0.01947 | 0.01752 | 0.01556 | 0.01358 | 0.00974 | 0.00973 | 50.0% |
+| oracle | 0.01947 | 0.01144 | 0.00792 | 0.00569 | 0.00290 | 0.00451 | 14.2% |
+
+**Deferral works.** Solving the worst 20% by uncertainty cuts CRPS 41%, against 20% for a random 20%. To halve the error you solve 27% of designs instead of 50%. Perfect ranking would need 14.2%, so the signal captures **63% of the available headroom** out of region, and 76% in region.
+
+**The result that pairs steps 6 and 7, and the honest framing of the whole project:** the intervals are badly miscalibrated at the compact edge (ratio 0.66, coverage 0.587 in the furthest bin), and the ranking still works there. **A signal can be useless as an absolute interval and still be good at ordering.** Say this rather than either half alone.
+
+**Total narrowly beats epistemic**, at every rate and in both regions, AUC 0.00642 against 0.00667. Consistent with aleatoric measuring model misfit rather than noise: misfit carries real information about local difficulty, so including it helps the ranking. ⚠️ A 4% margin at one seed. Report it as a consistent lean, not a finding, and note that decision log 8.1 left this open deliberately so the answer is a result either way.
+
+**Sanity check built into the output:** the 0% column is identical across all four rankings, since nothing is deferred there and the ranking cannot matter. A mismatch would mean the cumulative-sum indexing is wrong.
+
+⚠️ **The curve assumes the solver always succeeds.** Deferred points are credited the exact value. Decision log 8.6 leaves it open as a stretch item whether VMEC++ failures cluster in the compact region, which would make this optimistic.
+
+**Next: step 8, the N-sweep.** 30 ensembles, floor 12, the only remaining training. Then figures for steps 6 and 7, then the write-up.
 
 Two loose ends, neither blocking anything: the mirror-pair search (folded into decision log 2.2, the tolerance duplicate check) and a three-seed rerun of the narrow sweep's p30 and p90 if the U's upper arm is ever load-bearing.
 
@@ -775,7 +794,7 @@ ensemble.
 | 4 | mean-variance, interior hole at p30 | 1 | ✅ done 2026-08-29, out/in RMSE 1.98x, calibration 0.69 out of region |
 | 5 | mean-variance, tail-low | 1 | ✅ done 2026-08-29, out/in RMSE 3.24x, calibration 0.66 out of region |
 | 6 | calibration figures | 0 | ✅ done 2026-08-30, coverage 0.779 at the tail against 0.956 in region, and PIT found a mean bias out there |
-| 7 | deferral curve | 0 | reads run 5 |
+| 7 | deferral curve | 0 | ✅ done 2026-08-30, solving the worst 20% cuts CRPS 41% against 20% at random, total-ranked narrowly ahead of epistemic |
 | 8 | full N-sweep | 30, floor 12 | does the decomposition hold as N grows |
 
 Runs 2, 4 and 5 are the headline result. Run 8 is validation and goes last.

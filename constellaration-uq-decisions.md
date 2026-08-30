@@ -1284,6 +1284,8 @@ Coverage at six nominal levels, CRPS, and PIT, all on total uncertainty per the 
 
 **Decided:** Two curves, epistemic-ranked and total-ranked. Not aleatoric-ranked.
 
+**ANSWERED 2026-08-30: total wins, narrowly.** AUC 0.00642 against 0.00667, consistently at every rate and in both regions. See the step 7 result below. The 4% margin at one seed makes it a lean rather than a finding, but it went the way 5.1 predicts, since the aleatoric term is model misfit and misfit is informative about local difficulty.
+
 **Why:** Which signal defers best is a result, not a setup detail, and showing both is nearly free, same trained ensemble and same predictions, just two sort orders. It also tests the "total and epistemic should be close" claim empirically instead of assuming it, which matters because that claim rests on aleatoric sitting near zero, which is itself a prediction 6.2 is designed to check.
 
 **Dropped from the original "all three":** aleatoric-ranked. If aleatoric really does sit at the numerical floor, ranking by it is ranking by noise, and the curve would land on the random baseline by construction. It answers nothing that the floor measurement in Stage 2 does not already answer.
@@ -1338,6 +1340,31 @@ Coverage at six nominal levels, CRPS, and PIT, all on total uncertainty per the 
 
 **My decision:**
 > Headline is the tail split's held-out set. That is the case the paper actually warned about, and it is where deferral has to earn its keep. In-region goes next to it for contrast so the difference is visible.
+
+---
+
+**RESULT 2026-08-30, `scripts/deferral.py`, step 7. No training, reads `results/mv_ensemble_tail_points.csv` in seconds.**
+
+CRPS of the hybrid system in physical units, out of region at the compact edge, n = 5,405. Deferred points credited exact per 8.3.
+
+| ranking | 0% | 10% | 20% | 30% | 50% | AUC | halve at |
+|---|---|---|---|---|---|---|---|
+| epistemic | 0.01947 | 0.01526 | 0.01181 | 0.00908 | 0.00525 | 0.00667 | 27.4% |
+| total | 0.01947 | 0.01467 | 0.01150 | 0.00892 | 0.00497 | **0.00642** | **26.9%** |
+| random | 0.01947 | 0.01752 | 0.01556 | 0.01358 | 0.00974 | 0.00973 | 50.0% |
+| oracle | 0.01947 | 0.01144 | 0.00792 | 0.00569 | 0.00290 | 0.00451 | 14.2% |
+
+**Deferral works, and by a wide margin over the floor.** Solving the worst 20% by uncertainty cuts CRPS by 41%; a random 20% cuts it by 20%. To halve the error, solve 27% of designs rather than 50%. Measured against the ceiling the signal captures 63% of the available headroom out of region ((random − mine) / (random − oracle) on AUC), and 76% in region.
+
+**⚠️ This is the entry that makes the project's argument whole, and it should be stated as a pair with Stage 7's result rather than on its own.** Stage 7 established the intervals are badly miscalibrated at the compact edge: ratio 0.66, coverage 0.587 in the furthest distance bin. This entry establishes the ranking still works out there. **A signal can be useless as an absolute interval and still be good at ordering, and deferral only needs the ordering.** Reporting only the calibration failure understates what the surrogate is worth; reporting only the deferral curve hides that the intervals cannot be read as intervals. Both together is the finding.
+
+**Total narrowly beats epistemic**, at every deferral rate and in both regions, AUC 0.00642 against 0.00667. That is the answer 8.1 deliberately left to measurement. It is consistent with 5.1 and 5.4's conclusion that the aleatoric term is model misfit rather than label noise: misfit carries genuine information about which points are locally hard, so a ranking that includes it does better than one that does not. ⚠️ The margin is 4% at a single seed. Report it as a consistent lean, not a result, and note that the two curves are close enough that either signal would be a defensible choice in practice.
+
+**In-region deferral behaves the same way but ranks better**, 76% of headroom against 63%. The signal orders points better where it is calibrated, which is expected and worth one sentence rather than treatment as a problem.
+
+**Sanity check built into the output.** The 0% column is identical across all four rankings, since nothing is deferred there and the ranking cannot matter. A mismatch would expose an off-by-one in the cumulative-sum indexing, which is the only real bug risk in the computation.
+
+⚠️ **The random floor is measured, not asserted.** It averages 50 permutations rather than drawing the straight line its expectation traces, so all four curves are produced by the same code path.
 
 ---
 

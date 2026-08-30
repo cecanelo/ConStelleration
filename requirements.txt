@@ -13,3 +13,7 @@ pyarrow==25.0.1
 datasets==5.0.1
 huggingface_hub==1.28.0
 pytest==8.3.4
+# Pinned to match the VS Code Ruff extension's bundled binary (charliermarsh.ruff
+# 2026.74.0). Until 2026-08-30 ruff ran only inside the editor, so `ruff check`
+# in a terminal failed and lint was not reproducible outside one machine.
+ruff==0.16.4
