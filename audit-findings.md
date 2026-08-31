@@ -10,7 +10,7 @@ truth, and to verify against code and `results/*.json`.
 digit. The measurement is sound. The risk sits almost entirely in the reporting,
 where prose compressed curves into single numbers the bins contradict.
 
-**Status: items 1 to 16 closed, all 2026-08-31. Items 17 to 19 open**, and those are remaining project work rather than audit findings: the three missing story assets, the write-up, and switching the studio back to CPU. Closed items keep their full text with the result appended, so the reasoning stays readable next to what it produced.
+**Status: items 1 to 17 closed, all 2026-08-31. Every audit finding is addressed.** What remains is 18, the write-up, and 19, switching the studio back to CPU. Closed items keep their full text with the result appended, so the reasoning stays readable next to what it produced. Closed items keep their full text with the result appended, so the reasoning stays readable next to what it produced.
 
 ---
 
@@ -281,16 +281,26 @@ so latent only. Add an explicit guard.
 
 ## E. Remaining deliverable work
 
-### 17. Three missing story assets
+### 17. ~~Three missing story assets~~ ✅ CLOSED 2026-08-31
 
 Designed from the narrative rather than from the notebook:
 
-- **Table: ours against Table 7.** RMSE only, never R², two metrics. This is what
-  buys permission to make any later claim.
-- **Table: the six-row decomposition.** Currently only a CLAUDE.md block. The
-  ratio column is the most quotable thing in the project.
-- **Figure: extrapolation gap against N**, 1.71 rising to 3.39. Data already in
-  `results/n_sweep.json`, unplotted.
+All three built as notebook cells rendering from the results files, so they
+cannot drift from the artifacts.
+
+- **Table 1, ours against Table 7.** Three rows: our 10-member MSE ensemble at
+  1.75x on edge rotational transform, plus one untuned MLP on each of two
+  metrics at 2.4x and 2.8x. ⚠️ The second pair is the real point: a pipeline bug
+  would not produce a consistent factor across two unrelated metrics. RMSE only,
+  never R². ⚠️ There is no log10 qi ensemble and the cell says so, since quoting
+  2.8x as "our qi result" would be wrong.
+- **Table 2, the six-row decomposition.** From `calibration.json`, carrying the
+  single-seed caveat and the ~2% trim conservatism in its own markdown so the
+  table travels with them.
+- **Figure 8, extrapolation gap against N**, 1.71 rising to 3.39 with seed error
+  bars, plus the withdrawn calibration-trend claim recorded beside it.
+
+Notebook renumbered and verified: 11 figures, 13 unique headings, all rendered.
 
 ### 18. The write-up
 
@@ -305,7 +315,7 @@ Nothing remaining needs the T4 except item 1's sensitivity run.
 1. ~~Item 1~~ done 2026-08-31, on CPU in 129s
 2. ~~Items 2 and 3~~ ✅ done 2026-08-31, both results files regenerated
 3. ~~Everything in B, C and D~~ ✅ done 2026-08-31
-4. E
+4. ~~E~~ 17 done; 18 and 19 remain
 
 **Cut for the pitch, keep in an appendix:** coverage-versus-nominal, the
 placement table, and the three gate figures. They answer "did you check?" rather
