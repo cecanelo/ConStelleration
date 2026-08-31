@@ -1465,18 +1465,44 @@ CRPS of the hybrid system in physical units, out of region at the compact edge, 
 
 ---
 
-**8.6 Solver failure rate** `OPEN`
+**8.6 Solver failure rate** `MEASURED 2026-08-31`
 
-- [ ] Decided (stretch)
+- [x] Decided: measured, closed as a caveat rather than a second curve
 
-**Options:** ignore / fold into the fallback assumption
+**Decision: the fallback does NOT always succeed, the deferral curve keeps its published form, and the shortfall is reported as a two-sentence caveat with a number attached.** `scripts/solver_failures.py`, no training, about a minute.
 
-**Leaning:** only if 1.6 shows failures cluster in your held-out region
+**Why it needed measuring at all.** The deferral curve credits every deferred shape with the exact solver value, contributing zero error. That is an assumption about VMEC++, not a result, and it is weakest exactly where deferral sends the most work. Leaving it as a generic caveat would have been the one place in this project where a load-bearing claim rested on something unmeasured.
 
-**Why:** The deferral curve assumes the fallback always returns the truth. If VMEC++ fails at a meaningful rate in the compact region, that assumption breaks, and saying so with a figure is a specific and correct criticism of your own method rather than a generic caveat.
+**The obstacle, and why this is more than a groupby.** `metrics.aspect_ratio` is computed *from* the solved equilibrium, so it is **null on all 5,278 forward-model failures at NFP=3**. We know which shapes failed and not how compact they were. Two cheap geometric proxies were tried and rejected before any script was written: `1/|r10|` reaches Spearman 0.72 and `1/sqrt(|r10 z10|)` reaches 0.83, which would scatter shapes across neighbouring bins badly enough to hide a real effect or manufacture a fake one. So aspect ratio is **predicted from the 80 coefficients**, reusing what 3.5 established: it is input-measurable, out-of-fold R² 0.9876, RMSE 0.180 against a spread of 1.62, Spearman 0.990.
 
-**My decision:**
->
+⚠️ **Both groups are measured with the same instrument, deliberately.** Using the true aspect ratio for successes and a prediction for failures would compare two populations through two different lenses, and any difference in failure rate could then be prediction error rather than physics. Every row gets an out-of-fold prediction: successes from the one fold model that did not train on them, failures from the average of all five.
+
+⚠️ **The aspect-ratio model is itself extrapolating onto the failures.** It was fit only on shapes that solved, and no label exists on a failure to check it against, so its accuracy there is unmeasurable. This project's own subject, one level down. The held-out R² bounds the instrument on successes and nothing bounds it on failures.
+
+**Two failure modes, and only one of them is a solver call.** Generation-stage failure means no usable boundary was ever produced, so VMEC++ was never invoked; forward-model failure means a valid shape reached the solver and it did not converge. The population removes the first (1 row of 182,222) and keeps the second as the outcome, because "if I send this shape to the solver, do I get an answer back" is only about the second.
+
+**The headline, and it does not survive the confound check.** Failure rate by predicted aspect ratio is a **U**, 42.1% at the compact end, 4.4% in the middle, 38.7% at the extended end. Split at the tail cutoff of 7.3672 it reads 31.19% below against 11.62% above, a relative risk of **2.68x** on 7,775 and 24,553 shapes.
+
+Then, holding the generator fixed:
+
+| pathway | n | share below cutoff | rate below | rate above | rel risk |
+|---|---|---|---|---|---|
+| desc | 17,671 | 8.1% | 0.00% | 0.00% | n/a |
+| vmec | 14,657 | 43.3% | 38.21% | 34.33% | **1.11x** |
+
+**Every solver failure is a `vmec`-pathway row, and within `vmec` aspect ratio barely matters.** The 2.68x is **composition, not geometry**: the compact region is 82% `vmec`-proposed against 34% in the extended region, so sorting by compactness was sorting by generator. The U at the extended end has the same explanation.
+
+⚠️ **Do not read `desc` at exactly 0.00% across 17,671 rows as evidence that DESC-proposed shapes always solve.** Too clean. Far more likely the flag is set differently per pathway, or the DESC pipeline ran a forward model internally and emitted only converged rows. State it as "no forward-model failures are recorded on the DESC pathway" and stop there.
+
+**What survives and what does not.** The *operational* number survives: shapes below the cutoff in this dataset fail about a third of the time, so deferring them returns nothing about a third of the time. The *causal* claim does not: compactness is not what breaks the solver. **The defensible sentence is that solver reliability is a property of the proposal process, not of the geometry**, and it correlates with compactness here only through who proposed what. That is the more useful finding, because it says what would actually change the risk: swap the generator, not the region.
+
+**Effect on the deferral curve, as a caveat rather than a correction.** Out of region at 20% deferral with total ranking, CRPS falls 0.01947 to 0.01150, a 41% cut. Crediting only the roughly 69% of deferrals that would actually solve puts it near 0.0140, a **28% cut**. ⚠️ That is a back-of-envelope figure and 31% is a *lower bound* on the deferred subset's failure rate, since deferral picks the most uncertain shapes, which are the most compact, where bin 0 reads 42%.
+
+**Why a caveat and not a second curve.** Correcting properly means crediting each deferred point with its own failure probability, which is a real second curve and a further hour. The comparison the figure exists to make is unaffected: **deferral still beats random by the same margin, because random deferral draws from the same population and eats the same failure rate.** Only the absolute level moves, and one paragraph reports that honestly. The project is at the point where polish beats scope.
+
+⚠️ **None of this makes the measured curve wrong on its own terms.** Every shape in our pool solved successfully, by construction, since the filter chain keeps only converged rows. This is a statement about **deployment**: an optimizer proposing new compact shapes may meet a failure rate the experiment never saw, and how bad it is depends on which optimizer.
+
+**Incidental, and it is the project's own premise arriving from a third direction.** Sampling density, surrogate accuracy and solver reliability all peak in the same middle band of aspect ratio and all degrade at both ends. Three unrelated measurements, one shape.
 
 ---
 

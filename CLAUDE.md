@@ -286,7 +286,13 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 **Sanity check built into the output:** the 0% column is identical across all four rankings, since nothing is deferred there and the ranking cannot matter. A mismatch would mean the cumulative-sum indexing is wrong.
 
-⚠️ **The curve assumes the solver always succeeds.** Deferred points are credited the exact value. Decision log 8.6 leaves it open as a stretch item whether VMEC++ failures cluster in the compact region, which would make this optimistic.
+⚠️ **The curve assumes the solver always succeeds, and it does not. MEASURED AND CLOSED 2026-08-31**, `scripts/solver_failures.py`, the last open item in the decision log. Deferred points are credited the exact value; in the region deferral sends work to, **about a third of VMEC++ calls fail**. Crediting only the roughly 69% that would solve turns the 41% CRPS cut at 20% deferral into about **28%**, a back-of-envelope figure and a lower bound on the shortfall, since deferral picks the most compact shapes and those fail 42%.
+
+⚠️ **The obvious causal reading is wrong, and the confound check is the finding.** Failure rate by predicted aspect ratio is a U, 42.1% compact / 4.4% middle / 38.7% extended, reading 31.19% below the tail cutoff against 11.62% above, a 2.68x. But **every solver failure is a `vmec`-pathway row**, and within `vmec` the compact-versus-extended risk is only 1.11x. The compact region is 82% `vmec`-proposed against 34% elsewhere, so **sorting by compactness was sorting by generator**. The defensible sentence: **solver reliability is a property of the proposal process, not of the geometry.** That is also the more useful one, since it says what would change the risk.
+
+⚠️ **Aspect ratio is null on every failed row**, being computed from the solved equilibrium, so it is predicted from the 80 coefficients out of fold (R² 0.9876, Spearman 0.990), with **the same instrument applied to both groups** so a difference cannot be prediction error. Two cheap geometric proxies were tried and rejected at Spearman 0.72 and 0.83. ⚠️ Do not read `desc` at 0.00% across 17,671 rows as DESC never failing; the flag is more likely set differently per pathway.
+
+⚠️ **The measured curve is not wrong on its own terms.** Every shape in our pool solved, by construction. This is about **deployment**: a new optimizer proposing compact shapes may meet a failure rate the experiment never saw, and which optimizer decides how bad it is. Reported as a caveat rather than a second curve, because deferral still beats random by the same margin (random deferral draws from the same population and eats the same failure rate) and only the absolute level moves. Full detail in decision log 8.6, solver failure rate.
 
 **Step 8 done (2026-08-30), `scripts/n_sweep.py`, 30 ensembles in 1386s on a T4.** The last training run. 5 sizes x 3 seeds x 2 noise conditions, tail split, primary target. Everything frozen except N and the injected noise.
 
@@ -318,7 +324,7 @@ This is what earns the two terms their names, and it independently reproduces st
 
 **No rate or exponent is reported**, per the standing decision to report the shape only. Five rungs at three seeds show a shape and nothing finer.
 
-**Next: work through `audit-findings.md`.** All training is done and the figures exist.
+**Next: the write-up.** All training is done, the figures exist, `audit-findings.md` is worked through, every headline is replicated across three seeds, and decision log 8.6 (solver failure rate) closed on 2026-08-31, which was the last open item anywhere.
 
 ⚠️ **Three adversarial audits ran on 2026-08-30** (data and leakage, uncertainty mathematics, claims against artifacts), by a separate model told to treat this file and the decision log as claims under test. **Every table recomputed reproduced to the printed digit, and the core machinery came back clean:** units, variance-space aggregation, the closed forms, the NLL, set disjointness. The risk sits in the reporting, where prose compressed curves into single numbers the bins contradict.
 
@@ -839,7 +845,7 @@ architecture claim in either direction.
 
 Full reasoning is in `constellaration-uq-decisions.md` in this repo.
 
-**None. Every decision is settled as of 2026-08-30.** What
+**None. Every decision is settled as of 2026-08-31**, when 8.6 (solver failure rate) closed as the last open item. What
 remains is execution: steps 6, 7 and 8 in the run table below,
 then figures and the write-up.
 
@@ -937,6 +943,7 @@ ensemble.
 | 7 | deferral curve | 0 | ✅ done 2026-08-30, solving the worst 20% cuts CRPS 41% against 20% at random; total-ranked beats epistemic in all nine paired runs (run 9) |
 | 8 | full N-sweep | 30, floor 12 | ✅ done 2026-08-30, HOLDS: injected σ recovered at 0.0208 against 0.020 while misfit fell 3.6x, and the extrapolation gap widened 1.71 to 3.39 |
 | 9 | seed replication | 6, plus 6 single MLPs | ✅ done 2026-08-31, every headline claim survives, and total-ranked deferral wins in all nine paired runs |
+| 10 | solver failure rate | 0, five gradient boosters | ✅ done 2026-08-31, the fallback fails about a third of the time in the deferral region, but it is the generator and not the geometry |
 
 Runs 2, 4 and 5 are the headline result. Run 8 is validation and goes last.
 

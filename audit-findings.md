@@ -310,9 +310,11 @@ Notebook renumbered and verified: 11 figures, 13 unique headings, all rendered.
 
 ### 18. The write-up
 
-### 19. Switch the studio back to CPU
+### 19. ~~Switch the studio back to CPU~~ ✅ CLOSED 2026-08-31
 
-Nothing remaining needs the T4 except item 1's sensitivity run.
+Nothing remaining needs the T4 except item 1's sensitivity run, which ran on CPU
+in 129s. Decision log 8.6's solver-failure check also ran on CPU, five gradient
+boosters in about a minute.
 
 ---
 
@@ -321,7 +323,7 @@ Nothing remaining needs the T4 except item 1's sensitivity run.
 1. ~~Item 1~~ done 2026-08-31, on CPU in 129s
 2. ~~Items 2 and 3~~ ✅ done 2026-08-31, both results files regenerated
 3. ~~Everything in B, C and D~~ ✅ done 2026-08-31
-4. ~~E~~ 17 done; 18 and 19 remain
+4. ~~E~~ 17 and 19 done; **18, the write-up, is the only item left**
 
 **Cut for the pitch, keep in an appendix:** coverage-versus-nominal, the
 placement table, and the three gate figures. They answer "did you check?" rather

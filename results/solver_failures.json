@@ -1,0 +1,174 @@
+{
+  "name": "solver_failures",
+  "saved_at": "2026-08-31T12:11:41+00:00",
+  "git_commit": "7400266b0e32932ccad5d3d054e8fe2a2b8d4315",
+  "git_dirty": true,
+  "constants": {
+    "SEED": 0,
+    "N_FOLDS": 5,
+    "N_BINS": 10,
+    "MAX_ITER": 1000,
+    "SOLVER_FLAG": "misc.has_neurips_2025_forward_model_error",
+    "GENERATION_FLAGS": [
+      "misc.has_optimize_boundary_omnigenity_vmec_error",
+      "misc.has_optimize_boundary_omnigenity_desc_error",
+      "misc.has_generate_qp_initialization_from_targets_error",
+      "misc.has_generate_nae_initialization_from_targets_error"
+    ],
+    "TEST_FRACTION": 0.2,
+    "note": "aspect ratio is null on every solver failure and is predicted out of fold from the 80 boundary coefficients for both groups"
+  },
+  "results": {
+    "population": {
+      "n": 32328,
+      "n_failed": 5278,
+      "failure_rate": 0.16326404355357585,
+      "aspect_present_on_failures": 0
+    },
+    "instrument": {
+      "n": 27050,
+      "rmse": 0.18043660225064745,
+      "r2": 0.9875709146353511,
+      "std_of_aspect": 1.618469641292108,
+      "spearman": 0.9895544633175952
+    },
+    "cutoff": 7.367242651101116,
+    "bins": [
+      {
+        "bin": 0,
+        "a_lo": 3.6943044632826663,
+        "a_hi": 5.688659283413933,
+        "a_median": 4.872106846453578,
+        "n": 3233,
+        "n_failed": 1360,
+        "rate": 0.42066192390968143,
+        "stderr": 0.008682200001755761
+      },
+      {
+        "bin": 1,
+        "a_lo": 5.688659283413933,
+        "a_hi": 6.979146893145158,
+        "a_median": 6.3348737373295325,
+        "n": 3233,
+        "n_failed": 833,
+        "rate": 0.25765542839467986,
+        "stderr": 0.007691650898186374
+      },
+      {
+        "bin": 2,
+        "a_lo": 6.979146893145158,
+        "a_hi": 7.849382472368907,
+        "a_median": 7.451603094496158,
+        "n": 3233,
+        "n_failed": 510,
+        "rate": 0.15774822146613052,
+        "stderr": 0.006410624689152099
+      },
+      {
+        "bin": 3,
+        "a_lo": 7.849382472368907,
+        "a_hi": 8.63436065323708,
+        "a_median": 8.252630815082817,
+        "n": 3232,
+        "n_failed": 400,
+        "rate": 0.12376237623762376,
+        "stderr": 0.005792547343205742
+      },
+      {
+        "bin": 4,
+        "a_lo": 8.63436065323708,
+        "a_hi": 9.117455728685135,
+        "a_median": 8.918691335451912,
+        "n": 3233,
+        "n_failed": 228,
+        "rate": 0.07052273430250541,
+        "stderr": 0.004502783901876452
+      },
+      {
+        "bin": 5,
+        "a_lo": 9.117455728685135,
+        "a_hi": 9.452160989060365,
+        "a_median": 9.303347869445863,
+        "n": 3233,
+        "n_failed": 212,
+        "rate": 0.06557377049180328,
+        "stderr": 0.004353461781386802
+      },
+      {
+        "bin": 6,
+        "a_lo": 9.452160989060365,
+        "a_hi": 9.699938131150635,
+        "a_median": 9.583533858433515,
+        "n": 3232,
+        "n_failed": 143,
+        "rate": 0.04424504950495049,
+        "stderr": 0.0036171785327981563
+      },
+      {
+        "bin": 7,
+        "a_lo": 9.699938131150635,
+        "a_hi": 9.93831456843956,
+        "a_median": 9.81762377384852,
+        "n": 3233,
+        "n_failed": 143,
+        "rate": 0.04423136405815033,
+        "stderr": 0.0036160855915156713
+      },
+      {
+        "bin": 8,
+        "a_lo": 9.93831456843956,
+        "a_hi": 10.241386814136192,
+        "a_median": 10.05290653461278,
+        "n": 3233,
+        "n_failed": 198,
+        "rate": 0.06124342715743891,
+        "stderr": 0.0042169979114200715
+      },
+      {
+        "bin": 9,
+        "a_lo": 10.241386814136192,
+        "a_hi": 12.004659355872919,
+        "a_median": 11.026123165171214,
+        "n": 3233,
+        "n_failed": 1251,
+        "rate": 0.3869471079492731,
+        "stderr": 0.008565878756659536
+      }
+    ],
+    "below_cutoff": {
+      "n": 7775,
+      "n_failed": 2425,
+      "rate": 0.31189710610932475,
+      "stderr": 0.005253904397921801
+    },
+    "above_cutoff": {
+      "n": 24553,
+      "n_failed": 2853,
+      "rate": 0.11619761332627378,
+      "stderr": 0.0020451440688501465
+    },
+    "relative_risk": 2.6841954596222397,
+    "pathway_confound": [
+      {
+        "pathway": "desc",
+        "n": 17671,
+        "share_below_cutoff": 0.08081036726840586,
+        "rate_below": 0.0,
+        "n_below": 1428,
+        "rate_above": 0.0,
+        "n_above": 16243,
+        "relative_risk": NaN
+      },
+      {
+        "pathway": "vmec",
+        "n": 14657,
+        "share_below_cutoff": 0.43303540970184895,
+        "rate_below": 0.382070269418623,
+        "n_below": 6347,
+        "rate_above": 0.34332129963898916,
+        "n_above": 8310,
+        "relative_risk": 1.1128650329017726
+      }
+    ]
+  }
+}
