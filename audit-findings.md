@@ -10,7 +10,7 @@ truth, and to verify against code and `results/*.json`.
 digit. The measurement is sound. The risk sits almost entirely in the reporting,
 where prose compressed curves into single numbers the bins contradict.
 
-**Status: items 1, 2 and 3 closed and item 4 partly closed, all 2026-08-31. Items 5 to 19 open.** Closed items keep their full text with the result appended, so the reasoning stays readable next to what it produced.
+**Status: items 1 to 16 closed, all 2026-08-31. Items 17 to 19 open**, and those are remaining project work rather than audit findings: the three missing story assets, the write-up, and switching the studio back to CPU. Closed items keep their full text with the result appended, so the reasoning stays readable next to what it produced.
 
 ---
 
@@ -135,13 +135,17 @@ the per-split bins byte-identical.
 
 ## C. Sentences that overclaim their own tables
 
-### 5. "Coverage degrades monotonically with distance"
+### 5. ~~"Coverage degrades monotonically with distance"~~ ✅ CLOSED 2026-08-31
+
+**Fixed** in CLAUDE.md and the decision log: "falls from 0.93 to 0.59 with one non-monotone step".
 
 Tail bins: 0.928, 0.873, 0.781, **0.822**, 0.803, 0.766, 0.675, 0.587. The hole
 rises first too. Downward trend, not monotone. Say "falls from 0.93 to 0.59 with
 one non-monotone step".
 
-### 6. "The irreducible part sits at 0.020 and does not move"
+### 6. ~~"The irreducible part sits at 0.020 and does not move"~~ ✅ CLOSED 2026-08-31
+
+**Fixed** in both documents and in `n_sweep.py`'s own docstring, which carried the same wording. Replaced with the convergence and its mechanism rather than a softened adjective.
 
 The recovered column **converges from above**: 0.0318, 0.0241, 0.0223, 0.0223,
 0.0208. Every one of the 15 cells sits above 0.020.
@@ -154,13 +158,17 @@ convergence evidence rather than noise. The pre-registered form, "the noisy
 curve flattens near sqrt(misfit² + σ²)", was already correct; the "does not
 move" gloss was written over it afterwards.
 
-### 7. "Total beats epistemic at every rate and in both regions"
+### 7. ~~"Total beats epistemic at every rate and in both regions"~~ ✅ CLOSED 2026-08-31
+
+**Fixed:** 48 of 49 rates per region, exceptions losing by 0.000012 and 0.000007.
 
 48 of 49 interior rates out-of-region (one loss by 0.000012) and 48 of 49
 in-region (one loss by 0.000007). The AUC lean and the "consistent lean, not a
 finding" framing both survive. "At every rate" is literally false.
 
-### 8. Verdict verbs disagree with the artifacts
+### 8. ~~Verdict verbs disagree with the artifacts~~ ✅ CLOSED 2026-08-31
+
+**Fixed:** gate 3.5 now reads "returned INCONCLUSIVE and we proceeded on the evidence", step 1 now cites `verdict: FAIL` from its own JSON. Reasons for proceeding kept verbatim.
 
 `results/gate_3_5_split_axis.json` records `verdict: "INCONCLUSIVE"`; CLAUDE.md
 says "passed with a caveat". `results/mse_ensemble.json` records
@@ -171,7 +179,9 @@ credit. Align the verbs with the artifacts and keep the stated reasons for
 proceeding. **"The bar failed and here is why we proceeded" is more credible
 than a softened verb.**
 
-### 9. Step 1's epistemic 0.00631 is not comparable to any later number
+### 9. ~~Step 1's epistemic 0.00631 is not comparable to any later number~~ ✅ CLOSED 2026-08-31
+
+**Fixed:** marked non-comparable in both documents, naming all three simultaneous changes (aggregation, loss, training size), and noting that nothing downstream uses it.
 
 `scripts/mse_ensemble.py:132,160` computes `epistemic.mean()`, the mean of
 per-point standard deviations, which is exactly the aggregation removed
@@ -181,7 +191,9 @@ and training size (21,118 against 16,794). Nothing downstream uses it, since the
 hole and tail comparisons use step 2's own 0.00887. Mark it non-comparable, or
 update the script and rerun.
 
-### 10. Single-seed disclosure
+### 10. ~~Single-seed disclosure~~ ✅ CLOSED 2026-08-31
+
+**Fixed:** one paragraph directly above the headline table in CLAUDE.md, stating that every figure except the N-sweep is seed 0 and citing the sweep's spreads as the only direct evidence for how much seed noise to expect.
 
 **Everything except the N-sweep is seed 0**: all six calibration ratios, all
 coverage and PIT figures, both deliverable curves, the matched-distance
@@ -191,7 +203,9 @@ not for the headline numbers.
 One plain sentence beside the headline table, rather than scattered caveats.
 Stated once it retires the objection; discovered, it reads as an omission.
 
-### 11. The N-sweep pre-registration cannot be verified from the repository
+### 11. ~~The N-sweep pre-registration cannot be verified from the repository~~ ✅ CLOSED 2026-08-31
+
+**Fixed:** the attestation is now stated as this session's record rather than the repository's, with the git evidence named. **Standing rule adopted: commit a prediction in its own commit before the run that tests it.**
 
 `git log -S` finds the prediction text entering only in commit `830792a`, the
 same commit that added the sweep results. The sweep ran 15:15 to 15:53 against
@@ -202,7 +216,9 @@ The predictions did land (~0.023 predicted against 0.0236 measured at full N).
 Note the attestation honestly, and **from now on commit predictions in their own
 commit before running.**
 
-### 12. Decision 4.7's "500 validation points confirmed sufficient at N=1000"
+### 12. ~~Decision 4.7's "500 validation points confirmed sufficient at N=1000"~~ ✅ CLOSED 2026-08-31
+
+**Fixed:** the N=1000 half is withdrawn, since that row ran at lr 3e-4 rather than the frozen 1e-3. Superseded by better evidence: the N-sweep's three seeds at N=1000 under the frozen recipe, epistemic 0.01477 / 0.01486 / 0.01462.
 
 `results/hp_check.json` shows that row ran at **lr 3e-4**, the nominal
 validation-loss winner. The frozen recipe is lr 1e-3, chosen afterwards on cost.
@@ -217,7 +233,9 @@ about ±1%. That is better evidence under the recipe actually used.
 
 ## D. Latent code hazards, none of which has fired
 
-### 13. The variance clamp zeroes the gradient in both directions
+### 13. ~~The variance clamp zeroes the gradient in both directions~~ ✅ CLOSED 2026-08-31
+
+**Fixed:** recorded in `gaussian_nll`'s docstring, naming the `pinned_fraction` monitor as the only thing catching it and instructing that it not be removed.
 
 `nets.py:208-210`. `raw_log_variance.clamp(...)` has zero derivative outside its
 bounds. The floor correctly blocks the pull down, but it also blocks the pull
@@ -230,7 +248,9 @@ Never fired: `pinned_fraction` is 0.0 in all three runs. The monitor at
 `mv_ensemble.py:190-195` is the only thing standing between this and a silent
 wrong number. Record that in a comment beside it.
 
-### 14. Warm-up checkpoint escape
+### 14. ~~Warm-up checkpoint escape~~ ✅ CLOSED 2026-08-31
+
+**Fixed:** `train_one_mv` raises when `max_epochs <= warmup_epochs`. Two tests, one for the rejection and one bounding it (`max_epochs = warmup_epochs + 1` must still run).
 
 `nets.py:274-306`. The best-weight reset fires at `epoch == warmup_epochs`. If
 the loop never reaches it (`max_epochs <= warmup_epochs`, reachable through the
@@ -240,13 +260,17 @@ head, silently. Unreachable with the frozen constants (500 > 25).
 
 Add `if max_epochs <= warmup_epochs: raise`, plus a test.
 
-### 15. NaN targets vanish silently in the trim
+### 15. ~~NaN targets vanish silently in the trim~~ ✅ CLOSED 2026-08-31
+
+**Fixed:** `trim_target_tails` raises on NaN targets rather than folding them into the tail fraction. Docstring also now records that the function reads labels before any split exists, pointing at 1.4.
 
 `data.py:52`. `between()` is False for NaN, so a NaN-target row disappears in the
 trim with no count discrepancy attributable to it. Zero NaNs in the current pool,
 so latent only. Add an explicit guard.
 
-### 16. Two comment inaccuracies
+### 16. ~~Two comment inaccuracies~~ ✅ CLOSED 2026-08-31
+
+**Fixed:** the distance-reference comment now says fit ∪ validation and why that is deliberate; `n_sweep.py`'s unused distance computation is deleted along with its now-unused import.
 
 - `mv_ensemble.py:206-208` and `n_sweep.py:126-128` set `fit_mask` from the
   pre-validation index array, so the distance reference is fit ∪ validation while
@@ -280,7 +304,7 @@ Nothing remaining needs the T4 except item 1's sensitivity run.
 
 1. ~~Item 1~~ done 2026-08-31, on CPU in 129s
 2. ~~Items 2 and 3~~ ✅ done 2026-08-31, both results files regenerated
-3. Everything in B, C and D as one documentation pass
+3. ~~Everything in B, C and D~~ ✅ done 2026-08-31
 4. E
 
 **Cut for the pitch, keep in an appendix:** coverage-versus-nominal, the

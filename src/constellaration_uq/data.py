@@ -48,6 +48,30 @@ def filter_valid(df: pd.DataFrame) -> Iterator[tuple[str, pd.DataFrame]]:
 def trim_target_tails(
     df: pd.DataFrame, target_column: str, tail_fraction: float = 0.0005
 ) -> pd.DataFrame:
+    """Drop the extreme tails of one target column.
+
+    ⚠️ Reads labels, and does so before any split exists. On a random split that
+    is harmless. On this project's splits it is not: target and split axis are
+    correlated, so the dropped rows concentrate in the held-out region. 22 of
+    the 28 dropped rows land in the tail split's held-out set. The cost is
+    measured rather than assumed, see `mv_ensemble.py --sensitivity` and
+    decision log 1.4; it is about 2% on the tail headline, in the flattering
+    direction.
+
+    ⚠️ NaN targets would vanish here silently. `between` is False for NaN, so a
+    NaN row is dropped by this function and counted against the tail fraction,
+    which makes the trim quietly remove more than it claims to. There are none
+    in the current pool, so this is a guard against a future target column
+    rather than a fix for an observed bug.
+    """
+    missing = int(df[target_column].isna().sum())
+    if missing:
+        raise ValueError(
+            f'{target_column} has {missing} NaN values. `between` silently drops them, '
+            'so they would be folded into the tail trim rather than counted. '
+            'Filter them explicitly before trimming.'
+        )
+
     lower, upper = df[target_column].quantile([tail_fraction, 1 - tail_fraction])
     return df[df[target_column].between(lower, upper)]
 

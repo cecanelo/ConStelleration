@@ -16,9 +16,15 @@ noise conditions. 5.1 and 5.4 established that on clean targets the aleatoric
 term is the model's own misfit, which *does* shrink with N, so "aleatoric stays
 flat" would have no content. Adding Gaussian noise of σ = 0.020 to the training
 targets installs a floor that genuinely should not move, and the contrast between
-the conditions is the result: epistemic decaying toward a flat aleatoric floor.
-It also makes the claim falsifiable to a number, "aleatoric stays at 0.020 as N
-grows seventeenfold", rather than to a trend.
+the conditions is the result: epistemic decaying while the injected part does
+not. It also makes the claim falsifiable to a number rather than to a trend.
+
+⚠️ The number is the *recovered* injection, `sqrt(noisy² − clean²)` within seed,
+not the raw noisy aleatoric curve. Measured, it converges to 0.020 from above
+(0.0318, 0.0241, 0.0223, 0.0223, 0.0208), because the subtraction credits the
+clean run's misfit to the noisy run while noisy training actually fits worse.
+Both misfits shrink with N, so the excess shrinks with them. Do not describe
+either curve as flat.
 
 σ = 0.020 because 0.005 is too close to the baseline misfit to separate from it
 and 0.050 dominates everything and hides the epistemic decay. It is 25% of the
@@ -50,11 +56,7 @@ from constellaration_uq.ensemble import N_MEMBERS, decompose, train_mv_ensemble
 from constellaration_uq.metrics import coverage, rms_uncertainty
 from constellaration_uq.nets import VAL_SIZE, resolve_device, split_validation
 from constellaration_uq.results import load_results, save_results, save_table
-from constellaration_uq.splits import (
-    distance_from_training_region,
-    nested_subsamples,
-    tail_split,
-)
+from constellaration_uq.splits import nested_subsamples, tail_split
 
 TEST_FRACTION = 0.2
 IN_REGION_TEST_FRACTION = 0.2
@@ -95,7 +97,12 @@ class Config:
 def build_sets(X, y, axis, seed=0):
     """The four frozen sets, carved once and reused at every N.
 
-    Returns (fit_pool_X, fit_pool_y, X_val, y_val, in_idx, out_idx, distance).
+    Returns (fit_pool_X, fit_pool_y, X_val, y_val, out_idx, in_idx).
+
+    ⚠️ No distance is returned. This used to compute one and no caller ever
+    read it, which is dead code in a script whose whole claim is that only N
+    varies. Removed 2026-08-31. The sweep reports in-region and out-of-region
+    aggregates, not a distance curve; that lives in scripts/calibration.py.
 
     ⚠️ The test sets and the validation set are frozen ACROSS the whole sweep.
     Only the subsample drawn from the fit pool varies. If the validation set
@@ -118,16 +125,7 @@ def build_sets(X, y, axis, seed=0):
         X[fit_pool_idx], y[fit_pool_idx], VAL_SIZE, seed
     )
 
-    # Distance measured against the fit pool, not train_mask, for the same
-    # reason as everywhere else: train_mask holds the in-region slice, which
-    # would then read distance zero by construction rather than by measurement.
-    # Measured against the FULL pool, not each subsample, so the x axis does not
-    # move between rungs.
-    fit_mask = np.zeros(len(axis), dtype=bool)
-    fit_mask[fit_pool_idx] = True
-    distance = distance_from_training_region(axis, fit_mask)
-
-    return X_fit_pool, y_fit_pool, X_val, y_val, np.flatnonzero(out_mask), in_idx, distance
+    return X_fit_pool, y_fit_pool, X_val, y_val, np.flatnonzero(out_mask), in_idx
 
 
 def evaluate(label, y_true, parts, selection):
@@ -147,7 +145,7 @@ def evaluate(label, y_true, parts, selection):
 
 def run_cell(X, y, sets, size, seed, sigma):
     """One ensemble: one (N, seed, noise) combination."""
-    X_fit_pool, y_fit_pool, X_val, y_val, out_idx, in_idx, _ = sets
+    X_fit_pool, y_fit_pool, X_val, y_val, out_idx, in_idx = sets
 
     n = len(X_fit_pool) if size is None else size
     (subset,) = nested_subsamples(len(X_fit_pool), [n], seed)
@@ -322,7 +320,7 @@ def main():
     axis = trimmed[AXIS_COL].to_numpy()
 
     sets = build_sets(X, y, axis)
-    X_fit_pool, _, X_val, _, out_idx, in_idx, _ = sets
+    X_fit_pool, _, X_val, _, out_idx, in_idx = sets
     print(
         f'pool {len(trimmed):,} rows   fit pool {len(X_fit_pool):,}   '
         f'validation {len(X_val):,}   in-region {len(in_idx):,}   '

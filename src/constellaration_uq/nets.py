@@ -204,6 +204,22 @@ def gaussian_nll(raw_mean, raw_log_variance, target):
 
     The clamped raw value is used directly as log(variance) rather than taking
     a log of the exponentiated one, which is both cheaper and exact.
+
+    ⚠️ **The clamp has zero derivative outside its bounds, in BOTH directions,
+    and that is a latent trap rather than only a safety rail.** The floor
+    correctly blocks a point being pulled further down, but it equally blocks it
+    being pulled back up: a point whose raw output dives below log(1e-6)
+    contributes no gradient to the variance head at all, so it cannot un-pin
+    itself through its own NLL term, only through shared-weight updates driven
+    by other points. A head that collapses early in the NLL phase would stay
+    collapsed and aleatoric would silently read 1e-6 * y_std^2 everywhere, which
+    looks like a confident model rather than a broken one.
+
+    **Nothing catches this except the monitor.** `mv_ensemble.py` computes and
+    prints the fraction of member predictions sitting on the floor, and 4.4 made
+    that the observable beta-NLL trigger. It has read 0.00% in every run so far,
+    so the hazard has never fired, but the monitor is the only thing standing
+    between it and a wrong number that raises nothing. Do not remove it.
     """
     clamped = raw_log_variance.clamp(LOG_VARIANCE_MIN, LOG_VARIANCE_MAX)
     variance = torch.exp(clamped)
@@ -242,6 +258,19 @@ def train_one_mv(
     different scales and are not comparable, which is why the phase is recorded
     and why best-weight tracking resets at the switch.
     """
+    # ⚠️ Without this the failure is silent and total. Best-weight tracking
+    # resets at the warm-up boundary, so a loop that never reaches it restores
+    # the best MSE-phase checkpoint instead, and `predict` then returns
+    # variances from a head that was never trained on the NLL at all. Every
+    # number downstream would be plausible and meaningless. Unreachable with
+    # the frozen constants (500 against 25), but both are reachable through the
+    # **train_kwargs chain in ensemble.py, so the guard is cheap insurance.
+    if max_epochs <= warmup_epochs:
+        raise ValueError(
+            f'max_epochs ({max_epochs}) must exceed warmup_epochs ({warmup_epochs}), '
+            'or the variance head is never trained and its output is meaningless'
+        )
+
     device = resolve_device(device)
 
     scaler = StandardScaler().fit(X_fit)

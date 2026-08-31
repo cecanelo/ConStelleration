@@ -307,9 +307,16 @@ def main():
             'restored_targets': [round(float(v), 8) for v in y_extra],
         }
 
-    # Distance measured against the fit set, not train_mask. The mask holds the
-    # in-region slice, which would then read distance 0 by construction rather
-    # than by measurement.
+    # Distance measured against the rows the model saw, not against train_mask.
+    # The mask holds the in-region slice, which would then read distance 0 by
+    # construction rather than by measurement.
+    #
+    # ⚠️ Precisely, the reference is fit UNION validation, since fit_pool is the
+    # index array before split_validation carves the 500 early-stopping rows out
+    # of it. That is deliberate, the model did see those rows for stopping, and
+    # they are a random draw from the training region so they barely move any
+    # nearest-neighbour distance. The comment said "the fit set" until
+    # 2026-08-31, which was imprecise rather than wrong.
     fit_mask = np.zeros(len(axis), dtype=bool)
     fit_mask[fit_pool] = True
     distance = distance_from_training_region(axis, fit_mask)[eval_idx]

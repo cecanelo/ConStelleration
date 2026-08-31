@@ -109,7 +109,7 @@ An interactive VS Code terminal activates it automatically, but a non-interactiv
 
 `tests/test_data.py` covers the three functions that do real logic (16 tests, pytest). Fixtures deliberately reproduce the nested boundary structure, verified that the pre-fix implementation fails them.
 
-**Gate 3.5 passed with a caveat (2026-08-27), `scripts/gate_3_5_split_axis.py`.** Aspect ratio predicted from the 80 coefficients: ridge 0.784, gradient boosting 0.988, MLP 0.983, against a std of 1.639. **Aspect ratio is input-measurable, so it is safe as the split axis** and splitting on it is a shift in the questions, not in the answers.
+**Gate 3.5 returned INCONCLUSIVE (2026-08-27), `scripts/gate_3_5_split_axis.py`, and we proceeded on the evidence below.** ⚠️ This read "passed with a caveat" until 2026-08-31, which upgraded the artifact's own recorded verdict. The bar was not moved and the miss was always disclosed; only the verb was softened. Aspect ratio predicted from the 80 coefficients: ridge 0.784, gradient boosting 0.988, MLP 0.983, against a std of 1.639. **Aspect ratio is input-measurable, so it is safe as the split axis** and splitting on it is a shift in the questions, not in the answers.
 
 It missed the pre-registered 0.99 bar. That bar came from the information floor implied by dropping R(0,0) per 1.5, which bounds what any model could know and says nothing about what a quick untuned fit reaches on 21k points. Everything else points one way: the 0.05% trim moved R² by 0.00002, residual correlation with R(0,0) was +0.075, and every increase in training budget raised the score, so the shortfall is budget rather than missing information. The miss is recorded rather than the bar relaxed, see decision log 3.5.
 
@@ -133,7 +133,7 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 ⚠️ **max_elongation was disqualified on coverage, not on gap.** It shows real gaps (1.91, 1.26) but its tail-high held-out set reaches 37 std from the training region against aspect ratio's 2.13, so an equal-width distance bin comes out empty and no coverage rate is estimable. The two-condition rule in 3.7 caught what gap size alone would have missed.
 
-**Hole placement settled (2026-08-29), `scripts/hole_placement.py`. Centre p30, spanning p20 to p40.** It sits immediately above the tail's p0 to p20 without overlapping, so the two experiments share no held-out configuration and their sizes stay matched at 5,404 each. Reach 0.45 against the median placement's 0.20, thinnest bin 583, δ = 0.041. That is the widest reach a non-overlapping hole can have, so 0.45 caps the matched-distance claim. δ = 0.06 is unchanged, it was always set by the tail's 276-point bin. Full reasoning in decision log 3.7, held-out fraction and hole placement.
+**Hole placement settled (2026-08-29), `scripts/hole_placement.py`. Centre p30, spanning p20 to p40.** It sits immediately above the tail's p0 to p20 without overlapping, so the two experiments share no held-out configuration and their sizes stay matched at 5,404 and 5,405 (`tail_split` includes the boundary row). Reach 0.45 against the median placement's 0.20, thinnest bin 583, δ = 0.041. That is the widest reach a non-overlapping hole can have, so 0.45 caps the matched-distance claim. δ = 0.06 is unchanged, it was always set by the tail's 276-point bin. Full reasoning in decision log 3.7, held-out fraction and hole placement.
 
 ⚠️ **The penalty is a U in placement, not a monotone climb.** At 20% held out the ratio runs 1.96 / 1.80 / 1.12 / 0.95 / 0.90 / 0.80 / 0.82 for centres p20 through p80. A 10% sweep, the only one that reaches p90, closes the U at 0.91. Ratio tracks reach almost monotonically, so **gap width drives most of the penalty** and sparsity matters because it makes gaps wide. Two caveats: a 20% band cannot be centred above p80 without running off the data, and the U's upper arm rests on the two thinnest bins in either table (about 130 points against roughly 310) at a single seed.
 
@@ -156,7 +156,7 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 ⚠️ **Do not claim the cost grows with distance.** The first four windows sit between 1.03 and 1.13 with no trend, and the 1.35 comes from the thinnest window, which also has the worst-matched medians (0.426 against 0.448) in the range where error rises fastest. **Quote the 12% over the shared range and stop there.** A trend was predicted before the run and the data does not support it, which is the same failure that produced the original 15%.
 
-**The number for a pitch:** at 1.83 std out, RMSE is 73% of the target's own std (0.0786). Predicting the dataset mean would score 100%. The surrogate is barely beating nothing there while still returning a confident-looking number.
+**The number for a pitch:** at 1.83 std out, RMSE is 73% of the target's own std (0.07892). Predicting the dataset mean would score 100%. The surrogate is barely beating nothing there while still returning a confident-looking number.
 
 ⚠️ **Two measurement choices that would otherwise flatter the result.** Distance is computed against the fit set, not `train_mask`; the mask contains the in-region slice, which would then get distance 0 by construction rather than by measurement. And the in-region slice is one anchor at distance 0, not part of the binned curve, since it is half the evaluation set and quantile binning spent three of eight bins stacking it on the y axis.
 
@@ -172,11 +172,13 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 **Step 0 done (2026-08-29), `scripts/hp_check.py`, 436s.** Six single-network fits, three learning rates by two batch sizes, on the random split with selection on validation loss only. Recipe frozen, see decision log 4.7. Batch 512 lost outright at every learning rate.
 
-**Step 1 done (2026-08-29), `scripts/mse_ensemble.py`, ten members in 454s. Ensemble RMSE 0.01052 against a pre-registered bar of 0.0105: MISSED by 0.2%.** The bar was badly calibrated, derived as a round number with no uncertainty, and the miss is recorded rather than the bar moved and rather than the seed rerolled. Proceeding on the evidence: 1.75x Table 7 against their tuned ensemble, the sklearn single MLP was 2.3x, and the ensemble beats its best member by 14% so it is not carried by one lucky run.
+**Step 1 done (2026-08-29), `scripts/mse_ensemble.py`, ten members in 454s. Ensemble RMSE 0.01052 against a pre-registered bar of 0.0105. `results/mse_ensemble.json` records `verdict: FAIL`, by 0.2%, and we proceeded on the evidence below.** The bar was badly calibrated, derived as a round number with no uncertainty, and the miss is recorded rather than the bar moved and rather than the seed rerolled. Proceeding on the evidence: 1.75x Table 7 against their tuned ensemble, the sklearn single MLP was 2.3x, and the ensemble beats its best member by 14% so it is not carried by one lucky run.
 
 ⚠️ **Do not report R² against Table 7.** Ours is 0.982 against their 0.997, which reads far worse than the RMSE ratio implies, because R² depends on the test set's own spread: 0.0786 for us against roughly 0.115 back-solved from their table. RMSE is the comparable number, R² is not.
 
-**In-region epistemic spread is 0.00631**, 8% of the target std and about 60% of the ensemble's total error. That is the baseline that has to grow in the hole and tail runs.
+**In-region epistemic spread is 0.00631**, 8% of the target std and about 60% of this ensemble's total error.
+
+⚠️ **Do not compare 0.00631 to any later epistemic number.** `mse_ensemble.py` still aggregates as `mean(sqrt(variance))`, the convention retired everywhere else on 2026-08-30, and this run also used a different loss (MSE, no variance head) and 21,118 training rows against the mean-variance runs' 16,794. Three changes at once. The hole and tail growth comparisons use step 2's own in-region 0.00887 as their baseline, so nothing downstream depends on this figure.
 
 **Step 2 done (2026-08-29, renumbered 2026-08-30), `scripts/mv_ensemble.py random`, ten members.** In-region RMSE 0.01256, epistemic 0.00887, aleatoric 0.01194, total 0.01487. Out-of-region is near-identical, which is correct for a random split.
 
@@ -204,6 +206,8 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 ⚠️ **One reading that looks like failure and is not.** At σ = 0.05 total predicted uncertainty is 0.053 against a clean-target error of 0.0216, which reads as badly over-dispersed. The model estimates uncertainty for the noisy distribution it trained on, while being scored against clean targets. Against noisy targets the expected error is sqrt(0.0216² + 0.05²) = 0.0545 versus 0.053 predicted. Correctly calibrated for its own distribution.
 
 **Steps 4 and 5 done (2026-08-29), `scripts/mv_ensemble.py hole` and `tail`.** All three headline ensembles now exist, and this is the result the project was built to produce.
+
+⚠️ **Every number in this table is a single seed (seed 0), and so is every coverage, PIT, CRPS and deferral figure in this project. Only the N-sweep has replication.** Three seeds there put per-rung spreads near ±1% on epistemic and ±0.06 to ±0.14 on the out/in ratio, which is the only direct evidence available for how much seed noise to expect elsewhere. The differences the table rests on are far larger than that, but no seed spread has been measured for them and none should be implied.
 
 | split | region | RMSE | epistemic | aleatoric | total | total / RMSE | cov @ 0.9 | PIT mean |
 |---|---|---|---|---|---|---|---|---|
@@ -244,7 +248,7 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 **Step 6 done (2026-08-30), `scripts/calibration.py`.** No training, reads the three `_points.csv` in seconds. Coverage versus nominal at six levels, CRPS, and PIT, all on total uncertainty, with coverage and CRPS binned by distance using `metrics.distance_bins` so the curves share the distance-error figure's x axis. Writes `results/calibration.json`, `_bins.csv` and `_points.csv`.
 
-**Coverage degrades monotonically with distance, which is the deliverable.** Tail: 0.928 at the nearest bin falling to 0.587 at 1.63 to 2.13 std out. Hole: 0.916 to 0.806, shallower and it flattens. At matched distance around 0.4 std the tail is worse than the hole (0.78 against 0.81), consistent with the single-MLP distance-matched premium.
+**Coverage degrades with distance, which is the deliverable.** Tail: 0.928 at the nearest bin falling to 0.587 at 1.63 to 2.13 std out, with one non-monotone step (0.781 then 0.822 at the third and fourth bins). ⚠️ This read "monotonically" until 2026-08-31, which the bins contradict. Hole: 0.916 to 0.806, shallower and it flattens. At matched distance around 0.4 std the tail is worse than the hole (0.78 against 0.81), consistent with the single-MLP distance-matched premium.
 
 **Step 7 done (2026-08-30), `scripts/deferral.py`.** Deliverable two, no training, reads the tail points file in seconds. Rank the held-out shapes by uncertainty, defer the worst fraction to VMEC++, credit those exact, score the hybrid system by CRPS in physical units.
 
@@ -259,7 +263,7 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 **The result that pairs steps 6 and 7, and the honest framing of the whole project:** the intervals are badly miscalibrated at the compact edge (ratio 0.66, coverage 0.587 in the furthest bin), and the ranking still works there. **A signal can be useless as an absolute interval and still be good at ordering.** Say this rather than either half alone.
 
-**Total narrowly beats epistemic**, at every rate and in both regions, AUC 0.00642 against 0.00667. Consistent with aleatoric measuring model misfit rather than noise: misfit carries real information about local difficulty, so including it helps the ranking. ⚠️ A 4% margin at one seed. Report it as a consistent lean, not a finding, and note that decision log 8.1 left this open deliberately so the answer is a result either way.
+**Total narrowly beats epistemic**, at 48 of 49 deferral rates in each region and on AUC, 0.00642 against 0.00667. ⚠️ This read "at every rate" until 2026-08-31; the single exceptions lose by 0.000012 out of region and 0.000007 in, so the lean is real and the absolute wording was not. Consistent with aleatoric measuring model misfit rather than noise: misfit carries real information about local difficulty, so including it helps the ranking. ⚠️ A 4% margin at one seed. Report it as a consistent lean, not a finding, and note that decision log 8.1 left this open deliberately so the answer is a result either way.
 
 **Sanity check built into the output:** the 0% column is identical across all four rankings, since nothing is deferred there and the ranking cannot matter. A mismatch would mean the cumulative-sum indexing is wrong.
 
@@ -277,11 +281,13 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 | 8,000 | 0.00984 | 0.01431 | 0.02648 | 0.0223 ± 0.0009 |
 | 16,793 | 0.00873 | 0.01111 | 0.02362 | **0.0208 ± 0.0003** |
 
-**The clean statement of the result, and the form to use in the write-up:** the recovered σ column is the injected component pulled back out by quadrature subtraction, `sqrt(noisy² − clean²)`, within seed. **The reducible part falls from 0.0398 to 0.0111 as N grows 17x. The irreducible part sits at 0.020 and does not move**, landing at 0.0208 ± 0.0003 against a true 0.020. Epistemic shrinks monotonically in both conditions, 0.01475 to 0.00873 clean, with a per-rung seed spread around ±1% against a trend of x0.59.
+**The clean statement of the result, and the form to use in the write-up:** the recovered σ column is the injected component pulled back out by quadrature subtraction, `sqrt(noisy² − clean²)`, within seed. **The reducible part falls from 0.0398 to 0.0111 as N grows 17x, while the recovered injected part converges to 0.020 from above**, reaching 0.0208 ± 0.0003 against a true 0.020.
+
+⚠️ **This read "sits at 0.020 and does not move" until 2026-08-31, which the column contradicts:** it runs 0.0318, 0.0241, 0.0223, 0.0223, 0.0208, and all fifteen cells sit above 0.020. The mechanism is worth stating rather than softening the sentence. `sqrt(noisy² − clean²)` credits the *clean* run's misfit to the noisy run, but noisy training fits worse, so the subtraction over-attributes and every value lands above σ. Both misfits shrink with N, so the excess shrinks too. That makes the convergence evidence for the decomposition rather than noise against it. Epistemic shrinks monotonically in both conditions, 0.01475 to 0.00873 clean, with a per-rung seed spread around ±1% against a trend of x0.59.
 
 This is what earns the two terms their names, and it independently reproduces step 3's verdict by a different route, since step 3 compared magnitudes at one N and this tracks them across seventeenfold.
 
-⚠️ **The pre-registered prediction was correct.** Predicted ~0.023 for noisy aleatoric at full N before the run, measured 0.0236. The earlier wording, "aleatoric stays at 0.020 as N grows twentyfold", was corrected to the quadrature form before the sweep ran, not after seeing it.
+⚠️ **The pre-registered prediction was correct, and the attestation is this session's record rather than the repository's.** Predicted ~0.023 for noisy aleatoric at full N before the run, measured 0.0236. ⚠️ `git log -S` shows the prediction text entering in the same commit as the sweep results, so prediction and outcome are indistinguishable in the git history. Nothing contradicts the claim and nothing independently supports it. **Standing rule from 2026-08-31: commit a prediction in its own commit before the run that tests it.** The earlier wording, "aleatoric stays at 0.020 as N grows twentyfold", was corrected to the quadrature form before the sweep ran, not after seeing it.
 
 **Second finding, and it was not what the sweep was built for: the extrapolation gap widens with data.** Out-of-region over in-region RMSE, averaged over seeds: 1.71, 2.13, 2.53, 2.92, **3.39**. Monotone, spreads of ±0.06 to ±0.14, and the endpoints do not overlap. In-region error falls 67% over the sweep while out-of-region falls only 29%.
 
@@ -442,8 +448,17 @@ architecture claim in either direction.
   epochs against 75. Over 300 sweep networks that is 3.7 hours
   against 1.3. Ties on accuracy break on cost.
   Batch 512 lost outright at all three learning rates.
-  500 validation points confirmed sufficient at both ends of the
-  sweep: jitter 0.030 at full size, 0.010 at N=1000.
+  500 validation points confirmed sufficient at full size,
+  jitter 0.030.
+  ⚠️ **The N=1000 half of that claim was withdrawn on
+  2026-08-31.** `results/hp_check.json` shows the small-N row
+  ran at lr 3e-4, the nominal validation-loss winner, not the
+  frozen 1e-3, and a higher learning rate gives a noisier
+  validation curve, so the frozen recipe's stopping signal at
+  N=1000 was never checked by that script. **Better evidence
+  exists and supersedes it:** the N-sweep ran three seeds at
+  N=1000 under the frozen recipe and in-region epistemic came
+  out 0.01477 / 0.01486 / 0.01462, a spread near ±1%.
   Incidental, and it is the sweep's premise arriving early: the
   same recipe at N=1000 gives RMSE 0.045 against 0.0115 at full
   size, a 4x degradation from data volume alone.

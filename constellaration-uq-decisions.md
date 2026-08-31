@@ -661,7 +661,7 @@ The geometry problem this run exposed was that the hole at the median reached on
 | ~0.40 | 0.0325 to 0.0336 | 0.0376 |
 | 1.83 | no points | 0.0577 |
 
-RMSE on edge rotational transform per field period, whose pool std is 0.0786.
+RMSE on edge rotational transform per field period, whose pool std is 0.07892.
 
 **At matched distance the tail costs about 12% more than the hole.** So most of the headline gap, 3.02 against 1.80, is **distance rather than edge**: the tail split simply asks about configurations much further from the data. What survives after controlling for distance is the edge cost itself, and it is real but modest. That is a weaker claim than "the model interpolates for free and cannot extrapolate," and a considerably more defensible one.
 
@@ -874,7 +874,7 @@ RMSE on edge rotational transform per field period, whose pool std is 0.0786.
 
 ⚠️ **Registered before seeing the result on purpose.** Gate 3.5 set its bar from an argument that did not apply, missed it, and the miss was recorded rather than the bar moved. That only works if the bar exists first. Judging afterwards always produces a pass.
 
-**RESULT 2026-08-29, `scripts/mse_ensemble.py`, ten members in 454s: MISSED by 0.2%.** Ensemble RMSE **0.01052** against the 0.0105 bar. The second condition passed cleanly: 0.01052 against a best member of 0.01223, a 14% improvement, so the ensemble is not being carried by one lucky member. Per-member RMSE spans 0.01223 to 0.01304 across ten seeds, with nothing pathological.
+**RESULT 2026-08-29, `scripts/mse_ensemble.py`, ten members in 454s. `results/mse_ensemble.json` records `verdict: FAIL`, by 0.2%.** ⚠️ This entry said "MISSED" until 2026-08-31, which softened the artifact's own verdict. The bar was not moved and the miss was always disclosed; only the verb was gentler than the JSON. Ensemble RMSE **0.01052** against the 0.0105 bar. The second condition passed cleanly: 0.01052 against a best member of 0.01223, a 14% improvement, so the ensemble is not being carried by one lucky member. Per-member RMSE spans 0.01223 to 0.01304 across ten seeds, with nothing pathological.
 
 ⚠️ **The bar was badly calibrated, and that is the finding, not a pipeline defect.** 0.0105 was derived as "a modest improvement over the single network's 0.01149" and rounded, with no uncertainty attached. The run landed 0.00002 away, inside any sensible error bar on a number chosen that way. Same failure as gate 3.5's 0.99: a threshold that sounded principled and was not. The bar is recorded as missed and is **not** moved retroactively, and the run was **not** repeated with a different seed until it passed.
 
@@ -882,7 +882,7 @@ RMSE on edge rotational transform per field period, whose pool std is 0.0786.
 
 ⚠️ **R² is NOT comparable to Table 7 and must not be reported as if it were.** Ours is 0.98181 against their 0.997, which reads far worse than the RMSE ratio implies. R² depends on the test set's own spread: our target has std 0.0786, while back-solving std = RMSE / NRMSE from their table gives about 0.115. Same RMSE, different denominator, different R². **RMSE is the comparable number; R² is not**, and 5.3 already restricts the comparability claim to RMSE and R² jointly, which this narrows further.
 
-**Incidental, and it is the baseline for steps 3 and 4:** in-region epistemic spread is 0.00631, which is 8% of the target's standard deviation and about 60% of the ensemble's total error. The members genuinely disagree even where the data is dense. That number has to grow off-distribution or the project has no subject.
+⚠️ **Not a baseline for anything, corrected 2026-08-31.** This called the figure below "the baseline for steps 3 and 4". It is not comparable to them: `mse_ensemble.py` still aggregates as `mean(sqrt(variance))`, retired everywhere else on 2026-08-30, and this run used a different loss and 21,118 training rows against 16,794. Three changes at once. Steps 3 and 4 use step 2's own in-region 0.00887, so nothing downstream depends on it. **Incidental only:** in-region epistemic spread is 0.00631, which is 8% of the target's standard deviation and about 60% of the ensemble's total error. The members genuinely disagree even where the data is dense. That number has to grow off-distribution or the project has no subject.
 
 **My decision:**
 > Train the plain MSE version first. It is what A.4 actually built so it is the fair comparison, and it verifies the whole pipeline in one cheap run. After that, if the mean-variance means come out worse, I know the cause is the variance head and not the data handling.
@@ -1160,6 +1160,8 @@ So the reported aleatoric means "irreducible given this architecture and this in
 | 8,000 | 0.00984 | 0.01431 | 0.02648 | 0.0223 ± 0.0009 |
 | 16,793 | 0.00873 | 0.01111 | 0.02362 | **0.0208 ± 0.0003** |
 
+⚠️ **The "does not move" wording was withdrawn 2026-08-31.** The recovered column converges to 0.020 **from above**, running 0.0318, 0.0241, 0.0223, 0.0223, 0.0208, with all fifteen cells sitting above 0.020. State the mechanism rather than softening the sentence: `sqrt(noisy² − clean²)` credits the *clean* run's misfit to the noisy run, but noisy training fits worse, so the subtraction over-attributes; both misfits shrink with N, so the excess shrinks with it. The convergence is therefore evidence for the decomposition rather than noise against it. The pre-registered form, "the noisy curve flattens near sqrt(misfit² + σ²)", was already correct and the gloss was written over it afterwards.
+
 **The claim, in the form that survives scrutiny.** The recovered column is the injected component pulled back out within seed by quadrature subtraction, sqrt(noisy² − clean²), which is the right operation because the two contributions add in variance. **The reducible part of the aleatoric term falls from 0.0398 to 0.0111 as N grows seventeenfold, while the irreducible part sits at 0.020 and does not move**, converging to 0.0208 ± 0.0003. Epistemic shrinks monotonically in both conditions, x0.59 clean and x0.72 noisy, with per-rung seed spreads near ±1%.
 
 **Why this is worth more than step 3's verdict.** 6.2 compared magnitudes at a single N, which a head that scaled its output by anything monotone could have passed. This tracks the split across a seventeenfold change in data volume and asks the two halves to move in opposite ways: one decaying, one fixed. They do.
@@ -1288,7 +1290,7 @@ Coverage at six nominal levels, CRPS, and PIT, all on total uncertainty per the 
 | hole p30 | 0.950 | 0.871 | −0.079 |
 | tail-low | 0.956 | 0.779 | **−0.177** |
 
-**Coverage degrades monotonically with distance, which is the deliverable.** The tail runs 0.928 at the nearest bin down to 0.587 at 1.63 to 2.13 std out, so a stated 90% interval is closer to a 60% interval there. The hole runs 0.916 to 0.806, shallower and flattening. **At matched distance around 0.4 std the tail is worse than the hole**, 0.78 against 0.81, consistent with the distance-matched premium measured on single MLPs in 3.11.
+**Coverage degrades with distance, which is the deliverable.** ⚠️ This read "monotonically" until 2026-08-31 and the bins contradict it: the tail's third and fourth bins run 0.781 then 0.822, and the hole rises before it falls. The trend is unambiguous and the wording was not. The tail runs 0.928 at the nearest bin down to 0.587 at 1.63 to 2.13 std out, so a stated 90% interval is closer to a 60% interval there. The hole runs 0.916 to 0.806, shallower and flattening. **At matched distance around 0.4 std the tail is worse than the hole**, 0.78 against 0.81, consistent with the distance-matched premium measured on single MLPs in 3.11.
 
 **CRPS tracks it,** 0.00544 in region at the tail rising to 0.03207 in the furthest bin, a factor of 5.9. Reported in the target's physical units and on the same scale the deferral curve will use.
 
@@ -1375,7 +1377,7 @@ Coverage at six nominal levels, CRPS, and PIT, all on total uncertainty per the 
 
 **Decided:** Two curves, epistemic-ranked and total-ranked. Not aleatoric-ranked.
 
-**ANSWERED 2026-08-30: total wins, narrowly.** AUC 0.00642 against 0.00667, consistently at every rate and in both regions. See the step 7 result below. The 4% margin at one seed makes it a lean rather than a finding, but it went the way 5.1 predicts, since the aleatoric term is model misfit and misfit is informative about local difficulty.
+**ANSWERED 2026-08-30: total wins, narrowly.** ⚠️ Corrected 2026-08-31: it wins at 48 of 49 deferral rates in each region, not all of them, the exceptions losing by 0.000012 out of region and 0.000007 in. AUC 0.00642 against 0.00667, consistently at every rate and in both regions. See the step 7 result below. The 4% margin at one seed makes it a lean rather than a finding, but it went the way 5.1 predicts, since the aleatoric term is model misfit and misfit is informative about local difficulty.
 
 **Why:** Which signal defers best is a result, not a setup detail, and showing both is nearly free, same trained ensemble and same predictions, just two sort orders. It also tests the "total and epistemic should be close" claim empirically instead of assuming it, which matters because that claim rests on aleatoric sitting near zero, which is itself a prediction 6.2 is designed to check.
 

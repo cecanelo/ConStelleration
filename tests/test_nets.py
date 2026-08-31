@@ -411,3 +411,27 @@ def test_warmup_default_is_the_frozen_value():
     """Changing this silently would alter the frozen recipe for every model in
     the project (4.4)."""
     assert WARMUP_EPOCHS == 25
+
+
+def test_mv_refuses_a_max_epochs_that_skips_the_nll_phase(fit_and_val):
+    """⚠️ The silent-failure guard. Best-weight tracking resets at the warm-up
+    boundary, so a run that never reaches it restores the best MSE-phase
+    checkpoint and returns variances from a head that never saw the NLL. Every
+    downstream number would look ordinary and mean nothing. Unreachable with the
+    frozen constants, reachable through ensemble.py's **train_kwargs."""
+    X_fit, y_fit, X_val, y_val = fit_and_val
+    for max_epochs in (5, 10):
+        with pytest.raises(ValueError, match='must exceed warmup_epochs'):
+            train_one_mv(X_fit, y_fit, X_val, y_val, max_epochs=max_epochs, warmup_epochs=10)
+
+
+def test_mv_accepts_one_epoch_past_warmup(fit_and_val):
+    """Bounds the guard above: the check is <=, not <, so the smallest workable
+    setting must still run rather than being rejected by an off-by-one."""
+    X_fit, y_fit, X_val, y_val = fit_and_val
+    predict, history = train_one_mv(
+        X_fit, y_fit, X_val, y_val, max_epochs=3, warmup_epochs=2, patience=99
+    )
+    assert len(history) == 3
+    _, variance = predict(X_val)
+    assert (variance > 0).all()
