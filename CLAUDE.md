@@ -348,7 +348,9 @@ Variance scaling, one scalar per split, `sigma -> s * sigma` with `s = sqrt(mean
 
 ⚠️ **In-region coverage lands slightly above nominal after correction**, 0.910 to 0.920 against 0.9. The scalar is fitted by NLL, not by matching coverage at one level. Not a residual failure.
 
-**Next: the write-up, and it is the only thing left.** All training is done, the figures exist, `audit-findings.md` is worked through, every headline is replicated across three seeds, and the two optional items worth keeping are done: decision log 8.6 (solver failure rate) and 9.4 (post-hoc recalibration), both closed 2026-08-31. **All four optional-scope items are now settled: 9.4 done, 9.1 (second target), 9.2 (region ranking) and 9.3 (active learning) cut**, each with its reason recorded and a concrete future-work framing rather than a hedge. No decision anywhere in the log is open.
+**Next: the write-up, and it is the only thing left.** All training is done, the figures exist, `audit-findings.md` is worked through, every headline is replicated across three seeds, and the two optional items worth keeping are done: decision log 8.6 (solver failure rate) and 9.4 (post-hoc recalibration), both closed 2026-08-31. **All four optional-scope items are now settled: 9.4 done, 9.1 (second target), 9.2 (region ranking) and 9.3 (active learning) cut**, each with its reason recorded and a concrete future-work framing rather than a hedge. 3.2 (secondary target) closes with them.
+
+⚠️ **Four decisions do remain open, and they are the write-up's own:** decision log 10.1 format, 10.2 figure selection, 10.3 the comparability statement against Appendix A.4, and 10.4 stated limitations. Nothing about the modelling is open; these are the next work rather than leftovers.
 
 ⚠️ **Three adversarial audits ran on 2026-08-30** (data and leakage, uncertainty mathematics, claims against artifacts), by a separate model told to treat this file and the decision log as claims under test. **Every table recomputed reproduced to the printed digit, and the core machinery came back clean:** units, variance-space aggregation, the closed forms, the NLL, set disjointness. The risk sits in the reporting, where prose compressed curves into single numbers the bins contradict.
 
@@ -869,7 +871,7 @@ architecture claim in either direction.
 
 Full reasoning is in `constellaration-uq-decisions.md` in this repo.
 
-**None. Every decision is settled as of 2026-08-31.** 8.6 (solver failure rate) and 9.4 (post-hoc recalibration) closed as measurements; 9.1, 9.2 and 9.3 closed as cuts with reasons. What
+**No modelling decision is open as of 2026-08-31.** 8.6 (solver failure rate) and 9.4 (post-hoc recalibration) closed as measurements; 3.2, 9.1, 9.2 and 9.3 closed as cuts with reasons. ⚠️ **Stage 10 is still open in full**, four write-up decisions: 10.1 format, 10.2 figure selection, 10.3 the Appendix A.4 comparability statement, 10.4 stated limitations. What
 remains is execution: steps 6, 7 and 8 in the run table below,
 then figures and the write-up.
 

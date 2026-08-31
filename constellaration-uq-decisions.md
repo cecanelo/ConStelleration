@@ -461,9 +461,9 @@ Third question answered by the same index, at roughly ten extra lines. Settles t
 
 ---
 
-**3.2 Secondary target** `OPEN`
+**3.2 Secondary target** `CLOSED 2026-08-31, see 9.1`
 
-- [ ] Decided (defer this until end of week 2)
+- [x] Decided: none
 
 **Options:** `log10(qi)` / none
 
@@ -473,7 +473,9 @@ Third question answered by the same index, at roughly ten extra lines. Settles t
 
 **Evidence from the day 1-2 grid (2026-08-27):** viable, and more interesting than expected. log10 qi degrades on **both** tails (1.53 low, 1.75 high) where edge rotational transform degrades sharply on one only (3.02 low, 1.14 high). So the two targets fail differently, which makes the comparative claim in the Why above concrete rather than speculative. Its in-region RMSE of 0.143 against Table 7's 0.051 tracks the same 2.4 to 2.8x factor as the primary target, so nothing about it looks broken.
 
-**Still deferred to the week 2 gate.** The evidence says it is worth doing, not that there will be time. Per 6.1 it gets its own ensemble, never its own N-sweep.
+**CLOSED 2026-08-31: no secondary target.** Superseded by 9.1, second target, which cut it on cost: `mv_ensemble.py` has no `--target` flag and no log10 handling, and both downstream scripts hardcode the points filenames, so it is about 90 minutes rather than the one line of code that was assumed. Per the standing decision it would have got its own ensemble and never its own N-sweep, but it does not get one.
+
+⚠️ **The comparative claim in the Why above survives in weakened form, and should be made.** The grid table already shows the two targets fail differently, so the write-up can say the extrapolation premise is not target-specific while stating plainly that every *uncertainty* finding rests on one target. See 9.1 for the wording and the future-work framing.
 
 ---
 
