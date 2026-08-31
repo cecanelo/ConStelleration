@@ -324,7 +324,31 @@ This is what earns the two terms their names, and it independently reproduces st
 
 **No rate or exponent is reported**, per the standing decision to report the shape only. Five rungs at three seeds show a shape and nothing finer.
 
-**Next: the write-up.** All training is done, the figures exist, `audit-findings.md` is worked through, every headline is replicated across three seeds, and decision log 8.6 (solver failure rate) closed on 2026-08-31, which was the last open item anywhere.
+**Post-hoc recalibration done (2026-08-31), `scripts/recalibration.py`, no training, seconds. VERDICT: the standard fix makes off-distribution overconfidence WORSE.** Optional scope 9.4, and it closes the strongest objection to the headline: "the model is overconfident at the compact edge" invites "so recalibrate it".
+
+Variance scaling, one scalar per split, `sigma -> s * sigma` with `s = sqrt(mean(z^2))`, the closed-form Gaussian-NLL minimiser, fitted on a held-out half of the in-region slice and applied unchanged everywhere.
+
+| split | region | ratio | cov@0.9 | CRPS |
+|---|---|---|---|---|
+| random | in | 1.162 → 0.881 | 0.970 → 0.920 | 0.00583 → 0.00568 |
+| random | out | 1.145 → 0.868 | 0.962 → 0.906 | 0.00596 → 0.00583 |
+| hole | out | 0.685 → **0.554** | 0.871 → 0.803 | 0.01071 → 0.01089 |
+| tail | in | 1.196 → 0.927 | 0.959 → 0.910 | 0.00537 → 0.00525 |
+| tail | out | 0.664 → **0.515** | 0.779 → **0.669** | 0.01947 → 0.02014 |
+
+**The result needs all three parts.** The correction **works where it is fitted** (tail in-region 1.196 to 0.927), it **transfers correctly when there is no shift** (the random split's out-of-region set, which is the control), and it **actively harms calibration under shift**. At the compact edge a stated 90% interval held 78% of the truth and now holds **67%**.
+
+**Two independent confirmations.** CRPS rises out of region on both shifted splits while falling everywhere in region, and CRPS is a proper scoring rule, so this is not an artifact of the ratio. And **PIT barely moves**, 0.348 to 0.333 at the tail, because **a variance scale cannot fix a mean bias**, which reconfirms the step 6 finding by a different route.
+
+**The sentence for the write-up:** recalibrating on in-region data, the only data available under the premise, makes off-distribution overconfidence worse, because it corrects an over-dispersion that exists only in region. No cheap post-hoc route to honest intervals at the compact edge, which leaves targeted sampling or deferral.
+
+⚠️ **The prediction was directionally right and wrong on magnitude, recorded as a miss.** Predicted `s` in 0.85 to 0.90 and an out-of-region ratio near 0.60; measured `s` at 0.758 / 0.809 / 0.775 and a ratio of 0.515. Pre-registered in its own commit before the run (`d5bf29e`), per the standing rule.
+
+⚠️ **Reporting only, per the decision that recalibration never feeds the deferral rule.** No headline number above changed, the recalibrated figures live in their own table, and **the deferral ranking is provably untouched**: a positive scalar cannot reorder points, verified by `check_ranking` on all three splits rather than assumed.
+
+⚠️ **In-region coverage lands slightly above nominal after correction**, 0.910 to 0.920 against 0.9. The scalar is fitted by NLL, not by matching coverage at one level. Not a residual failure.
+
+**Next: the write-up.** All training is done, the figures exist, `audit-findings.md` is worked through, every headline is replicated across three seeds, and both optional items that were kept are done: decision log 8.6 (solver failure rate) and 9.4 (post-hoc recalibration), both closed 2026-08-31. Optional scope 9.2 (region ranking) and 9.3 (active learning) are cut; 9.1 (second target, log10 qi) is the only optional item still on the table.
 
 ⚠️ **Three adversarial audits ran on 2026-08-30** (data and leakage, uncertainty mathematics, claims against artifacts), by a separate model told to treat this file and the decision log as claims under test. **Every table recomputed reproduced to the printed digit, and the core machinery came back clean:** units, variance-space aggregation, the closed forms, the NLL, set disjointness. The risk sits in the reporting, where prose compressed curves into single numbers the bins contradict.
 
@@ -944,6 +968,7 @@ ensemble.
 | 8 | full N-sweep | 30, floor 12 | ✅ done 2026-08-30, HOLDS: injected σ recovered at 0.0208 against 0.020 while misfit fell 3.6x, and the extrapolation gap widened 1.71 to 3.39 |
 | 9 | seed replication | 6, plus 6 single MLPs | ✅ done 2026-08-31, every headline claim survives, and total-ranked deferral wins in all nine paired runs |
 | 10 | solver failure rate | 0, five gradient boosters | ✅ done 2026-08-31, the fallback fails about a third of the time in the deferral region, but it is the generator and not the geometry |
+| 11 | post-hoc recalibration | 0 | ✅ done 2026-08-31, the standard in-region fix makes the tail worse, ratio 0.664 to 0.515 and coverage 0.779 to 0.669 |
 
 Runs 2, 4 and 5 are the headline result. Run 8 is validation and goes last.
 
@@ -957,10 +982,10 @@ Runs 2, 4 and 5 are the headline result. Run 8 is validation and goes last.
 
 Everything here is expendable. Do not suggest starting any of it before the week 2 gate.
 
-1. Second target (`log10(qi)`).
-2. Ranked list of design-space regions where the surrogate is least confident, framed as a sampling recommendation.
-3. Simulated pool-based active learning comparing acquisition on random, total, epistemic, aleatoric; and whether out-of-region calibration predicts which signal acquires best.
-4. Post-hoc recalibration, fit in-region only. Value is narrow:
+1. Second target (`log10(qi)`). **The only optional item still on the table.**
+2. ~~Ranked list of design-space regions where the surrogate is least confident, framed as a sampling recommendation.~~ **Cut 2026-08-31.**
+3. ~~Simulated pool-based active learning comparing acquisition on random, total, epistemic, aleatoric; and whether out-of-region calibration predicts which signal acquires best.~~ **Cut 2026-08-31.**
+4. ✅ **Post-hoc recalibration, done 2026-08-31**, and it turned out to be worth more than "narrow": the correction makes off-distribution calibration worse, which closes the standard objection to the headline. Original framing kept below. Fit in-region only. Value is narrow:
    a robustness check on whether an out-of-region calibration
    gap survives a standard in-region correction, not a
    standalone finding. Reporting only, never feeds the deferral

@@ -1523,29 +1523,27 @@ Then, holding the generator fixed:
 
 ---
 
-**9.2 Region ranking as a sampling recommendation** `OPEN`
+**9.2 Region ranking as a sampling recommendation** `CUT 2026-08-31`
 
-- [ ] Decided at week 2 gate
+- [x] Decided: cut
 
 **Why:** Turns your uncertainty map into something actionable for a design team. Cheap if the deferral machinery already exists.
 
-**My decision:**
->
+**My decision: cut.** It would restate what the distance-binned calibration curves already show, in a form that reads as a recommendation rather than a measurement, and a ranked list of design-space regions invites the reader to check it against physics we cannot check it against. Belongs in future work, where it is worth more as a stated direction than as a rushed result.
 
 ---
 
-**9.3 Active learning simulation** `OPEN`
+**9.3 Active learning simulation** `CUT 2026-08-31`
 
-- [ ] Decided at week 2 gate
+- [x] Decided: cut
 
 **Why:** Compare acquisition on random, total, epistemic, aleatoric. This is the most interesting optional item and the most expensive. Needs a full acquisition loop with retraining, which is not a two-hour job.
 
-**My decision:**
->
+**My decision: cut.** The most interesting of the four optional items and by far the most expensive: a pool-based acquisition loop needs many rounds of retraining, which would be the largest compute item left in the project, to answer a question no deliverable depends on. Cut on cost against a schedule where polish beats scope, not on interest. Belongs in future work, and is the item to pick up first if the project is ever extended.
 
 ---
 
-**9.4 Post-hoc recalibration, fit in-region only** `PRE-REGISTERED 2026-08-31, NOT YET RUN`
+**9.4 Post-hoc recalibration, fit in-region only** `DONE 2026-08-31`
 
 - [x] Decided: in scope, variance scaling only
 
@@ -1582,6 +1580,43 @@ In region the ensemble is *over*-dispersed, ratio 1.13 ± 0.03. So the fitted sc
 ⚠️ **`s` and the reported calibration ratio are different aggregations and will not be reciprocal.** The table's ratio is `sqrt(mean(sigma^2)) / sqrt(mean(e^2))`; the NLL scalar is `sqrt(mean(e^2 / sigma^2))`. They coincide only when sigma is constant across points. Expect `s` near but not exactly `1 / 1.13`, and never present one as a check on the other.
 
 ⚠️ **A global scalar cannot change the deferral ranking.** Sorting by `s^2 * sigma^2` is the same order as sorting by `sigma^2`, so both "mine" curves are identical after recalibration and only the CRPS level moves. Stated as an invariance rather than rerun to rediscover. The oracle curve can shift slightly, since it ranks by CRPS and CRPS is not invariant to the scale.
+
+---
+
+**RUN 2026-08-31, `scripts/recalibration.py`, no training, seconds. VERDICT: the standard fix makes off-distribution overconfidence WORSE.**
+
+⚠️ **The prediction was directionally right and wrong on magnitude. Recorded as a miss rather than softened.** Predicted `s` in 0.85 to 0.90; measured **0.758 (random), 0.809 (hole), 0.775 (tail)**, all three below the band. Predicted the tail's out-of-region ratio near 0.60; measured **0.515**. The damage is worse than predicted. The gap is exactly the aggregation subtlety pre-registered above: `1 / 1.196 = 0.836` against a fitted `s` of 0.775, non-reciprocal as expected but by more than was allowed for.
+
+| split | region | ratio before | ratio after | cov@0.9 before | cov@0.9 after | CRPS before | CRPS after |
+|---|---|---|---|---|---|---|---|
+| random | in | 1.162 | 0.881 | 0.970 | 0.920 | 0.00583 | 0.00568 |
+| random | out | 1.145 | 0.868 | 0.962 | 0.906 | 0.00596 | 0.00583 |
+| hole | in | 1.042 | 0.843 | 0.949 | 0.915 | 0.00557 | 0.00547 |
+| hole | out | 0.685 | **0.554** | 0.871 | 0.803 | 0.01071 | 0.01089 |
+| tail | in | 1.196 | 0.927 | 0.959 | 0.910 | 0.00537 | 0.00525 |
+| tail | out | 0.664 | **0.515** | 0.779 | **0.669** | 0.01947 | 0.02014 |
+
+**The result has three parts and needs all three.**
+
+**1. The correction works where it is fitted.** Tail in-region ratio 1.196 to 0.927, coverage 0.959 to 0.910 against a nominal 0.9. So the method is not broken, which is what makes the rest of the table readable.
+
+**2. It transfers correctly when there is no shift.** The random split's out-of-region set moves 1.145 to 0.868 and its coverage to 0.906. **This is the control.** A correction that degraded every split equally would prove nothing about shift.
+
+**3. It actively harms calibration under shift.** At the compact edge a stated 90% interval held 78% of the truth before the correction and **67% after**. The hole shows the same effect, smaller.
+
+**Two independent confirmations that this is not an artifact of the chosen diagnostic.**
+
+*CRPS moves the same way.* Out of region it rises on both shifted splits, 0.01947 to 0.02014 at the tail and 0.01071 to 0.01089 at the hole, while every in-region CRPS falls. CRPS is a proper scoring rule, so it is saying the recalibrated predictive distribution is genuinely worse out there, independently of the calibration ratio.
+
+*PIT barely moves*, 0.348 to 0.333 at the tail. Correct and expected: **a variance scale cannot fix a mean bias.** This independently reconfirms 7.1's finding that the tail failure is not purely a variance problem, by a completely different route.
+
+⚠️ **In-region coverage lands slightly above nominal after correction**, 0.910 to 0.920 against 0.9. Expected: the scalar is fitted by Gaussian NLL, not by matching coverage at one level, so it balances the whole distribution rather than pinning a single quantile. Do not read it as a residual failure.
+
+**The ranking invariance held on all three splits**, verified by `check_ranking` rather than assumed, so the deferral curve stands as published with no rerun.
+
+**What this buys, and it is the reason the entry was worth an hour:** it closes the strongest objection to the headline. The sentence for the write-up is that **recalibrating on in-region data, the only data available under the premise, makes off-distribution overconfidence worse, because it corrects an over-dispersion that exists only in region.** There is no cheap post-hoc route to honest intervals at the compact edge, which leaves targeted sampling or deferral. That is a stronger conclusion than a null result would have been.
+
+⚠️ **Scope discipline held.** Reporting only, per 7.4. Nothing here feeds the deferral rule, no headline number in CLAUDE.md changed, and the recalibrated figures live in their own table beside the originals rather than replacing them.
 
 ---
 
