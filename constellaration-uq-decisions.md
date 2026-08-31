@@ -1512,14 +1512,32 @@ Then, holding the generator fixed:
 
 ---
 
-**9.1 Second target (log10 qi)** `OPEN`
+**9.1 Second target (log10 qi)** `CUT 2026-08-31, with a partial answer already in hand`
 
-- [ ] Decided at week 2 gate
+- [x] Decided: cut, and named explicitly in future work
 
 **Why first to survive:** one line of code once the pipeline works, and it gives you a comparative claim.
 
-**My decision:**
->
+**My decision: cut.** ⚠️ **The objection it answers is real and should be stated in the write-up rather than avoided:** every uncertainty finding in this project, the decomposition, the calibration gap, the deferral curve, exists on one target, so "you picked the metric where the gap is biggest" is a fair question.
+
+**It is partially answered already, by the day 1-2 grid, and that is the line to use.** The grid fitted the same single MLP on both candidate targets across the same three cuts of the aspect-ratio axis. Out-of-region over in-region RMSE:
+
+| target | tail-low | tail-high | hole |
+|---|---|---|---|
+| edge rotational transform | **3.02** | 1.14 | 0.95 |
+| log10 qi | **1.53** | 1.75 | 1.11 |
+
+**So the extrapolation premise is not target-specific: log10 qi degrades at the compact end too, by 1.53x.** What *is* target-specific is the magnitude and the asymmetry. The primary target's penalty is concentrated at the compact end (3.02 against 1.14 at the extended end); qi's is milder and runs the other way (1.53 against 1.75). **State exactly that, and state that the uncertainty findings are reported on one target only.** It is a weaker claim than a full second pipeline would support, and it is honest, and it costs nothing.
+
+**Why cut rather than run.** Three reasons, and the first is the one that decides it.
+
+⚠️ **The cost is not the "one line of code" this entry promised.** `mv_ensemble.py` exposes no `--target` flag; `target_col` is a dataclass field argparse never reaches, and the log10 transform (the grid maps it as `'log10_qi': ('metrics.qi', np.log10)`) has to come across with it. `calibration.py` and `deferral.py` both hardcode `mv_ensemble_{split}_points.csv` and would need target-aware filenames the way seed replication needed seed-aware ones. Realistic cost is about 90 minutes, of which only 25 is unattended compute for the three ensembles.
+
+**It adds breadth, not depth.** It reruns validated machinery on a different column. Nothing about the method is under test that the primary target has not already tested, which is why the standing decision already ruled out giving a second target its own N-sweep or variance-head check.
+
+**And the grid says it would not replicate cleanly anyway.** Expect roughly 1.5x rather than 3.24x on the tail split, so the finding would be "same direction, smaller magnitude, target-dependent asymmetry". That is a fine result and it would have to be threaded through the thesis from the first draft rather than appended, which is what made the before-or-after question sharp. Cut is the cheaper answer to the same question.
+
+**Future work, stated concretely so it reads as a plan rather than a hedge:** run the same three-split, ten-member mean-variance pipeline on log10 qi and report whether the calibration gap and the deferral headroom track the point-error gap across targets. The grid's asymmetry reversal makes that genuinely interesting: **if qi's penalty is worse at the extended end while the primary's is worse at the compact end, then "where the surrogate can be trusted" is a property of the metric and not only of the design space**, which is a stronger claim than this project makes and needs its own evidence.
 
 ---
 

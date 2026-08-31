@@ -348,7 +348,7 @@ Variance scaling, one scalar per split, `sigma -> s * sigma` with `s = sqrt(mean
 
 ⚠️ **In-region coverage lands slightly above nominal after correction**, 0.910 to 0.920 against 0.9. The scalar is fitted by NLL, not by matching coverage at one level. Not a residual failure.
 
-**Next: the write-up.** All training is done, the figures exist, `audit-findings.md` is worked through, every headline is replicated across three seeds, and both optional items that were kept are done: decision log 8.6 (solver failure rate) and 9.4 (post-hoc recalibration), both closed 2026-08-31. Optional scope 9.2 (region ranking) and 9.3 (active learning) are cut; 9.1 (second target, log10 qi) is the only optional item still on the table.
+**Next: the write-up, and it is the only thing left.** All training is done, the figures exist, `audit-findings.md` is worked through, every headline is replicated across three seeds, and the two optional items worth keeping are done: decision log 8.6 (solver failure rate) and 9.4 (post-hoc recalibration), both closed 2026-08-31. **All four optional-scope items are now settled: 9.4 done, 9.1 (second target), 9.2 (region ranking) and 9.3 (active learning) cut**, each with its reason recorded and a concrete future-work framing rather than a hedge. No decision anywhere in the log is open.
 
 ⚠️ **Three adversarial audits ran on 2026-08-30** (data and leakage, uncertainty mathematics, claims against artifacts), by a separate model told to treat this file and the decision log as claims under test. **Every table recomputed reproduced to the printed digit, and the core machinery came back clean:** units, variance-space aggregation, the closed forms, the NLL, set disjointness. The risk sits in the reporting, where prose compressed curves into single numbers the bins contradict.
 
@@ -869,7 +869,7 @@ architecture claim in either direction.
 
 Full reasoning is in `constellaration-uq-decisions.md` in this repo.
 
-**None. Every decision is settled as of 2026-08-31**, when 8.6 (solver failure rate) closed as the last open item. What
+**None. Every decision is settled as of 2026-08-31.** 8.6 (solver failure rate) and 9.4 (post-hoc recalibration) closed as measurements; 9.1, 9.2 and 9.3 closed as cuts with reasons. What
 remains is execution: steps 6, 7 and 8 in the run table below,
 then figures and the write-up.
 
@@ -982,7 +982,7 @@ Runs 2, 4 and 5 are the headline result. Run 8 is validation and goes last.
 
 Everything here is expendable. Do not suggest starting any of it before the week 2 gate.
 
-1. Second target (`log10(qi)`). **The only optional item still on the table.**
+1. ~~Second target (`log10(qi)`).~~ **Cut 2026-08-31, and the objection it answers is partially closed already.** The day 1-2 grid fitted the same single MLP on both targets across the same three cuts, so a point-error comparison exists: out/in RMSE is 3.02 / 1.14 / 0.95 (tail-low / tail-high / hole) for edge rotational transform against **1.53 / 1.75 / 1.11 for log10 qi**. ⚠️ **So the extrapolation premise is not target-specific**, qi degrades at the compact end too; what is target-specific is the magnitude and the asymmetry, since qi's penalty is milder and runs the other way. **Say exactly that in the write-up, and say that the uncertainty findings are reported on one target only.** Cut on cost: `mv_ensemble.py` has no `--target` flag and no log10 handling, and `calibration.py` and `deferral.py` hardcode the points filenames, so it is about 90 minutes rather than the "one line of code" the decision log originally promised. Full reasoning and the future-work framing in decision log 9.1, second target.
 2. ~~Ranked list of design-space regions where the surrogate is least confident, framed as a sampling recommendation.~~ **Cut 2026-08-31.**
 3. ~~Simulated pool-based active learning comparing acquisition on random, total, epistemic, aleatoric; and whether out-of-region calibration predicts which signal acquires best.~~ **Cut 2026-08-31.**
 4. ✅ **Post-hoc recalibration, done 2026-08-31**, and it turned out to be worth more than "narrow": the correction makes off-distribution calibration worse, which closes the standard objection to the headline. Original framing kept below. Fit in-region only. Value is narrow:
