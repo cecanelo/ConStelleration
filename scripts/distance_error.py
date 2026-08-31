@@ -25,6 +25,7 @@ Two choices worth knowing about, both recorded in the code below:
 """
 
 import time
+from itertools import pairwise
 
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -45,6 +46,10 @@ TEST_FRACTION = 0.2
 IN_REGION_TEST_FRACTION = 0.2
 HOLE_CENTRE = 0.30
 N_BINS = 8
+
+# Width of the fixed windows the matched-distance comparison uses. 0.1 std keeps
+# the thinnest window near 300 tail points over the 0 to 0.45 shared range.
+WINDOW_WIDTH = 0.1
 
 AXIS_COL = 'metrics.aspect_ratio'
 TARGET_COL = 'metrics.edge_rotational_transform_over_n_field_periods'
@@ -69,6 +74,85 @@ def bin_by_distance(distance, abs_error, n_bins):
         row['rmse'] = float(np.sqrt(np.mean(abs_error[sel] ** 2)))
         row['mae'] = float(np.mean(abs_error[sel]))
     return rows
+
+
+def matched_windows(all_points, width=WINDOW_WIDTH):
+    """Hole against tail inside identical distance windows.
+
+    ⚠️ **This exists because reading the two binned curves at their bin medians
+    does not compare like with like, and a headline number was wrong for exactly
+    that reason.** The bins are equal-count, so their widths differ wherever the
+    two splits differ in density: the tail's second bin spans 0.13 to 0.31 while
+    the hole's are about 0.05 wide there. RMSE inside a wide bin is dominated by
+    its far edge, so quoting that bin's value "at 0.2" reports something closer
+    to the error at 0.3. The premium was reported as a flat 15% at both 0.2 and
+    0.4 std; measured in shared windows it is near zero at 0.2 and about 27% at
+    0.4.
+
+    Fixed-width windows here, not quantile bins, because the whole point is that
+    both splits are asked about the same interval of distance. Equal counts and
+    equal windows cannot both hold when the two splits have different densities,
+    and for this comparison the window is what has to match.
+
+    Only the shared range is covered. The hole cannot reach past its own widest
+    gap, so beyond that there is nothing to compare the tail against and the
+    question stops having an answer.
+    """
+    rows = []
+    for name in ('hole_p30', 'tail_low'):
+        rows.append([p for p in all_points if p['split'] == name and p['region'] == 'out'])
+    hole, tail = rows
+
+    shared = min(max(p['distance'] for p in hole), max(p['distance'] for p in tail))
+    edges = np.arange(0.0, shared + width, width)
+
+    def stats(points, lo, hi):
+        errs = np.array([p['abs_error'] for p in points if lo <= p['distance'] < hi])
+        dist = np.array([p['distance'] for p in points if lo <= p['distance'] < hi])
+        if not len(errs):
+            return None
+        return {
+            'n': len(errs),
+            'd_median': float(np.median(dist)),
+            'rmse': float(np.sqrt(np.mean(errs**2))),
+        }
+
+    out = []
+    for lo, hi in pairwise(edges):
+        h, t = stats(hole, lo, hi), stats(tail, lo, hi)
+        if h is None or t is None:
+            continue
+        out.append(
+            {
+                'window_lo': round(float(lo), 4),
+                'window_hi': round(float(hi), 4),
+                'n_hole': h['n'],
+                'n_tail': t['n'],
+                'd_median_hole': h['d_median'],
+                'd_median_tail': t['d_median'],
+                'rmse_hole': h['rmse'],
+                'rmse_tail': t['rmse'],
+                'premium': t['rmse'] / h['rmse'],
+            }
+        )
+
+    # The whole shared range as one row, which is the number to quote if a
+    # single one is wanted. Labelled so it cannot be mistaken for a window.
+    h, t = stats(hole, 0.0, shared), stats(tail, 0.0, shared)
+    out.append(
+        {
+            'window_lo': 0.0,
+            'window_hi': round(float(shared), 4),
+            'n_hole': h['n'],
+            'n_tail': t['n'],
+            'd_median_hole': h['d_median'],
+            'd_median_tail': t['d_median'],
+            'rmse_hole': h['rmse'],
+            'rmse_tail': t['rmse'],
+            'premium': t['rmse'] / h['rmse'],
+        }
+    )
+    return out
 
 
 def run_split(axis, X, y, make_split):
@@ -177,11 +261,37 @@ def main():
         results[name] = summary
         all_points.extend({'split': name, **p} for p in points)
 
+    windows = matched_windows(all_points)
+
+    print('\nmatched distance: hole against tail in identical windows')
+    header = (
+        f'{"window":>13s} {"n_hole":>7s} {"n_tail":>7s} {"med_h":>7s} {"med_t":>7s} '
+        f'{"rmse_hole":>10s} {"rmse_tail":>10s} {"premium":>8s}'
+    )
+    print(header)
+    print('-' * len(header))
+    for row in windows[:-1]:
+        label = f'{row["window_lo"]:.2f} to {row["window_hi"]:.2f}'
+        print(
+            f'{label:>13s} {row["n_hole"]:7,d} {row["n_tail"]:7,d} '
+            f'{row["d_median_hole"]:7.3f} {row["d_median_tail"]:7.3f} '
+            f'{row["rmse_hole"]:10.5f} {row["rmse_tail"]:10.5f} {row["premium"]:8.3f}'
+        )
+    whole = windows[-1]
+    print(
+        f'{"shared range":>13s} {whole["n_hole"]:7,d} {whole["n_tail"]:7,d} '
+        f'{whole["d_median_hole"]:7.3f} {whole["d_median_tail"]:7.3f} '
+        f'{whole["rmse_hole"]:10.5f} {whole["rmse_tail"]:10.5f} {whole["premium"]:8.3f}'
+    )
+
     total_seconds = time.time() - started
     print(f'\ntotal {total_seconds:.1f}s')
     print('\nRead the bins, not the ratio. The curve is the deliverable: error')
     print('against distance, with the hole and the tail overlaid over the range')
     print('they share, and the tail continuing alone past it.')
+    print('\nThe premium column is the edge cost with distance controlled for.')
+    print('It is not flat: at short range a gap and an edge cost the same, and')
+    print('the edge penalty appears as the distance grows.')
 
     constants = {
         'SEED': SEED,
@@ -189,17 +299,23 @@ def main():
         'IN_REGION_TEST_FRACTION': IN_REGION_TEST_FRACTION,
         'HOLE_CENTRE': HOLE_CENTRE,
         'N_BINS': N_BINS,
+        'WINDOW_WIDTH': WINDOW_WIDTH,
         'AXIS_COL': AXIS_COL,
         'TARGET_COL': TARGET_COL,
         'architecture': ARCHITECTURE,
     }
-    payload = {'total_seconds': round(total_seconds, 1), 'splits': results}
+    payload = {
+        'total_seconds': round(total_seconds, 1),
+        'splits': results,
+        'matched_windows': windows,
+    }
 
     save_results('distance_error', payload, constants=constants)
     # Per-point rows so the bins can be redrawn without refitting. Roughly 29k
     # rows; the stage 2 rebinning is the precedent for wanting this on disk.
     save_table('distance_error_points', all_points)
-    print('saved results/distance_error.json and results/distance_error_points.csv')
+    save_table('distance_error_matched', windows)
+    print('saved results/distance_error.json, _points.csv and _matched.csv')
 
 
 if __name__ == '__main__':

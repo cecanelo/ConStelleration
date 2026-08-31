@@ -1,7 +1,7 @@
 """Step 6: calibration diagnostics for the three headline ensembles.
 
 Deliverable one. Steps 2, 4 and 5 already reported that predicted uncertainty is
-0.93 to 1.05 times the error it predicts in region and 0.56 to 0.62 out of it.
+1.04 to 1.18 times the error it predicts in region and 0.66 to 0.69 out of it.
 That is an aggregate ratio, and nobody can act on a ratio. This turns it into
 "the 90% interval holds the truth X% of the time, and X falls off past here",
 which is a sentence a deferral threshold can rest on.
@@ -10,15 +10,14 @@ No training. Reads the three results/mv_ensemble_*_points.csv written by step 5,
 which already carry region, distance, truth, mean and all three variance terms
 per point. Seconds, not minutes.
 
-Three diagnostics, frozen in 7.1: coverage versus nominal, CRPS, and aggregate
-PIT histograms. Coverage and CRPS bin by distance using metrics.distance_bins,
+Three diagnostics, frozen in 7.1: coverage versus nominal, CRPS, and PIT. Coverage and CRPS bin by distance using metrics.distance_bins,
 the same edges the distance-error figure uses, so the two curves overlay.
 
 ⚠️ Everything here scores TOTAL predicted variance, which amends 7.5's original
 "epistemic alone". Coverage is an interval question and an interval needs the
-full spread: in-region epistemic is 0.00768 against an RMSE of 0.01256, so an
+full spread: in-region epistemic is 0.00887 against an RMSE of 0.01256, so an
 epistemic-only 90% interval would read as badly broken on the random split,
-where step 2 measured the model honest to within 5%. That is arithmetic from
+where coverage puts the model at 0.966 against a nominal 0.9. That is arithmetic from
 using 60% of the standard deviation, not a finding. The epistemic and aleatoric
 terms are reported beside the intervals as components instead.
 
@@ -102,6 +101,20 @@ def bin_out_of_region(df):
     sit at exactly zero distance, so binning the combined set spends three of
     eight bins stacking them against the y axis. Same convention as
     distance_error.py, which is what lets the two figures share an x axis.
+
+    ⚠️ **PIT mean is binned here, and 7.1's cut does not forbid it.** That entry
+    cut the per-bin PIT *histogram*, where ten bars rest on about sixty points
+    each and jump around from sampling noise alone. A per-bin PIT *mean* rests
+    on all ~675 points in the bin and is stable. Two different objects.
+
+    It is needed because the claim it supports is otherwise confounded. The
+    aggregate comparison, tail 0.348 against hole 0.531, is read as "the tail is
+    biased and the hole is not". But the tail's held-out points reach 2.13 std
+    out while the hole's stop at 0.45, so if bias grows with distance that
+    contrast could be a distance effect and nothing more. This is the same
+    confound the matched-distance analysis exists to remove, one diagnostic
+    over. Binning PIT is what lets the comparison be made at matched distance,
+    or retracted.
     """
     out = df[df['region'] == 'out']
     rows, masks = distance_bins(out['distance'].to_numpy(), N_BINS)
@@ -111,6 +124,10 @@ def bin_out_of_region(df):
         row['rmse'] = float(np.sqrt(np.mean((chunk['y_true'] - chunk['mean']) ** 2)))
         row['crps'] = float(chunk['crps'].mean())
         row['total'] = rms_uncertainty(chunk['total_variance'])
+        # Below 0.5 the truth keeps landing under the prediction, so the mean
+        # is drifting rather than the interval merely being too narrow. That
+        # distinction decides whether widening intervals would help.
+        row['pit_mean'] = float(chunk['pit'].mean())
         for level, value in zip(
             LEVELS,
             coverage_curve(chunk['y_true'], chunk['mean'], chunk['total_variance'], LEVELS),
@@ -141,7 +158,7 @@ def print_bins(split, rows):
     print(f'\n{split}, out of region, by distance')
     header = (
         f'{"d_lo":>7s} {"d_hi":>7s} {"n":>6s} {"rmse":>9s} {"crps":>9s} '
-        f'{"cov@0.9":>9s} {"cov@0.5":>9s}'
+        f'{"cov@0.9":>9s} {"cov@0.5":>9s} {"pit":>7s}'
     )
     print(header)
     print('-' * len(header))
@@ -149,7 +166,8 @@ def print_bins(split, rows):
         print(
             f'{row["d_lo"]:7.3f} {row["d_hi"]:7.3f} {row["n"]:6,d} '
             f'{row["rmse"]:9.5f} {row["crps"]:9.5f} '
-            f'{row[f"coverage_{HEADLINE_LEVEL:g}"]:9.3f} {row["coverage_0.5"]:9.3f}'
+            f'{row[f"coverage_{HEADLINE_LEVEL:g}"]:9.3f} {row["coverage_0.5"]:9.3f} '
+            f'{row["pit_mean"]:7.3f}'
         )
 
 

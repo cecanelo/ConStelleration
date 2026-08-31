@@ -663,7 +663,26 @@ The geometry problem this run exposed was that the hole at the median reached on
 
 RMSE on edge rotational transform per field period, whose pool std is 0.0786.
 
-**At matched distance the tail costs about 15% more than the hole**, consistently at both 0.2 and 0.4 standard deviations out. So most of the headline gap, 3.02 against 1.80, is **distance rather than edge**: the tail split simply asks about configurations much further from the data. What survives after controlling for distance is the edge premium itself, and it is real but modest. That is a weaker claim than "the model interpolates for free and cannot extrapolate," and a considerably more defensible one.
+**At matched distance the tail costs about 12% more than the hole.** So most of the headline gap, 3.02 against 1.80, is **distance rather than edge**: the tail split simply asks about configurations much further from the data. What survives after controlling for distance is the edge cost itself, and it is real but modest. That is a weaker claim than "the model interpolates for free and cannot extrapolate," and a considerably more defensible one.
+
+⚠️ **CORRECTED 2026-08-31. This read "about 15%, consistently at both 0.2 and 0.4 std out", and both the number and the word "consistently" were artifacts of how it was derived.** It came from interpolating the two binned curves at their bin medians. The bins are equal-count, so their widths differ wherever the splits differ in density: the tail's second bin spans 0.13 to 0.31 while the hole's are about 0.05 wide there. RMSE inside a wide bin is dominated by its far edge, so quoting that bin's value "at 0.2" actually reports something nearer the error at 0.3.
+
+**`distance_error.matched_windows` now computes it** in identical fixed-width windows, writing `results/distance_error_matched.csv`. Fixed width rather than equal count, because equal counts and equal windows cannot both hold when the two splits differ in density, and here the window is what must match.
+
+| window (std out) | n hole | n tail | RMSE hole | RMSE tail | tail / hole |
+|---|---|---|---|---|---|
+| 0.0 to 0.1 | 1,344 | 532 | 0.01881 | 0.02063 | 1.10 |
+| 0.1 to 0.2 | 1,272 | 406 | 0.02230 | 0.02299 | 1.03 |
+| 0.2 to 0.3 | 1,066 | 393 | 0.02806 | 0.03169 | 1.13 |
+| 0.3 to 0.4 | 1,129 | 348 | 0.03121 | 0.03275 | 1.05 |
+| 0.4 to 0.5 | 593 | 277 | 0.03305 | 0.04457 | 1.35 |
+| **whole shared range** | **5,403** | **1,826** | **0.02615** | **0.02929** | **1.12** |
+
+⚠️ **A trend was predicted before this ran and the data does not support it.** The expectation, stated in advance, was that the cost would grow with distance, from near zero at 0.2 std to roughly 27% at 0.4. The first four windows instead sit between 1.03 and 1.13 with no ordering, and the single high value of 1.35 comes from the thinnest window, which also has the worst-matched medians (0.426 against 0.448) in the range where error rises fastest, so part of it is residual distance mismatch rather than edge effect.
+
+**Report the 12% over the shared range and nothing finer.** Reading a trend off five noisy windows would be the same mistake, one level down, that produced the original 15%.
+
+**What is unaffected.** The load-bearing conclusion is untouched and is now properly supported: hole 0.02615 against tail 0.02929 over the shared range, against 0.04157 for the full tail. Most of the raw gap is distance. One seed and one MLP per split.
 
 **The far tail number is the one to quote in a pitch.** At 1.83 standard deviations out, RMSE is 73% of the target's own standard deviation. Predicting the dataset mean and ignoring the input entirely would score 100%. The surrogate is barely beating nothing out there while still returning a confident-looking number, which is the deferral argument in one line.
 
@@ -696,7 +715,22 @@ RMSE on edge rotational transform per field period, whose pool std is 0.0786.
 
 ⚠️ **Aleatoric rises off-distribution too**, 0.01032 to 0.02189 at the tail, and by a larger factor than epistemic does (2.1x against 1.7x). Noise in the world cannot depend on where you stand, so this is further evidence that the term measures model misfit rather than label noise, consistent with 5.1's first measurement. Say it plainly in the write-up rather than being caught on it.
 
-⚠️ **The tail is BIASED, not merely overconfident. Found 2026-08-30 by step 6, and it is new.** PIT mean out of region is 0.348 at the tail against 0.51 to 0.53 in every other cell, dropping to 0.223 in the furthest bin. PIT below 0.5 means the truth lands below the predicted mean, so the model **systematically over-predicts** edge rotational transform at the compact edge. That is a fault of the mean, not of the interval, and widening the error bars would not address it. The hole shows nothing comparable at 0.531, so this separates the hole and tail conditions a second time and independently of the coverage gap. Consequence for the write-up: do not describe the tail's calibration failure as purely a variance problem. Consequence for method: this came from the aggregate PIT histogram, which was cut from 7.1 and reinstated the same day, and it justified itself on its first run.
+⚠️ **The tail is BIASED, not merely overconfident. Found 2026-08-30 by step 6, and it is new.** PIT mean out of region is 0.348 at the tail against 0.51 to 0.53 in every other cell, dropping to **0.153** in the furthest bin. PIT below 0.5 means the truth lands below the predicted mean, so the model **systematically over-predicts** edge rotational transform at the compact edge. That is a fault of the mean, not of the interval, and widening the error bars would not address it. The hole shows nothing comparable at 0.531, so this separates the hole and tail conditions a second time and independently of the coverage gap.
+
+⚠️ **That comparison was confounded until 2026-08-31, and the confound is now removed rather than assumed away.** The tail's held-out points reach 2.13 std out while the hole's stop at 0.45, so comparing the two aggregate PIT values compared different distance distributions. If bias grows with distance, the whole contrast could have been a distance effect. This is precisely the error 3.11's matched-distance analysis exists to prevent, occurring one diagnostic over.
+
+**PIT is now binned by distance** (`scripts/calibration.py`, `results/calibration_bins.csv`) and the contrast survives:
+
+| | nearest bin | ~0.4 std | furthest bin |
+|---|---|---|---|
+| hole p30 | 0.522 | 0.527 | 0.527 |
+| tail-low | 0.429 | 0.412 | **0.153** |
+
+**The hole sits flat between 0.52 and 0.55 across its entire range with no trend at all**, so it is not biased anywhere. **The tail is already at 0.429 in its nearest bin**, so it is biased everywhere out of region and worsens with distance. The contrast is real at matched distance, and it is stronger than the aggregates suggested.
+
+⚠️ **The previously quoted 0.223 for the furthest bin was never computed by anything.** No script produced per-bin PIT before this change. The real value is 0.153.
+
+⚠️ **This does not reopen 7.1.** That entry cut the per-bin PIT *histogram*, where ten bars rest on about sixty points each and jump around from sampling noise alone. A per-bin PIT *mean* rests on all ~675 points in the bin. Two different objects, conflated when the cut was written. Consequence for the write-up: do not describe the tail's calibration failure as purely a variance problem. Consequence for method: this came from the aggregate PIT histogram, which was cut from 7.1 and reinstated the same day, and it justified itself on its first run.
 
 **Nothing pinned on the variance floor in any of the three runs**, so 4.4's β-NLL question stays closed across all five ensembles trained so far.
 

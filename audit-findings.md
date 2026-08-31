@@ -10,7 +10,7 @@ truth, and to verify against code and `results/*.json`.
 digit. The measurement is sound. The risk sits almost entirely in the reporting,
 where prose compressed curves into single numbers the bins contradict.
 
-**Status: item 1 closed 2026-08-31. Items 2 to 19 open.** Closed items keep their full text with the result appended, so the reasoning stays readable next to what it produced.
+**Status: items 1, 2 and 3 closed and item 4 partly closed, all 2026-08-31. Items 5 to 19 open.** Closed items keep their full text with the result appended, so the reasoning stays readable next to what it produced.
 
 ---
 
@@ -62,58 +62,74 @@ the files calibration and deferral read.
 
 ## B. Numbers the artifacts contradict
 
-### 2. The furthest-bin PIT of 0.223 does not exist. The real value is 0.153
+### 2. ~~The furthest-bin PIT of 0.223 does not exist~~ ✅ CLOSED 2026-08-31
 
-No script ever computed per-bin PIT: decision log 7.1 cut PIT binned by
-distance. The number was written into both documents anyway.
+No script computed per-bin PIT: decision log 7.1 cut PIT binned by distance. The
+number was written into both documents anyway. **The real value is 0.153.**
 
-Recomputed per-bin tail PIT means: **0.429, 0.422, 0.412, 0.421, 0.393, 0.346,
-0.211, 0.153**.
+**Fixed** by adding `pit_mean` to the calibration bin rows. ⚠️ 7.1's cut does not
+forbid this: it cut the per-bin PIT *histogram*, where ten bars rest on about
+sixty points each, while a per-bin *mean* rests on all ~675. Two different
+objects, conflated when the cut was written.
 
-**Fix.** Add `pit_mean` to the calibration bin rows, rerun `scripts/calibration.py`
-(seconds), correct both documents.
+**The real reason it was needed, which is not the wrong number.** The claim it
+supports was confounded. "The tail is biased (0.348) and the hole is not
+(0.531)" compared two aggregates over different distance ranges, since the tail
+reaches 2.13 std out and the hole stops at 0.45. If bias grows with distance the
+whole contrast could have been a distance effect.
 
-**Why it works.** ⚠️ The 7.1 cut applies to the per-bin PIT *histogram*, where 10
-bars rest on about 60 points each. A per-bin PIT *mean* rests on all 675 and is
-stable. Those are different objects and were conflated. This makes the number
-reproducible from an artifact and gains the bias-versus-distance curve, 0.429
-falling to 0.153, which the project does not currently report at all.
+**Result: the contrast survives, and is stronger than the aggregates suggested.**
 
-### 3. "The tail costs about 15% more at both 0.2 and 0.4 std" is not supported
+| | nearest bin | ~0.4 std | furthest bin |
+|---|---|---|---|
+| hole p30 | 0.522 | 0.527 | 0.527 |
+| tail-low | 0.429 | 0.412 | **0.153** |
 
-The premium is about **3% at 0.2 std and 27% at 0.4 std**, roughly **12% over
-the whole shared range**.
+The hole is flat between 0.52 and 0.55 across its whole range with no trend, so
+it is not biased anywhere. The tail is already at 0.429 in its nearest bin, so it
+is biased everywhere out of region and worsens with distance.
+
+### 3. ~~"The tail costs about 15% more at both 0.2 and 0.4 std"~~ ✅ CLOSED 2026-08-31
 
 The 15% came from interpolating two binned curves at their bin medians. The bins
-have very different widths: the tail's second bin spans 0.13 to 0.31 while the
-hole's are about 0.05 wide there. RMSE in a wide bin is dominated by its far
-edge, so reading it at its median inflates the near value.
+are equal-count, so their widths differ where the splits differ in density: the
+tail's second bin spans 0.13 to 0.31 while the hole's are about 0.05 wide there,
+and a wide bin's RMSE is dominated by its far edge.
 
-Recomputed in shared windows with matched within-window medians:
-`[0.15, 0.25)` gives 1.025 (n = 389 vs 1,161), `[0.35, 0.45)` gives 1.271,
-`[0, 0.45)` gives 1.121.
+**Fixed** by `distance_error.matched_windows`, which compares the two splits in
+identical fixed-width windows and writes `results/distance_error_matched.csv`.
 
-**Fix.** Add a matched-window comparison to `scripts/distance_error.py` so the
-number is computed rather than hand-derived, and reword.
+| window (std out) | n hole | n tail | RMSE hole | RMSE tail | tail / hole |
+|---|---|---|---|---|---|
+| 0.0 to 0.1 | 1,344 | 532 | 0.01881 | 0.02063 | 1.10 |
+| 0.1 to 0.2 | 1,272 | 406 | 0.02230 | 0.02299 | 1.03 |
+| 0.2 to 0.3 | 1,066 | 393 | 0.02806 | 0.03169 | 1.13 |
+| 0.3 to 0.4 | 1,129 | 348 | 0.03121 | 0.03275 | 1.05 |
+| 0.4 to 0.5 | 593 | 277 | 0.03305 | 0.04457 | 1.35 |
+| **whole shared range** | **5,403** | **1,826** | **0.02615** | **0.02929** | **1.12** |
 
-**Why it works.** The corrected claim is stronger: **up close a gap and an edge
-cost the same, and the edge penalty emerges with distance.** The flat number was
-hiding that. The load-bearing conclusion is untouched: hole RMSE over the shared
-range is 0.02615 against the tail's 0.02932, versus 0.04157 for the full tail,
-so most of the raw 3.02-versus-1.80 gap is still distance rather than edge.
+**Result: about 12% over the shared range.**
 
-⚠️ The coverage version of the same comparison is robust: matched window
-`[0.35, 0.45)` gives hole 0.801 against tail 0.762, consistent with the claimed
-0.81 against 0.78.
+⚠️ **The audit's proposed replacement was also a trend, and the trend is not
+there.** It suggested "~3% at 0.2 std and ~27% at 0.4, so the premium grows with
+distance", and that was predicted again before this ran. Four of the five windows
+sit between 1.03 and 1.13 with no ordering, and the single 1.35 comes from the
+thinnest window, which also has the worst-matched medians (0.426 against 0.448)
+in the range where error rises fastest. **Quote 12% over the shared range and
+nothing finer.** Reading a trend off five noisy windows is the same mistake one
+level down.
 
-### 4. Small stale numbers
+**Unaffected:** the load-bearing conclusion. Hole 0.02615 against tail 0.02929
+over the shared range, against 0.04157 for the full tail, so most of the raw
+3.02-versus-1.80 gap is distance rather than edge. Verified that the refit left
+the per-split bins byte-identical.
 
-- "sizes stay matched at 5,404 each": the tail's out set is **5,405**
-  (`tail_split` includes the boundary row at `axis <= cutoff`).
-- Target std quoted as 0.0786; every results file records **0.078924**. The
-  derived percentages still hold.
-- `scripts/calibration.py:3-4,19` quotes pre-aggregation-fix values (0.93 to
-  1.05, 0.56 to 0.62, epistemic 0.00768). Its own output says otherwise.
+### 4. ~~Small stale numbers~~ ✅ PARTLY CLOSED 2026-08-31
+
+- `scripts/calibration.py` docstring corrected: 1.04 to 1.18 in region, 0.66 to
+  0.69 out, epistemic 0.00887. ✅
+- Still open: "sizes stay matched at 5,404 each" should be **5,405**, and target
+  std quoted as 0.0786 should be **0.078924**.
 
 ---
 
@@ -263,7 +279,7 @@ Nothing remaining needs the T4 except item 1's sensitivity run.
 ## Suggested order
 
 1. ~~Item 1~~ done 2026-08-31, on CPU in 129s
-2. Items 2 and 3, which change results files
+2. ~~Items 2 and 3~~ ✅ done 2026-08-31, both results files regenerated
 3. Everything in B, C and D as one documentation pass
 4. E
 

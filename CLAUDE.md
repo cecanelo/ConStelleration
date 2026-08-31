@@ -141,7 +141,20 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 **Distance-error curves measured (2026-08-29), `scripts/distance_error.py`,** three fits in 165s. Deliverable one in single-model form: per-point error binned by distance from the training region, three splits, one MLP each.
 
-**At matched distance the tail costs about 15% more than the hole**, at both 0.2 and 0.4 std out. So most of the 3.02-versus-1.80 headline is **distance, not edge**: the tail simply asks about configurations further from the data. The edge premium is what survives controlling for that, and it is real but modest. Weaker than the old claim, and far more defensible.
+**At matched distance the tail costs about 12% more than the hole.** So most of the 3.02-versus-1.80 headline is **distance, not edge**: the tail simply asks about configurations further from the data. The edge cost is what survives controlling for that, and it is real but modest. Weaker than the old claim, and far more defensible.
+
+⚠️ **Corrected 2026-08-31, and the correction is now computed rather than eyeballed.** This read "about 15% at both 0.2 and 0.4 std out", derived by interpolating two binned curves at their bin medians. The bins are equal-count, so their widths differ where the splits differ in density: the tail's second bin spans 0.13 to 0.31 while the hole's are about 0.05 wide there, and RMSE inside a wide bin is dominated by its far edge. `distance_error.matched_windows` now compares the two inside identical fixed-width windows and writes `results/distance_error_matched.csv`.
+
+| window (std out) | n hole | n tail | RMSE hole | RMSE tail | tail / hole |
+|---|---|---|---|---|---|
+| 0.0 to 0.1 | 1,344 | 532 | 0.01881 | 0.02063 | 1.10 |
+| 0.1 to 0.2 | 1,272 | 406 | 0.02230 | 0.02299 | 1.03 |
+| 0.2 to 0.3 | 1,066 | 393 | 0.02806 | 0.03169 | 1.13 |
+| 0.3 to 0.4 | 1,129 | 348 | 0.03121 | 0.03275 | 1.05 |
+| 0.4 to 0.5 | 593 | 277 | 0.03305 | 0.04457 | 1.35 |
+| **whole shared range** | **5,403** | **1,826** | **0.02615** | **0.02929** | **1.12** |
+
+⚠️ **Do not claim the cost grows with distance.** The first four windows sit between 1.03 and 1.13 with no trend, and the 1.35 comes from the thinnest window, which also has the worst-matched medians (0.426 against 0.448) in the range where error rises fastest. **Quote the 12% over the shared range and stop there.** A trend was predicted before the run and the data does not support it, which is the same failure that produced the original 15%.
 
 **The number for a pitch:** at 1.83 std out, RMSE is 73% of the target's own std (0.0786). Predicting the dataset mean would score 100%. The surrogate is barely beating nothing there while still returning a confident-looking number.
 
@@ -215,7 +228,9 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 ⚠️ **Aleatoric rises off-distribution too**, 0.01032 to 0.02189 at the tail, and it rises *more* than epistemic does (2.1x against 1.7x). Noise in the world cannot depend on where you stand, so this is more evidence the term measures model misfit. Consistent with step 2, and worth stating plainly rather than being caught on.
 
-⚠️ **The tail is BIASED, not merely overconfident, and this is new (2026-08-30, step 6).** PIT mean out of region is **0.348** at the tail against 0.51 to 0.53 everywhere else, falling to 0.223 in the furthest bin. PIT below 0.5 means the truth keeps landing below the predicted mean, so **the model systematically over-predicts edge rotational transform at the compact edge.** That is a different fault from a too-narrow interval and widening the error bars would not fix it. The hole shows nothing like it (0.531), so this separates the hole and tail conditions a second time, independently of the coverage gap. ⚠️ It also means the calibration failure at the tail is not purely a variance problem, so do not describe it as one. This came from the aggregate PIT histogram, the diagnostic that was cut from decision log 7.1 and reinstated the same day.
+⚠️ **The tail is BIASED, not merely overconfident, and this is new (2026-08-30, step 6).** PIT mean out of region is **0.348** at the tail against 0.51 to 0.53 everywhere else, falling to **0.153** in the furthest bin. PIT below 0.5 means the truth keeps landing below the predicted mean, so **the model systematically over-predicts edge rotational transform at the compact edge.** That is a different fault from a too-narrow interval and widening the error bars would not fix it. The hole shows nothing like it (0.531), so this separates the hole and tail conditions a second time, independently of the coverage gap.
+
+⚠️ **That contrast was confounded until 2026-08-31 and now is not.** The tail's held-out points reach 2.13 std out while the hole's stop at 0.45, so comparing the two aggregates compared different distance distributions, exactly the error the matched-distance analysis exists to prevent. PIT is now binned by distance (`scripts/calibration.py`), and the contrast survives: **the hole sits flat at 0.52 to 0.55 across its entire range with no trend, while the tail is already at 0.429 in its nearest bin and falls to 0.153.** So the tail is biased everywhere out of region, not only far out, and the hole is not biased anywhere. ⚠️ The previously quoted 0.223 for the furthest bin was never computed by anything; the real value is 0.153. Binning PIT means is not what decision log 7.1 cut, which was the per-bin PIT *histogram* resting on about 60 points a bar; a per-bin mean rests on all 675. ⚠️ It also means the calibration failure at the tail is not purely a variance problem, so do not describe it as one. This came from the aggregate PIT histogram, the diagnostic that was cut from decision log 7.1 and reinstated the same day.
 
 ⚠️ **THE AGGREGATION FIX (2026-08-30). Every uncertainty number in this file changed and none of the models did.** `mv_ensemble.summarise` and `variance_check.run_level` both summarised per-point variances as `mean(sqrt(variance))`, the average standard deviation. The correct quantity is `sqrt(mean(variance))`, the root mean square, and it follows directly from what the calibration ratio claims: a calibrated point satisfies E[(y − mu)²] = sigma², so averaging over points gives RMSE² = mean(sigma²), and the thing that should equal RMSE is sqrt(mean(sigma²)). By Jensen, mean(sigma) sits below that, by a margin that grows with how much sigma varies across points, which is exactly the off-distribution case this project is about.
 
@@ -285,8 +300,8 @@ This is what earns the two terms their names, and it independently reproduces st
 **Findings not yet fixed, so parts of this file are known to be wrong until they are.** Full list, with fixes and reasoning, in `audit-findings.md`. The four that matter:
 
 - ✅ **The 0.05% target trim reads held-out labels**, deleting 22 rows from the tail's held-out set. **Measured and closed 2026-08-31:** the headline is conservative by about 2% (3.24x against 3.31x), or 6% including the sign class. Decision log 1.4 carries the table and the rewritten justification.
-- **PIT "0.223 in the furthest bin" was never computed by anything.** The real value is 0.153.
-- **"About 15% at matched distance" is wrong**, an artifact of unequal bin widths. The premium is about 3% at 0.2 std and 27% at 0.4, so it grows with distance rather than being flat.
+- ✅ **PIT "0.223 in the furthest bin" was never computed by anything. Closed 2026-08-31:** the real value is 0.153, PIT is now binned by distance, and the hole/tail bias contrast survives at matched distance.
+- ✅ **"About 15% at matched distance" was wrong**, an artifact of unequal bin widths. **Closed 2026-08-31:** measured in identical windows it is 12% over the shared range, with no reliable trend across windows.
 - **Everything except the N-sweep is one seed**, which the headline table does not say.
 
 Two loose ends, neither blocking anything: the mirror-pair search (folded into decision log 2.2, the tolerance duplicate check) and a three-seed rerun of the narrow sweep's p30 and p90 if the U's upper arm is ever load-bearing.
