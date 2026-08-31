@@ -1545,16 +1545,43 @@ Then, holding the generator fixed:
 
 ---
 
-**9.4 Post-hoc recalibration, fit in-region only** `OPEN`
+**9.4 Post-hoc recalibration, fit in-region only** `PRE-REGISTERED 2026-08-31, NOT YET RUN`
 
-- [ ] Decided at week 2 gate
+- [x] Decided: in scope, variance scaling only
 
 **Why:** Demoted here from 7.3. Narrow value as a robustness check, not a standalone finding: it tests whether an out-of-region calibration gap survives a standard in-region correction, which closes off one alternative explanation for the headline result. Reporting only, never feeds the deferral rule (7.4).
 
 ⚠️ **Trap:** the calibration set must come from in-region data. Calibrating on out-of-region points assumes access to exactly the labels the premise says are unavailable.
 
-**My decision:**
->
+**My decision: variance scaling, a single scalar, fit in region on a held-out half of the in-region slice and applied unchanged everywhere.** Under Gaussian NLL the minimiser has a closed form, `s = sqrt(mean(z^2))` with `z = (y - mu) / sigma`, so there is no optimiser and no new dependency.
+
+**Two alternatives considered and rejected, both worth one sentence in the write-up rather than an hour of compute.**
+
+*Isotonic recalibration of the CDF* (Kuleshov et al. 2018) is more expressive and would fix shape distortions a scalar cannot. It also makes the predictive distribution non-Gaussian, which retires the closed-form CRPS in `metrics.crps_gaussian` and would force a sample-based CRPS into the deferral curve's y axis. That is a change to a frozen deliverable in exchange for expressiveness the claim does not need.
+
+*Conformal prediction* gives finite-sample marginal coverage guarantees, and ⚠️ **its guarantee assumes exchangeability between the calibration and test sets, which the tail split deliberately breaks.** So it would be valid in region and void out of region, which is exactly the regime under study. Naming that is sharper than running it.
+
+**Why one parameter is the right expressiveness.** The question is whether an in-region correction *transfers* out of region. A richer corrector makes the answer about which corrector was chosen.
+
+---
+
+⚠️ **PREDICTION, COMMITTED BEFORE THE RUN**, per the standing rule from 2026-08-31 that a prediction goes in its own commit before the run that tests it. This is a case where the outcome is guessable, which is when the rule earns its keep.
+
+In region the ensemble is *over*-dispersed, ratio 1.13 ± 0.03. So the fitted scalar should land **below 1, around 0.85 to 0.90**, and shrink the intervals. Applied unchanged out of region, where the ratio is already 0.677 ± 0.021, that should push it to roughly **0.60**, and out-of-region coverage at nominal 0.9 down from 0.788 toward the low 0.7s.
+
+**So the prediction is that the standard fix makes the out-of-region problem worse**, because it corrects an over-dispersion that exists only in region. If it holds, it strengthens the deferral argument rather than undermining it: there is no cheap post-hoc correction that recovers honest intervals off-distribution, so the options really are targeted sampling or deferral.
+
+**What would falsify it.** A scalar at or above 1.0 in region, or an out-of-region ratio that moves toward 1.0 after scaling. Either would mean the miscalibration is a global dispersion error rather than a shift effect, and the headline would need softening.
+
+---
+
+**Three design points that decide whether it is honest, settled in advance.**
+
+⚠️ **The calibration set must be in-region AND not reused for reporting.** The in-region test slice is what the headline table reports on, so fitting `s` there and then reporting the corrected ratio on the same rows is circular. It is split in half: fit on one, report on the other. The early-stopping validation set is not a substitute, since training already saw it through the stopping rule.
+
+⚠️ **`s` and the reported calibration ratio are different aggregations and will not be reciprocal.** The table's ratio is `sqrt(mean(sigma^2)) / sqrt(mean(e^2))`; the NLL scalar is `sqrt(mean(e^2 / sigma^2))`. They coincide only when sigma is constant across points. Expect `s` near but not exactly `1 / 1.13`, and never present one as a check on the other.
+
+⚠️ **A global scalar cannot change the deferral ranking.** Sorting by `s^2 * sigma^2` is the same order as sorting by `sigma^2`, so both "mine" curves are identical after recalibration and only the CRPS level moves. Stated as an invariance rather than rerun to rediscover. The oracle curve can shift slightly, since it ranks by CRPS and CRPS is not invariant to the scale.
 
 ---
 
