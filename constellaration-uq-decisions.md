@@ -142,12 +142,39 @@ Write your own reasoning in the blockquote under each open item, in your own wor
 
 - [x] Decided
 
-**Decided:** Match A.4's 0.05% per-metric tail trim, applied to the target metric only. Never to the split axis.
+**Decided:** A 0.05% per-tail trim on the target metric only. Never on the split axis.
 
-**Why:** Trimming tails on aspect ratio deletes exactly the compact configurations you plan to hold out. It destroys the extrapolation condition and you would not notice until the test set came back tiny and you blamed the histogram. Matching the trim on the target keeps Table 7 comparability.
+**Why, restated 2026-08-31.** This entry used to rest entirely on "match A.4 for comparability". That reason is weaker than it looked and it is no longer the foundation. Two reasons that hold on their own:
+
+- **A squared-error metric must not be decided by 0.1% of rows.** The 28 rows the trim removes carry targets 3 to 10 standard deviations from the mean. In a random 20% test slice about six of them would land in the test set and would dominate RMSE outright, so the reported accuracy would be a fact about six rows rather than about the model.
+- **The extreme low tail is a sign-convention artifact.** Those rows carry *negative* edge rotational transform, and Proxima's own benchmark scorer applies `np.abs()` before scoring (`problems.py` 174, 248, 384). Under their scoring a configuration at −0.46 has value 0.46, an ordinary high number. The signed target is bimodal for a reason that is not physically fundamental, and the trim removes that second mode.
+
+**A.4 alignment is now a bonus, not the justification.** ⚠️ Three reasons it cannot carry the weight:
+
+- **It is inferred from prose, not verified against code.** The paper's appendix says "0.05% tails trimmed per metric" and the A.4 training code is not in the public repo. Contrast 1.5, where the 80-column input vector was verified against their actual `_to_X` source. Nothing equivalent exists here and nothing can.
+- **Three things about their procedure are unknown:** whether 0.05% means per tail or in total, whether the trim is per metric independently or the union across all twelve, and whether it happens before or after their split. The third is the one that matters.
+- **We already know something differs**, since our pool is 27,050 against their stated ~23k and this document records that the trim cannot close that gap.
+
+⚠️ **And matching them would not make the trim safe here anyway.** A.4 used a random split, where rows deleted by extreme target land in train and test proportionally and nothing systematic happens. This project splits deliberately along an axis correlated with the target, so the deleted rows concentrate in the held-out set. **"We did what they did" is a comparability argument, not a validity argument**, and this entry previously used it as both.
+
+**MEASURED 2026-08-31, `scripts/mv_ensemble.py tail --sensitivity`.** The leak is real and small. The trim reads held-out labels, and 22 of the 28 deleted rows fall inside the tail split's held-out region.
+
+| held-out set | n | out-of-region RMSE | ratio to in-region |
+|---|---|---|---|
+| trimmed (headline) | 5,405 | 0.03962 | 3.24 |
+| + 13 ordinary tail rows | 5,418 | 0.04051 | **3.31** |
+| + 9 sign-flipped rows | 5,427 | 0.04200 | **3.44** |
+
+**So the headline understates the extrapolation gap by about 2%, and by 6% if the sign class is included.** The direction is flattering, which is why it was worth measuring rather than assuming. No finding changes; every one holds slightly more strongly.
+
+**Why the trimmed number stays the headline.** The 9 sign-flipped rows fail because the model has barely seen a negative-target configuration anywhere in training, not because they sit at low aspect ratio. Including them would conflate "extrapolating along the split axis is hard" with "a class covering 0.5% of the pool is unlearnable". Both are true and only the first is this project's question.
+
+**One incidental result worth keeping.** Back-solving from the table, the ensemble errs by about 0.275 on the sign-flipped rows, not the ~0.65 it would score by predicting the pool mean. With only 133 negative-target rows in 27,022 it has more signal for that class than expected.
+
+**Never on the split axis.** Trimming tails on aspect ratio would delete exactly the compact configurations the tail split holds out. It destroys the extrapolation condition, and the symptom is a test set that comes back small, which is easy to misread as a thin histogram rather than as a deleted experiment.
 
 **My decision:**
-> Trim the target the way A.4 did so the numbers stay comparable, and never touch the split axis. Trimming the split axis would silently delete the test set and I would misread it as a thin histogram.
+> Keep the trim and keep the trimmed set as the headline, but justify it on its own terms rather than on someone else's unpublished preprocessing. Report the sensitivity so the leak is a measured number instead of an unstated assumption, and report the sign class separately because it answers a different question.
 
 ---
 

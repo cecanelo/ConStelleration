@@ -116,14 +116,74 @@ def summarise(label, y_true, parts, selection):
     }
 
 
+def restored_rows(df, trimmed, config, axis, out_mask):
+    """The rows the 0.05% target trim deleted from this split's held-out region.
+
+    ⚠️ The trim reads held-out labels. `trim_target_tails` computes its quantiles
+    over the whole pool and drops rows by their target value, before any split
+    exists. Target and split axis are correlated, which is this project's own
+    premise, so the deleted rows do not land evenly: 22 of 28 fall inside the
+    tail's held-out region. The headline out-of-region RMSE is therefore
+    computed on a test set whose hardest members were removed using the answers
+    the experiment is supposed to be predicting.
+
+    This function recovers them so the cost can be measured rather than
+    estimated. It changes nothing about training: the ensemble is already fitted
+    when this is called, and the trimmed evaluation is reported unchanged
+    alongside.
+
+    Returns (X_extra, y_extra, axis_extra, is_sign_flipped), split out because
+    the restored rows are two different populations and averaging them into one
+    number would be misleading. Roughly a third carry NEGATIVE edge rotational
+    transform, a sign class of 133 rows in 27,022. Those fail because the model
+    has barely seen one anywhere in training, not because they sit at low aspect
+    ratio, so folding them into the headline would conflate "extrapolating along
+    the split axis is hard" with "a 0.5% physical class is unlearnable".
+    """
+    # The split was built on the trimmed axis, so recover its numeric boundary
+    # and apply that same value to the untrimmed pool. Re-running the split on
+    # untrimmed data would move the quantile and change which rows are held out.
+    if not out_mask.any():
+        raise ValueError('cannot recover a cutoff from an empty held-out set')
+    lo, hi = axis[out_mask].min(), axis[out_mask].max()
+
+    # ⚠️ A tail split is one-sided, so its lower bound is the pool minimum
+    # rather than a real boundary. Keeping it would exclude any restored row
+    # lying past that minimum, which is precisely the kind of row worth
+    # recovering. A hole is genuinely two-sided and keeps both bounds.
+    if config.split == 'tail':
+        lo = -np.inf
+
+    dropped = df.loc[df.index.difference(trimmed.index)]
+    dropped_axis = dropped[config.axis_col].to_numpy()
+    inside = (dropped_axis >= lo) & (dropped_axis <= hi)
+    dropped = dropped[inside]
+
+    y_extra = dropped[config.target_col].to_numpy()
+    return (
+        extract_input_features(dropped),
+        y_extra,
+        dropped_axis[inside],
+        y_extra < 0,
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('split', choices=['random', 'hole', 'tail'])
-    config = Config(split=parser.parse_args().split)
+    parser.add_argument(
+        '--sensitivity',
+        action='store_true',
+        help='also score the rows the target trim deleted from the held-out region',
+    )
+    args = parser.parse_args()
+    config = Config(split=args.split)
 
     started = time.time()
     print(f'device: {resolve_device()}   split: {config.split}')
 
+    # `df` is kept untrimmed so --sensitivity can recover the rows the trim
+    # deleted. Training uses `trimmed` only, exactly as before.
     df = load_pool()
     trimmed = trim_target_tails(df, config.target_col)
     X = extract_input_features(trimmed)
@@ -200,6 +260,53 @@ def main():
             f'variance head costs {rows[0]["rmse"] / MSE_ENSEMBLE_RMSE - 1:+.1%} on in-region RMSE'
         )
 
+    sensitivity = None
+    if args.sensitivity:
+        X_extra, y_extra, _, flipped = restored_rows(df, trimmed, config, axis, out_mask)
+        extra_means, extra_variances = predict_all(X_extra)
+        extra = decompose(extra_means, extra_variances)
+
+        y_out = y[out_idx]
+        mean_out = parts['mean'][n_in:]
+
+        def combined(keep):
+            """RMSE over the held-out set plus a chosen subset of restored rows.
+
+            Pooled in squared error, not averaged over two RMSEs, since the two
+            groups differ in size by two orders of magnitude.
+            """
+            errors = np.concatenate([y_out - mean_out, y_extra[keep] - extra['mean'][keep]])
+            return float(np.sqrt(np.mean(errors**2))), len(errors)
+
+        ordinary = ~flipped
+        levels = [
+            ('trimmed (headline)', float(rmse(y_out, mean_out)), len(y_out)),
+            ('+ ordinary tail rows', *combined(ordinary)),
+            ('+ sign-flipped rows', *combined(np.ones_like(flipped))),
+        ]
+
+        print(f'\n{"trim sensitivity":>22s} {"n":>7s} {"rmse_out":>9s} {"ratio":>7s}')
+        for label, value, count in levels:
+            print(f'{label:>22s} {count:7,d} {value:9.5f} {value / rows[0]["rmse"]:7.2f}')
+
+        print(
+            f'\n{len(y_extra)} rows restored, {int(flipped.sum())} of them sign-flipped '
+            f'(negative target).\nThe sign class is 0.5% of the pool, so those rows measure '
+            'unfamiliarity with a\nrare regime rather than distance along the split axis. '
+            'The headline stays on the\ntrimmed set for A.4 comparability, and is '
+            'conservative as a result.'
+        )
+
+        sensitivity = {
+            'n_restored': len(y_extra),
+            'n_sign_flipped': int(flipped.sum()),
+            'levels': [
+                {'set': label, 'n': count, 'rmse_out': value, 'ratio': value / rows[0]['rmse']}
+                for label, value, count in levels
+            ],
+            'restored_targets': [round(float(v), 8) for v in y_extra],
+        }
+
     # Distance measured against the fit set, not train_mask. The mask holds the
     # in-region slice, which would then read distance 0 by construction rather
     # than by measurement.
@@ -236,12 +343,18 @@ def main():
         'target_std': float(y.std()),
         'total_seconds': round(total_seconds, 1),
     }
-    save_results(f'mv_ensemble_{config.split}', payload, constants=constants)
+    if sensitivity is not None:
+        payload['trim_sensitivity'] = sensitivity
+
+    # A separate name, so a sensitivity run can never overwrite the headline
+    # files the calibration and deferral steps read.
+    name = f'mv_ensemble_{config.split}'
+    save_results(name + ('_sensitivity' if args.sensitivity else ''), payload, constants=constants)
 
     # Per-point rows so the calibration figures and the deferral curve need no
     # refit. Everything a Gaussian predictive distribution needs is here.
     save_table(
-        f'mv_ensemble_{config.split}_points',
+        name + ('_sensitivity' if args.sensitivity else '') + '_points',
         [
             {
                 'region': 'in' if i < n_in else 'out',
@@ -256,7 +369,8 @@ def main():
             for i in range(len(eval_idx))
         ],
     )
-    print(f'saved results/mv_ensemble_{config.split}.json and _points.csv')
+    written = name + ('_sensitivity' if args.sensitivity else '')
+    print(f'saved results/{written}.json and _points.csv')
 
 
 if __name__ == '__main__':

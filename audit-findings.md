@@ -10,61 +10,55 @@ truth, and to verify against code and `results/*.json`.
 digit. The measurement is sound. The risk sits almost entirely in the reporting,
 where prose compressed curves into single numbers the bins contradict.
 
-**Nothing here is fixed yet.** This is the work list for the next session.
+**Status: item 1 closed 2026-08-31. Items 2 to 19 open.** Closed items keep their full text with the result appended, so the reasoning stays readable next to what it produced.
 
 ---
 
 ## A. The one real methodological issue
 
-### 1. The target trim reads held-out labels and deletes the tail's hardest test rows
+### 1. ~~The target trim reads held-out labels and deletes the tail's hardest test rows~~ ✅ CLOSED 2026-08-31
 
 `data.py:48-52`, called before the split in every script.
 
 `trim_target_tails` computes its 0.05% quantiles over the whole pool and drops
-rows by their labels. **22 of the 28 dropped rows land inside the tail's
-held-out region**, because target and split axis are correlated, which is this
-project's own premise.
+rows by their target value, before any split exists. Target and split axis are
+correlated, which is this project's own premise, so the deleted rows do not land
+evenly: **22 of 28 fall inside the tail's held-out region**, 9 of them
+sign-flipped configurations carrying negative edge rotational transform.
 
-⚠️ **The magnitude is far larger than a first estimate suggested.** The 28 rows
-are two distinct populations, not one smooth tail:
+**MEASURED, `scripts/mv_ensemble.py tail --sensitivity`.** The ensemble is
+trained exactly as before, then additionally scored on the deleted rows.
 
-- **13 rows at z ≈ −9**, targets −0.45 to −0.56. These are **sign-flipped
-  configurations**, negative edge rotational transform, the class recorded as
-  133 of 27,022. A different physical regime, not distribution outliers.
-- **15 rows at z ≈ +3**, targets 0.48 to 0.52. Ordinary upper tail.
+| held-out set | n | out-of-region RMSE | ratio |
+|---|---|---|---|
+| trimmed (headline) | 5,405 | 0.03962 | 3.24 |
+| + 13 ordinary tail rows | 5,418 | 0.04051 | **3.31** |
+| + 9 sign-flipped rows | 5,427 | 0.04200 | **3.44** |
 
-Of the 22 inside the tail's region, **9 are sign-flipped**. A model trained on a
-distribution centred at 0.241 predicting a truth of −0.46 errs by about 0.65,
-roughly **16x** the tail's RMSE of 0.0396, not the 3x first assumed. Restoring
-all 22 moves out-of-region RMSE from about 0.0396 to about 0.047, so the 3.24x
-headline becomes roughly 3.9x and the calibration ratio worsens past 0.66.
+**The leak is real and small: the headline is conservative by about 2%, or 6%
+with the sign class.** It flatters us, which is why it needed measuring rather
+than assuming. No finding changes; each holds slightly more strongly.
 
-**So the leak flatters us, by about 20% on the headline rather than 2%.**
+**Resolution.** The trimmed set stays the headline. The 9 sign-flipped rows fail
+because the model has barely seen a negative-target configuration anywhere in
+training, not because they sit at low aspect ratio, so folding them in would
+conflate "extrapolating along the split axis is hard" with "a 0.5% class is
+unlearnable". Reported separately instead.
 
-**But restoring them would introduce a worse confound.** Those 9 rows fail
-because the model has barely seen a sign-flipped configuration anywhere in
-training, not because they sit at low aspect ratio. Including them conflates
-"extrapolating along the aspect-ratio axis is hard" with "a class covering 0.5%
-of the pool is unlearnable". Both are true; only the first is this project's
-question.
+**The justification was rewritten at the same time.** Decision 1.4 now rests on two standalone
+reasons rather than on matching A.4: a squared-error metric must not be decided
+by 0.1% of rows, and the extreme low tail is a sign-convention artifact their
+own scorer removes with `np.abs()`. The A.4 match is inferred from appendix
+prose, their training code is not public, and their random split makes the trim
+harmless in a way it is not here.
 
-**Fix.** Keep the A.4-comparable trimmed set as the headline and add a
-**sensitivity result**, not a caveat. Retrain the tail ensemble (seeds are fixed,
-so it reproduces exactly) evaluating additionally on the untrimmed
-out-of-region set, then report:
+**Incidental result kept.** The ensemble errs by about 0.275 on the sign-flipped
+rows rather than the ~0.65 it would score by predicting the pool mean, so it has
+more signal for that class than its 133 rows in 27,022 would suggest.
 
-> Restoring the 22 trimmed rows to the tail's held-out set raises out-of-region
-> RMSE from 0.0396 to X and the ratio from 3.24 to Y. Nine of the 22 carry
-> negative edge rotational transform, a sign class representing 0.5% of the
-> pool, so the increase measures unfamiliarity with that class rather than
-> distance along the split axis. The headline is reported on the trimmed set for
-> comparability with Appendix A.4, and is conservative as a result.
-
-**Why it works.** It converts an undisclosed leak into a quantified disclosure
-running against our own interest, explains why the trimmed number is still the
-right headline, and keeps A.4 comparability. Cost is about 7 minutes on a T4.
-
----
+**Verified:** `mv_ensemble_tail_points.csv` came back byte-identical, and the
+sensitivity run writes to `mv_ensemble_tail_sensitivity` so it cannot clobber
+the files calibration and deferral read.
 
 ## B. Numbers the artifacts contradict
 
@@ -268,7 +262,7 @@ Nothing remaining needs the T4 except item 1's sensitivity run.
 
 ## Suggested order
 
-1. Item 1 while the GPU is up
+1. ~~Item 1~~ done 2026-08-31, on CPU in 129s
 2. Items 2 and 3, which change results files
 3. Everything in B, C and D as one documentation pass
 4. E

@@ -203,6 +203,8 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 **Calibration holds in region and breaks out of it.** The ratio column is predicted uncertainty over the error it predicts. In region it is 1.04 to 1.18 across all three splits, so slightly conservative. Out of region it falls to 0.69 and 0.66, so the model under-states its own error by 31% and 34%.
 
+⚠️ **The tail's out-of-region set is conservative by about 2%, measured 2026-08-31** (`scripts/mv_ensemble.py tail --sensitivity`). The 0.05% target trim reads held-out labels, and 22 of the 28 rows it deletes fall inside this split's held-out region. Restoring the 13 ordinary ones moves out-of-region RMSE from 0.03962 to 0.04051 and the ratio from 3.24x to 3.31x; the 9 sign-flipped rows take it to 0.04200 and 3.44x. The trimmed set stays the headline for A.4 comparability, and the sign class is reported separately because those rows measure unfamiliarity with a 0.5% regime rather than distance along the split axis. Full reasoning in decision log 1.4, outlier trimming.
+
 **The pitch sentence:** at the compact edge the error grows 3.24x while the reported uncertainty grows only 1.98x. Overconfident precisely where it is wrong, with nothing in the output to say so.
 
 **In coverage terms, which is the form a deferral threshold can use:** the nominal 90% interval holds 0.95 to 0.97 of the truth in region, and 0.779 at the tail, falling to **0.587 in the furthest distance bin**. So at the compact edge a stated 90% interval is closer to a 60% interval.
@@ -282,7 +284,7 @@ This is what earns the two terms their names, and it independently reproduces st
 
 **Findings not yet fixed, so parts of this file are known to be wrong until they are.** Full list, with fixes and reasoning, in `audit-findings.md`. The four that matter:
 
-- **The 0.05% target trim reads held-out labels** and deletes 22 rows from the tail's held-out set, 9 of them sign-flipped configurations. The headline is flattered by roughly 20%, not the 2% first estimated. Fix is a sensitivity run, not a retrain of everything, and the trimmed number stays the headline for A.4 comparability.
+- ✅ **The 0.05% target trim reads held-out labels**, deleting 22 rows from the tail's held-out set. **Measured and closed 2026-08-31:** the headline is conservative by about 2% (3.24x against 3.31x), or 6% including the sign class. Decision log 1.4 carries the table and the rewritten justification.
 - **PIT "0.223 in the furthest bin" was never computed by anything.** The real value is 0.153.
 - **"About 15% at matched distance" is wrong**, an artifact of unequal bin widths. The premium is about 3% at 0.2 std and 27% at 0.4, so it grows with distance rather than being flat.
 - **Everything except the N-sweep is one seed**, which the headline table does not say.
@@ -556,8 +558,16 @@ architecture claim in either direction.
   Table 7. Chosen over keeping all four pathways since the
   day 1-2 baseline check already covers the risk of this pool
   being too thin at the compact aspect-ratio end.
-- Outlier trimming: match A.4's 0.05% per-metric tail trim,
-  applied to the target metric only, never to the split axis.
+- Outlier trimming: a 0.05% per-tail trim on the target metric
+  only, never on the split axis. ⚠️ **Justified on its own terms,
+  not on matching A.4** (decision log 1.4, restated 2026-08-31):
+  a squared-error metric must not be decided by 0.1% of rows, and
+  the extreme low tail is a sign-convention artifact their own
+  scorer removes with `np.abs()`. A.4 alignment is a bonus. Their
+  exact procedure is inferred from appendix prose, their training
+  code is not public, and their random split makes the trim
+  harmless in a way it is not here. The cost on the tail split is
+  measured, not assumed: about 2%.
 - Ensemble size: 10, matching A.4.
 - Diversity mechanism: init and shuffle order only, not
   bootstrap.
