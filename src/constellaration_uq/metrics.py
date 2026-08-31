@@ -117,6 +117,27 @@ def crps_gaussian(y_true, mean, variance):
     return sigma * (z * (2 * norm.cdf(z) - 1) + 2 * norm.pdf(z) - 1 / np.sqrt(np.pi))
 
 
+def deferral_curve(crps, signal, rates):
+    """Mean CRPS over all points when the top fraction by `signal` is deferred.
+
+    Lives here rather than in deferral.py because seed_spread.py recomputes the
+    same curve across replication seeds, and two independent implementations of
+    a cumulative-sum index is exactly how the aggregation bug happened.
+
+    Deferred points contribute zero, so this is the score of the hybrid system,
+    surrogate plus solver, not of the surrogate on what is left. Dividing by the
+    full count rather than the retained count is what makes the ends of the
+    curve mean something: at rate 1 every point is solved and the score is 0.
+
+    One cumulative sum serves every rate, so the whole curve costs one sort.
+    """
+    order = np.argsort(-np.asarray(signal), kind='stable')
+    cumulative = np.concatenate([[0.0], np.cumsum(np.asarray(crps)[order])])
+    n = len(crps)
+    total = cumulative[-1]
+    return np.array([(total - cumulative[round(r * n)]) / n for r in rates])
+
+
 def distance_bins(distance, n_bins):
     """Split points into equal-count quantile bins of distance.
 

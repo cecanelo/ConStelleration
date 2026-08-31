@@ -172,12 +172,20 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('split', choices=['random', 'hole', 'tail'])
     parser.add_argument(
+        '--seed',
+        type=int,
+        default=SEED,
+        help='replication seed. Varies member init, the in-region slice and the '
+        'validation set. For hole and tail the out-of-region set is a quantile '
+        'cutoff on the axis and does not move, so the headline test set is fixed.',
+    )
+    parser.add_argument(
         '--sensitivity',
         action='store_true',
         help='also score the rows the target trim deleted from the held-out region',
     )
     args = parser.parse_args()
-    config = Config(split=args.split)
+    config = Config(split=args.split, seed=args.seed)
 
     started = time.time()
     print(f'device: {resolve_device()}   split: {config.split}')
@@ -221,8 +229,14 @@ def main():
         print(f'{k:7d} {epochs:7d} {best:9.4f} {now - previous[0]:6.1f}s', flush=True)
         previous[0] = now
 
+    # ⚠️ base_seed * N_MEMBERS, not base_seed. train_mv_ensemble uses
+    # `seed = base_seed + k` for its ten members, so consecutive replication
+    # seeds would share nine of ten member initialisations and the measured
+    # spread would read far smaller than the real one. Blocks of N_MEMBERS keep
+    # them disjoint: 0-9, 10-19, 20-29. Seed 0 is unchanged, since 0 * 10 = 0,
+    # which is what lets the existing results stay byte-identical.
     predict_all, histories = train_mv_ensemble(
-        X_fit, y_fit, X_val, y_val, base_seed=config.seed, progress=report
+        X_fit, y_fit, X_val, y_val, base_seed=config.seed * N_MEMBERS, progress=report
     )
 
     eval_idx = np.concatenate([in_idx, out_idx])
@@ -354,8 +368,12 @@ def main():
         payload['trim_sensitivity'] = sensitivity
 
     # A separate name, so a sensitivity run can never overwrite the headline
-    # files the calibration and deferral steps read.
+    # files the calibration and deferral steps read. Seed 0 also keeps the
+    # unsuffixed name, so replication runs are additive and nothing downstream
+    # has to learn about seeds.
     name = f'mv_ensemble_{config.split}'
+    if config.seed != SEED:
+        name += f'_s{config.seed}'
     save_results(name + ('_sensitivity' if args.sensitivity else ''), payload, constants=constants)
 
     # Per-point rows so the calibration figures and the deferral curve need no

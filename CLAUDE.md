@@ -141,7 +141,7 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 **Distance-error curves measured (2026-08-29), `scripts/distance_error.py`,** three fits in 165s. Deliverable one in single-model form: per-point error binned by distance from the training region, three splits, one MLP each.
 
-**At matched distance the tail costs about 12% more than the hole.** So most of the 3.02-versus-1.80 headline is **distance, not edge**: the tail simply asks about configurations further from the data. The edge cost is what survives controlling for that, and it is real but modest. Weaker than the old claim, and far more defensible.
+**At matched distance the tail costs about 16% more than the hole**, 1.156 ± 0.052 over three seeds (1.119, 1.119, 1.229), so roughly 3 standard deviations from no effect and the weakest of the headline claims. So most of the 3.02-versus-1.80 headline is **distance, not edge**: the tail simply asks about configurations further from the data. The edge cost is what survives controlling for that, and it is real but modest. Weaker than the old claim, and far more defensible.
 
 ⚠️ **Corrected 2026-08-31, and the correction is now computed rather than eyeballed.** This read "about 15% at both 0.2 and 0.4 std out", derived by interpolating two binned curves at their bin medians. The bins are equal-count, so their widths differ where the splits differ in density: the tail's second bin spans 0.13 to 0.31 while the hole's are about 0.05 wide there, and RMSE inside a wide bin is dominated by its far edge. `distance_error.matched_windows` now compares the two inside identical fixed-width windows and writes `results/distance_error_matched.csv`.
 
@@ -154,7 +154,7 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 | 0.4 to 0.5 | 593 | 277 | 0.03305 | 0.04457 | 1.35 |
 | **whole shared range** | **5,403** | **1,826** | **0.02615** | **0.02929** | **1.12** |
 
-⚠️ **Do not claim the cost grows with distance.** The first four windows sit between 1.03 and 1.13 with no trend, and the 1.35 comes from the thinnest window, which also has the worst-matched medians (0.426 against 0.448) in the range where error rises fastest. **Quote the 12% over the shared range and stop there.** A trend was predicted before the run and the data does not support it, which is the same failure that produced the original 15%.
+⚠️ **Do not claim the cost grows with distance.** At seed 0 the first four windows sit between 1.03 and 1.13 with no trend, and the 1.35 comes from the thinnest window, which also has the worst-matched medians (0.426 against 0.448) in the range where error rises fastest. **Quote the 12% over the shared range and stop there.** A trend was predicted before the run and the data does not support it, which is the same failure that produced the original 15%.
 
 **The number for a pitch:** at 1.83 std out, RMSE is 73% of the target's own std (0.07892). Predicting the dataset mean would score 100%. The surrogate is barely beating nothing there while still returning a confident-looking number.
 
@@ -207,7 +207,26 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 **Steps 4 and 5 done (2026-08-29), `scripts/mv_ensemble.py hole` and `tail`.** All three headline ensembles now exist, and this is the result the project was built to produce.
 
-⚠️ **Every number in this table is a single seed (seed 0), and so is every coverage, PIT, CRPS and deferral figure in this project. Only the N-sweep has replication.** Three seeds there put per-rung spreads near ±1% on epistemic and ±0.06 to ±0.14 on the out/in ratio, which is the only direct evidence available for how much seed noise to expect elsewhere. The differences the table rests on are far larger than that, but no seed spread has been measured for them and none should be implied.
+⚠️ **REPLICATED ACROSS THREE SEEDS, 2026-08-31.** The table below is seed 0, which every figure and downstream script still uses. `scripts/seed_spread.py` re-measures every quantity over seeds 0, 1 and 2 and writes `results/seed_spread.json`. **Seed noise runs 0.2% to 6.7%, mostly 2 to 5%, and every claim in this section clears it by roughly an order of magnitude.** Means with spreads:
+
+| split | region | RMSE | epistemic | aleatoric | total | ratio | cov @ 0.9 | PIT mean |
+|---|---|---|---|---|---|---|---|---|
+| random | in | 0.01286 ± 0.00027 | 0.00895 ± 0.00018 | 0.01160 ± 0.00057 | 0.01465 ± 0.00053 | 1.140 ± 0.039 | 0.961 ± 0.003 | 0.514 ± 0.008 |
+| random | out | 0.01325 ± 0.00033 | 0.00898 ± 0.00018 | 0.01156 ± 0.00060 | 0.01464 ± 0.00059 | 1.105 ± 0.047 | 0.959 ± 0.003 | 0.509 ± 0.008 |
+| hole p30 | in | 0.01278 ± 0.00063 | 0.00841 ± 0.00020 | 0.01082 ± 0.00054 | 0.01371 ± 0.00055 | 1.075 ± 0.072 | 0.958 ± 0.007 | 0.496 ± 0.007 |
+| hole p30 | out | 0.02423 ± 0.00046 | 0.01186 ± 0.00018 | 0.01293 ± 0.00059 | 0.01755 ± 0.00039 | **0.725 ± 0.028** | 0.878 ± 0.005 | 0.534 ± 0.002 |
+| tail-low | in | 0.01219 ± 0.00006 | 0.00853 ± 0.00027 | 0.01085 ± 0.00038 | 0.01381 ± 0.00040 | 1.132 ± 0.034 | 0.959 ± 0.002 | 0.507 ± 0.002 |
+| tail-low | out | 0.04048 ± 0.00135 | 0.01505 ± 0.00047 | 0.02290 ± 0.00073 | 0.02740 ± 0.00079 | **0.677 ± 0.021** | 0.788 ± 0.017 | **0.353 ± 0.012** |
+
+**Out-over-in RMSE: random 1.03 ± 0.01, hole 1.90 ± 0.12, tail 3.32 ± 0.10.** The three ranges do not come close to overlapping.
+
+**The random split is the control and it behaves.** Its gap is 1.03 ± 0.01 and its in and out ratios are statistically identical. A diagnostic that manufactured a gap there would invalidate everything downstream, and across three seeds it does not.
+
+⚠️ **Seed 0 was the most conservative seed on the tail**, gap 3.24 against a mean of 3.32, so the published headline understates the effect slightly rather than flattering it.
+
+⚠️ **What the seed varies, and what it does not.** Member initialisation, shuffle order, the in-region slice and the validation set all move. **The hole and tail held-out sets do not**, since they are quantile cutoffs on the axis with no random component, so the out-of-region numbers are replicated on a fixed test set. Only the random split's test set moves.
+
+⚠️ **Member seeds are spaced by N_MEMBERS.** `train_mv_ensemble` uses `seed = base_seed + k`, so consecutive replication seeds would otherwise share nine of ten member initialisations and this would have measured almost nothing. `base_seed = seed * N_MEMBERS` keeps them disjoint, and seed 0 is unchanged, which is how the existing results stayed byte-identical.
 
 | split | region | RMSE | epistemic | aleatoric | total | total / RMSE | cov @ 0.9 | PIT mean |
 |---|---|---|---|---|---|---|---|---|
@@ -263,7 +282,7 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 **The result that pairs steps 6 and 7, and the honest framing of the whole project:** the intervals are badly miscalibrated at the compact edge (ratio 0.66, coverage 0.587 in the furthest bin), and the ranking still works there. **A signal can be useless as an absolute interval and still be good at ordering.** Say this rather than either half alone.
 
-**Total narrowly beats epistemic**, at 48 of 49 deferral rates in each region and on AUC, 0.00642 against 0.00667. ⚠️ This read "at every rate" until 2026-08-31; the single exceptions lose by 0.000012 out of region and 0.000007 in, so the lean is real and the absolute wording was not. Consistent with aleatoric measuring model misfit rather than noise: misfit carries real information about local difficulty, so including it helps the ranking. ⚠️ A 4% margin at one seed. Report it as a consistent lean, not a finding, and note that decision log 8.1 left this open deliberately so the answer is a result either way.
+**Total beats epistemic, and this is now a result rather than a lean.** Paired within each ensemble, total-ranked wins in **all nine runs**, three splits by three seeds, by 0.8% to 5.8% on AUC with a mean near 3.5%. On the tail out of region it is 0.00647 ± 0.00018 against 0.00677 ± 0.00026. ⚠️ Compared *unpaired* the two overlap across seeds, so the paired comparison is the one to quote: both signals come from the same ensemble, so the difference is what varies, not the level. ⚠️ It read "at every rate and in both regions" until 2026-08-31, which was false at 1 of 49 rates per region. Decision log 8.1 deliberately left this open, so the answer is a result either way. Consistent with aleatoric measuring model misfit rather than noise: misfit carries real information about local difficulty, so including it helps the ranking. ⚠️ A 4% margin at one seed. Report it as a consistent lean, not a finding, and note that decision log 8.1 left this open deliberately so the answer is a result either way.
 
 **Sanity check built into the output:** the 0% column is identical across all four rankings, since nothing is deferred there and the ranking cannot matter. A mismatch would mean the cumulative-sum indexing is wrong.
 
@@ -308,7 +327,7 @@ This is what earns the two terms their names, and it independently reproduces st
 - ✅ **The 0.05% target trim reads held-out labels**, deleting 22 rows from the tail's held-out set. **Measured and closed 2026-08-31:** the headline is conservative by about 2% (3.24x against 3.31x), or 6% including the sign class. Decision log 1.4 carries the table and the rewritten justification.
 - ✅ **PIT "0.223 in the furthest bin" was never computed by anything. Closed 2026-08-31:** the real value is 0.153, PIT is now binned by distance, and the hole/tail bias contrast survives at matched distance.
 - ✅ **"About 15% at matched distance" was wrong**, an artifact of unequal bin widths. **Closed 2026-08-31:** measured in identical windows it is 12% over the shared range, with no reliable trend across windows.
-- **Everything except the N-sweep is one seed**, which the headline table does not say.
+- ✅ **Everything except the N-sweep was one seed. Closed 2026-08-31** by replicating all three splits over seeds 0, 1 and 2. Seed noise is 0.2% to 6.7% and every headline clears it by about an order of magnitude. `scripts/seed_spread.py`, `results/seed_spread.json`.
 
 Two loose ends, neither blocking anything: the mirror-pair search (folded into decision log 2.2, the tolerance duplicate check) and a three-seed rerun of the narrow sweep's p30 and p90 if the U's upper arm is ever load-bearing.
 
@@ -599,6 +618,26 @@ architecture claim in either direction.
   harmless in a way it is not here. The cost on the tail split is
   measured, not assumed: about 2%.
 - Ensemble size: 10, matching A.4.
+- **Seed replication FROZEN 2026-08-31: three seeds (0, 1, 2)
+  on all three splits, plus three on the single-MLP distance
+  curve.** `scripts/seed_spread.py` aggregates whatever seeds
+  exist and reports mean, spread and range for every headline
+  quantity. Seed 0 keeps the unsuffixed filenames, so
+  replication is additive and no downstream script had to learn
+  about seeds.
+  **Why three and not more:** seed noise came out 0.2% to 6.7%
+  while every headline effect clears it by roughly an order of
+  magnitude, so more seeds would tighten error bars on
+  conclusions that are not in doubt. The one claim near the
+  edge, the matched-distance premium at 3 sigma, is where extra
+  seeds would buy something if it ever becomes load-bearing.
+  ⚠️ **`base_seed = seed * N_MEMBERS`, not `seed`.**
+  `train_mv_ensemble` assigns member seeds as `base_seed + k`,
+  so consecutive replication seeds would share nine of ten
+  member initialisations and the measured spread would be
+  almost meaningless. Seed 0 is unchanged, since 0 * 10 = 0,
+  which is what let the existing results stay byte-identical
+  and served as the regression check.
 - Diversity mechanism: init and shuffle order only, not
   bootstrap.
 - Reporting space: physical units, not z-scored. Coverage and
@@ -895,8 +934,9 @@ ensemble.
 | 4 | mean-variance, interior hole at p30 | 1 | ✅ done 2026-08-29, out/in RMSE 1.98x, calibration 0.69 out of region |
 | 5 | mean-variance, tail-low | 1 | ✅ done 2026-08-29, out/in RMSE 3.24x, calibration 0.66 out of region |
 | 6 | calibration figures | 0 | ✅ done 2026-08-30, coverage 0.779 at the tail against 0.956 in region, and PIT found a mean bias out there |
-| 7 | deferral curve | 0 | ✅ done 2026-08-30, solving the worst 20% cuts CRPS 41% against 20% at random, total-ranked narrowly ahead of epistemic |
+| 7 | deferral curve | 0 | ✅ done 2026-08-30, solving the worst 20% cuts CRPS 41% against 20% at random; total-ranked beats epistemic in all nine paired runs (run 9) |
 | 8 | full N-sweep | 30, floor 12 | ✅ done 2026-08-30, HOLDS: injected σ recovered at 0.0208 against 0.020 while misfit fell 3.6x, and the extrapolation gap widened 1.71 to 3.39 |
+| 9 | seed replication | 6, plus 6 single MLPs | ✅ done 2026-08-31, every headline claim survives, and total-ranked deferral wins in all nine paired runs |
 
 Runs 2, 4 and 5 are the headline result. Run 8 is validation and goes last.
 

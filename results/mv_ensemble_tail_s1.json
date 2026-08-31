@@ -1,10 +1,10 @@
 {
-  "name": "mv_ensemble_tail",
-  "saved_at": "2026-08-31T08:19:00+00:00",
+  "name": "mv_ensemble_tail_s1",
+  "saved_at": "2026-08-31T08:28:59+00:00",
   "git_commit": "f1b28d2ba1d5d83e4f3ff1572268cab3003fd9df",
   "git_dirty": true,
   "constants": {
-    "SEED": 0,
+    "SEED": 1,
     "SPLIT": "tail",
     "TEST_FRACTION": 0.2,
     "IN_REGION_TEST_FRACTION": 0.2,
@@ -26,35 +26,35 @@
       {
         "set": "in-region",
         "n": 4324,
-        "rmse": 0.01222666480765582,
-        "epistemic": 0.008341406027907474,
-        "aleatoric": 0.01031573751084195,
-        "total": 0.013266253987501286
+        "rmse": 0.012107671083520097,
+        "epistemic": 0.0083375670002548,
+        "aleatoric": 0.011156733952237614,
+        "total": 0.013927948024231694
       },
       {
         "set": "out-of-region",
         "n": 5405,
-        "rmse": 0.039619152986527406,
-        "epistemic": 0.014569284312574173,
-        "aleatoric": 0.021892680762976652,
-        "total": 0.026297405130891842
+        "rmse": 0.039435983386649255,
+        "epistemic": 0.014901458250663458,
+        "aleatoric": 0.023575790296209334,
+        "total": 0.027890345030427845
       }
     ],
     "pinned_fraction": 0.0,
-    "floor_physical": 6.1459672237693976e-09,
+    "floor_physical": 6.041598405345571e-09,
     "member_epochs": [
-      54,
-      54,
-      51,
+      56,
+      55,
+      48,
+      55,
+      58,
+      49,
       53,
       54,
-      57,
-      55,
-      51,
-      57,
-      56
+      53,
+      50
     ],
     "target_std": 0.0789239111480279,
-    "total_seconds": 130.3
+    "total_seconds": 127.7
   }
 }

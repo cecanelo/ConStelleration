@@ -1,11 +1,11 @@
 {
-  "name": "mv_ensemble_tail",
-  "saved_at": "2026-08-31T08:19:00+00:00",
+  "name": "mv_ensemble_hole_s2",
+  "saved_at": "2026-08-31T08:35:54+00:00",
   "git_commit": "f1b28d2ba1d5d83e4f3ff1572268cab3003fd9df",
   "git_dirty": true,
   "constants": {
-    "SEED": 0,
-    "SPLIT": "tail",
+    "SEED": 2,
+    "SPLIT": "hole",
     "TEST_FRACTION": 0.2,
     "IN_REGION_TEST_FRACTION": 0.2,
     "HOLE_CENTRE": 0.3,
@@ -26,35 +26,35 @@
       {
         "set": "in-region",
         "n": 4324,
-        "rmse": 0.01222666480765582,
-        "epistemic": 0.008341406027907474,
-        "aleatoric": 0.01031573751084195,
-        "total": 0.013266253987501286
+        "rmse": 0.01364887498662872,
+        "epistemic": 0.008468477406694588,
+        "aleatoric": 0.0109491171247167,
+        "total": 0.013841902893361865
       },
       {
         "set": "out-of-region",
-        "n": 5405,
-        "rmse": 0.039619152986527406,
-        "epistemic": 0.014569284312574173,
-        "aleatoric": 0.021892680762976652,
-        "total": 0.026297405130891842
+        "n": 5404,
+        "rmse": 0.023734872365526835,
+        "epistemic": 0.011607569007668263,
+        "aleatoric": 0.013309689407637668,
+        "total": 0.01766022339524683
       }
     ],
     "pinned_fraction": 0.0,
-    "floor_physical": 6.1459672237693976e-09,
+    "floor_physical": 6.129466712819553e-09,
     "member_epochs": [
-      54,
-      54,
       51,
-      53,
-      54,
-      57,
-      55,
+      60,
+      49,
       51,
-      57,
-      56
+      51,
+      59,
+      54,
+      54,
+      56,
+      53
     ],
     "target_std": 0.0789239111480279,
-    "total_seconds": 130.3
+    "total_seconds": 128.2
   }
 }

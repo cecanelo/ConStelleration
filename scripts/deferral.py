@@ -42,7 +42,7 @@ curve is optimistic.
 import numpy as np
 import pandas as pd
 
-from constellaration_uq.metrics import crps_gaussian
+from constellaration_uq.metrics import crps_gaussian, deferral_curve
 from constellaration_uq.results import RESULTS_DIR, save_results, save_table
 
 SEED = 0
@@ -65,27 +65,10 @@ RANDOM_REPEATS = 50
 REPORT_AT = [0.0, 0.1, 0.2, 0.3, 0.5]
 
 
-def curve(crps, signal, rates):
-    """Mean CRPS over all points when the top fraction by `signal` is deferred.
-
-    Deferred points contribute zero, so this is the score of the hybrid system,
-    surrogate plus solver, not of the surrogate on what is left. Dividing by the
-    full count rather than the retained count is what makes the ends of the
-    curve mean something: at rate 1 every point is solved and the score is 0.
-
-    One cumulative sum serves every rate, so the whole curve costs one sort.
-    """
-    order = np.argsort(-np.asarray(signal), kind='stable')
-    cumulative = np.concatenate([[0.0], np.cumsum(np.asarray(crps)[order])])
-    n = len(crps)
-    total = cumulative[-1]
-    return np.array([(total - cumulative[round(r * n)]) / n for r in rates])
-
-
 def random_curve(crps, rates, seed):
     """The floor: defer at the same rate, choose at random."""
     rng = np.random.default_rng(seed)
-    runs = [curve(crps, rng.permutation(len(crps)), rates) for _ in range(RANDOM_REPEATS)]
+    runs = [deferral_curve(crps, rng.permutation(len(crps)), rates) for _ in range(RANDOM_REPEATS)]
     return np.mean(runs, axis=0)
 
 
@@ -114,12 +97,12 @@ def run_region(df):
     crps = crps_gaussian(df['y_true'], df['mean'], df['total_variance'])
 
     curves = {
-        'epistemic': curve(crps, df['epistemic_variance'], RATES),
-        'total': curve(crps, df['total_variance'], RATES),
+        'epistemic': deferral_curve(crps, df['epistemic_variance'], RATES),
+        'total': deferral_curve(crps, df['total_variance'], RATES),
         'random': random_curve(crps, RATES, SEED),
         # Ranking by the score itself is the best any ranking can do, which is
         # exactly what makes it the ceiling.
-        'oracle': curve(crps, crps, RATES),
+        'oracle': deferral_curve(crps, crps, RATES),
     }
 
     summary = {

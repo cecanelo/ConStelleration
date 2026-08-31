@@ -24,6 +24,7 @@ Two choices worth knowing about, both recorded in the code below:
   before it was rebinned.
 """
 
+import argparse
 import time
 from itertools import pairwise
 
@@ -57,9 +58,9 @@ TARGET_COL = 'metrics.edge_rotational_transform_over_n_field_periods'
 # Percentile 30 puts the hole immediately above the tail's 0 to 20 without
 # overlapping it, which is what makes the two experiments independent.
 SPLITS = {
-    'random': lambda axis: random_split(axis, SEED, TEST_FRACTION),
-    'hole_p30': lambda axis: hole_split(axis, TEST_FRACTION, HOLE_CENTRE),
-    'tail_low': lambda axis: tail_split(axis, 'low', TEST_FRACTION),
+    'random': lambda axis, seed=SEED: random_split(axis, seed, TEST_FRACTION),
+    'hole_p30': lambda axis, seed=SEED: hole_split(axis, TEST_FRACTION, HOLE_CENTRE),
+    'tail_low': lambda axis, seed=SEED: tail_split(axis, 'low', TEST_FRACTION),
 }
 
 
@@ -155,7 +156,7 @@ def matched_windows(all_points, width=WINDOW_WIDTH):
     return out
 
 
-def run_split(axis, X, y, make_split):
+def run_split(axis, X, y, make_split, seed=SEED):
     train_mask, oor_mask = make_split(axis)
 
     # An in-region held-out slice carved from the training region only, so the
@@ -163,10 +164,10 @@ def run_split(axis, X, y, make_split):
     # error, and the early-stopping validation set never sees out-of-region data.
     train_idx = np.flatnonzero(train_mask)
     fit_idx, in_idx = train_test_split(
-        train_idx, test_size=IN_REGION_TEST_FRACTION, random_state=SEED
+        train_idx, test_size=IN_REGION_TEST_FRACTION, random_state=seed
     )
 
-    predict = fit_mlp(X[fit_idx], y[fit_idx], SEED)
+    predict = fit_mlp(X[fit_idx], y[fit_idx], seed)
 
     # Distance is measured against the fit set, not train_mask. Using train_mask
     # would include the in-region slice in its own reference set and hand those
@@ -228,6 +229,16 @@ def run_split(axis, X, y, make_split):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        '--seed',
+        type=int,
+        default=SEED,
+        help='replication seed. Varies the MLP init, the in-region slice and, on '
+        'the random split, which rows are held out. The hole and tail held-out '
+        'sets are quantile cutoffs on the axis and do not move.',
+    )
+    args = parser.parse_args()
     started = time.time()
     df = load_pool()
     trimmed = trim_target_tails(df, TARGET_COL)
@@ -248,7 +259,7 @@ def main():
     for name, make_split in SPLITS.items():
         print(f'{name:10s} ', end='', flush=True)
         t0 = time.time()
-        summary, points = run_split(axis, X, y, make_split)
+        summary, points = run_split(axis, X, y, lambda a, f=make_split: f(a, args.seed), args.seed)
         elapsed = time.time() - t0
 
         min_bin = min(b['n'] for b in summary['bins'])
@@ -294,7 +305,7 @@ def main():
     print('the edge penalty appears as the distance grows.')
 
     constants = {
-        'SEED': SEED,
+        'SEED': args.seed,
         'TEST_FRACTION': TEST_FRACTION,
         'IN_REGION_TEST_FRACTION': IN_REGION_TEST_FRACTION,
         'HOLE_CENTRE': HOLE_CENTRE,
@@ -310,12 +321,15 @@ def main():
         'matched_windows': windows,
     }
 
-    save_results('distance_error', payload, constants=constants)
+    # Seed 0 keeps the unsuffixed name so replication runs are additive and
+    # nothing downstream has to learn about seeds.
+    out_name = 'distance_error' + (f'_s{args.seed}' if args.seed != SEED else '')
+    save_results(out_name, payload, constants=constants)
     # Per-point rows so the bins can be redrawn without refitting. Roughly 29k
     # rows; the stage 2 rebinning is the precedent for wanting this on disk.
-    save_table('distance_error_points', all_points)
-    save_table('distance_error_matched', windows)
-    print('saved results/distance_error.json, _points.csv and _matched.csv')
+    save_table(out_name + '_points', all_points)
+    save_table(out_name + '_matched', windows)
+    print(f'saved results/{out_name}.json, _points.csv and _matched.csv')
 
 
 if __name__ == '__main__':

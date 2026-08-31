@@ -1,11 +1,11 @@
 {
-  "name": "mv_ensemble_tail",
-  "saved_at": "2026-08-31T08:19:00+00:00",
+  "name": "mv_ensemble_random_s2",
+  "saved_at": "2026-08-31T08:33:43+00:00",
   "git_commit": "f1b28d2ba1d5d83e4f3ff1572268cab3003fd9df",
   "git_dirty": true,
   "constants": {
-    "SEED": 0,
-    "SPLIT": "tail",
+    "SEED": 2,
+    "SPLIT": "random",
     "TEST_FRACTION": 0.2,
     "IN_REGION_TEST_FRACTION": 0.2,
     "HOLE_CENTRE": 0.3,
@@ -26,35 +26,35 @@
       {
         "set": "in-region",
         "n": 4324,
-        "rmse": 0.01222666480765582,
-        "epistemic": 0.008341406027907474,
-        "aleatoric": 0.01031573751084195,
-        "total": 0.013266253987501286
+        "rmse": 0.012794000328623456,
+        "epistemic": 0.008789044022006781,
+        "aleatoric": 0.01079697481828824,
+        "total": 0.013921995545796083
       },
       {
         "set": "out-of-region",
-        "n": 5405,
-        "rmse": 0.039619152986527406,
-        "epistemic": 0.014569284312574173,
-        "aleatoric": 0.021892680762976652,
-        "total": 0.026297405130891842
+        "n": 5404,
+        "rmse": 0.013384225784423904,
+        "epistemic": 0.008770703685411394,
+        "aleatoric": 0.010803751613226654,
+        "total": 0.013915685112088138
       }
     ],
     "pinned_fraction": 0.0,
-    "floor_physical": 6.1459672237693976e-09,
+    "floor_physical": 6.351291340985386e-09,
     "member_epochs": [
-      54,
-      54,
-      51,
-      53,
-      54,
-      57,
+      52,
+      59,
       55,
-      51,
-      57,
-      56
+      56,
+      65,
+      52,
+      54,
+      53,
+      50,
+      54
     ],
     "target_std": 0.0789239111480279,
-    "total_seconds": 130.3
+    "total_seconds": 130.9
   }
 }

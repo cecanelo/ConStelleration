@@ -193,7 +193,13 @@ update the script and rerun.
 
 ### 10. ~~Single-seed disclosure~~ ✅ CLOSED 2026-08-31
 
-**Fixed:** one paragraph directly above the headline table in CLAUDE.md, stating that every figure except the N-sweep is seed 0 and citing the sweep's spreads as the only direct evidence for how much seed noise to expect.
+**Fixed twice, and the second fix superseded the first.** Initially a disclosure: one paragraph above the headline table saying every figure except the N-sweep was seed 0. Later the same day, replicated properly instead. All three splits rerun at seeds 1 and 2 (`mv_ensemble.py --seed`), plus `distance_error.py`, aggregated by the new `scripts/seed_spread.py`.
+
+**Seed noise is 0.2% to 6.7%, mostly 2 to 5%, and every headline clears it by roughly an order of magnitude.** Out-over-in RMSE: random 1.03 ± 0.01, hole 1.90 ± 0.12, tail 3.32 ± 0.10, with no overlap. Tail calibration 1.132 ± 0.034 in region against 0.677 ± 0.021 out. PIT 0.353 ± 0.012 at the tail against 0.534 ± 0.002 at the hole.
+
+⚠️ **A trap that would have made this measure nothing.** `train_mv_ensemble` uses `seed = base_seed + k`, so consecutive replication seeds would have shared nine of ten member initialisations. Fixed by spacing base seeds by `N_MEMBERS`; seed 0 is unchanged, which is how the existing results stayed byte-identical.
+
+**Two claims changed status.** Total-versus-epistemic deferral moved from "a lean, not a finding" to winning all nine paired runs. The matched-distance premium is 1.156 ± 0.052, about 3 sigma from no effect, and is now the weakest headline claim rather than an unqualified one.
 
 **Everything except the N-sweep is seed 0**: all six calibration ratios, all
 coverage and PIT figures, both deliverable curves, the matched-distance

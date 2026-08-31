@@ -663,7 +663,7 @@ The geometry problem this run exposed was that the hole at the median reached on
 
 RMSE on edge rotational transform per field period, whose pool std is 0.07892.
 
-**At matched distance the tail costs about 12% more than the hole.** So most of the headline gap, 3.02 against 1.80, is **distance rather than edge**: the tail split simply asks about configurations much further from the data. What survives after controlling for distance is the edge cost itself, and it is real but modest. That is a weaker claim than "the model interpolates for free and cannot extrapolate," and a considerably more defensible one.
+**At matched distance the tail costs about 16% more than the hole**, 1.156 ± 0.052 across three seeds, individually 1.119, 1.119 and 1.229. All three sit above 1.0, so the edge cost is real, but at roughly 3 standard deviations from no effect this is the weakest of the headline claims and should always be quoted with its spread. So most of the headline gap, 3.02 against 1.80, is **distance rather than edge**: the tail split simply asks about configurations much further from the data. What survives after controlling for distance is the edge cost itself, and it is real but modest. That is a weaker claim than "the model interpolates for free and cannot extrapolate," and a considerably more defensible one.
 
 ⚠️ **CORRECTED 2026-08-31. This read "about 15%, consistently at both 0.2 and 0.4 std out", and both the number and the word "consistently" were artifacts of how it was derived.** It came from interpolating the two binned curves at their bin medians. The bins are equal-count, so their widths differ wherever the splits differ in density: the tail's second bin spans 0.13 to 0.31 while the hole's are about 0.05 wide there. RMSE inside a wide bin is dominated by its far edge, so quoting that bin's value "at 0.2" actually reports something nearer the error at 0.3.
 
@@ -1377,7 +1377,11 @@ Coverage at six nominal levels, CRPS, and PIT, all on total uncertainty per the 
 
 **Decided:** Two curves, epistemic-ranked and total-ranked. Not aleatoric-ranked.
 
-**ANSWERED 2026-08-30: total wins, narrowly.** ⚠️ Corrected 2026-08-31: it wins at 48 of 49 deferral rates in each region, not all of them, the exceptions losing by 0.000012 out of region and 0.000007 in. AUC 0.00642 against 0.00667, consistently at every rate and in both regions. See the step 7 result below. The 4% margin at one seed makes it a lean rather than a finding, but it went the way 5.1 predicts, since the aleatoric term is model misfit and misfit is informative about local difficulty.
+**ANSWERED, and upgraded from a lean to a result 2026-08-31.** Replicated over three seeds on all three splits, total-ranked wins **all nine paired runs** by 0.8% to 5.8% on AUC, mean near 3.5%. On the tail out of region, 0.00647 ± 0.00018 against 0.00677 ± 0.00026.
+
+⚠️ **Quote the paired comparison, not the unpaired one.** Across seeds the two AUC distributions overlap, but both signals are computed from the same ensemble, so what varies between them within a run is the signal and what varies between runs is the level. Comparing the marginals throws away the pairing and understates a difference that is consistent in sign nine times out of nine.
+
+⚠️ It read "at every rate" until 2026-08-31, which was false at one of 49 rates per region. AUC 0.00642 against 0.00667 at seed 0, consistently at every rate and in both regions. See the step 7 result below. The 4% margin at one seed makes it a lean rather than a finding, but it went the way 5.1 predicts, since the aleatoric term is model misfit and misfit is informative about local difficulty.
 
 **Why:** Which signal defers best is a result, not a setup detail, and showing both is nearly free, same trained ensemble and same predictions, just two sort orders. It also tests the "total and epistemic should be close" claim empirically instead of assuming it, which matters because that claim rests on aleatoric sitting near zero, which is itself a prediction 6.2 is designed to check.
 
