@@ -365,6 +365,91 @@ Two loose ends, neither blocking anything: the mirror-pair search (folded into d
 
 ---
 
+---
+
+## Reproducing the results
+
+**Nothing here needs rerunning to read the findings.** All 57 files in `results/`
+and 23 in `figures/` are committed on purpose, so a reviewer sees every number on
+GitHub without running anything. This section is the map for when something does
+need regenerating.
+
+⚠️ **Every command below assumes the right interpreter.** On the Lightning studio
+that is `/home/zeus/miniconda3/envs/cloudspace/bin/python3`; elsewhere it is
+whatever env has the package installed editable. Bare `python3` will fail on
+every import.
+
+⚠️ **The pool is only reachable with `data_raw/`**, 585 MB and gitignored.
+Re-fetch it with the `snapshot_download` call recorded under Environment above.
+Scripts that read `results/*.csv` instead of the parquet do not need it, and they
+are marked below.
+
+**Dependency order.** Three hard edges, everything else is independent:
+
+1. `mv_ensemble.py {random,hole,tail}` writes the `_points.csv` files that
+   `calibration.py`, `deferral.py` and `recalibration.py` all read.
+2. `seed_spread.py` needs the `--seed 1` and `--seed 2` runs to exist, and
+   silently reports a single seed if they do not.
+3. `make_figures.py` and the notebook read `results/*.json`, so they come last.
+
+| script | needs data_raw | runtime | writes |
+|---|---|---|---|
+| `gate_3_5_split_axis.py` | yes | not recorded | `gate_3_5_split_axis.json` |
+| `stage_2_noise_floor.py` | yes | not recorded | `stage_2_noise_floor.json` |
+| `day_1_2_grid.py` | yes | 746s | `day_1_2_grid.{json,csv}` |
+| `hole_placement.py` | yes | not recorded | `hole_placement*.{json,csv}` |
+| `distance_error.py [--seed N]` | yes | 165s | `distance_error*.{json,csv}` |
+| `hp_check.py` | yes | 436s | `hp_check.{json,csv}` |
+| `mse_ensemble.py` | yes | 454s | `mse_ensemble.json`, `_members.csv` |
+| `mv_ensemble.py SPLIT [--seed N] [--sensitivity]` | yes | ~450s each | `mv_ensemble_{split}[_sN].json`, `_points.csv` |
+| `variance_check.py` | yes | 1101s | `variance_check.{json,csv}` |
+| `n_sweep.py [--restart]` | yes | 1386s on a T4 | `n_sweep.{json,csv}` |
+| `solver_failures.py` | yes | ~60s | `solver_failures.json`, `_bins.csv` |
+| `calibration.py` | no | seconds | `calibration.{json,csv}`, `_bins.csv`, `_points.csv` |
+| `deferral.py` | no | seconds | `deferral.json`, `deferral_curve.csv` |
+| `recalibration.py` | no | seconds | `recalibration.{json,csv}` |
+| `seed_spread.py` | no | seconds | `seed_spread.{json,csv}` |
+| `make_figures.py` | yes | seconds plus the parquet read | 5 figures into `figures/` |
+| `time_device.py` | yes | ~2 min | nothing, prints a CPU/GPU comparison |
+
+**The full rebuild from scratch, in order**, is roughly 100 minutes on CPU plus
+the N-sweep:
+
+```
+python3 scripts/mv_ensemble.py random
+python3 scripts/mv_ensemble.py hole
+python3 scripts/mv_ensemble.py tail
+python3 scripts/mv_ensemble.py tail --sensitivity
+for s in 1 2; do for k in random hole tail; do
+    python3 scripts/mv_ensemble.py $k --seed $s
+done; done
+python3 scripts/calibration.py
+python3 scripts/deferral.py
+python3 scripts/recalibration.py
+python3 scripts/seed_spread.py
+```
+
+⚠️ **Seed 0 writes the unsuffixed filenames every downstream script reads.** A
+`--seed 1` run writes `_s1` alongside and changes nothing else, which is what
+made replication additive rather than a refactor.
+
+⚠️ **`n_sweep.py` checkpoints after every cell and resumes by default.** Use
+`--restart` for a clean run. It refuses to resume across a change to its
+constants rather than silently mixing two configurations.
+
+⚠️ **Runs are deterministic**, so a rerun at the same seed reproduces the
+committed files byte for byte. That is the regression check: if a `_points.csv`
+changes after a refactor that was supposed to be behaviour-preserving, it was
+not.
+
+**Figures: the notebook is the working copy and `make_figures.py` is stale.**
+`notebooks/figures.ipynb` holds all 13 figures plus the two tables and is what
+produced everything in `figures/`. `scripts/make_figures.py` covers only 5 of
+them (`split_design`, `distance_reach`, `grid_ratios`, `noise_floor`,
+`gate_3_5_deciles`) and predates the rest. **Do not edit both.** Porting the
+other eight is a real but optional cleanup; until then, regenerate figures by
+running the notebook top to bottom and executing its Save cell.
+
 ## The dataset (verified facts, do not re-derive)
 
 Hugging Face: `proxima-fusion/constellaration`. Paper: arXiv 2506.19583 (NeurIPS 2025). Code: `github.com/proximafusion/constellaration`.
