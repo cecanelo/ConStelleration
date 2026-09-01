@@ -529,9 +529,9 @@ Elongation has a pathological outlier tail: its tail-high held-out set reaches 3
 
 ---
 
-**3.5 GATE: is the split axis really a function of the inputs?** `GATE` ✅ PASSED WITH CAVEAT 2026-08-27
+**3.5 GATE: is the split axis really a function of the inputs?** `GATE` ⚠️ INCONCLUSIVE 2026-08-27, proceeded on the evidence
 
-- [x] Passed
+- [x] Recorded as inconclusive, proceeded on the evidence
 
 **Check:** predict `metrics.aspect_ratio` from the raw coefficients. It should come out near machine precision.
 
@@ -562,6 +562,8 @@ std of y is 1.639 for scale.
 ⚠️ **The caveat: it scored 0.988 against a pre-registered 0.99, so it technically missed.** The bar was set from the information floor implied by the dropped R(0,0). That was the wrong instrument twice over. First, an information floor bounds what *any* model could know; it says nothing about what a quick untuned model reaches on 21k points, so it conflated knowable with learnable. Second, the gate's question is qualitative, input-measurable versus solver output, and a single absolute R² cannot answer it without a reference for what each category looks like on this data.
 
 **Decided: record the miss, do not move the bar.** The threshold stays 0.99 in the script and this entry documents why it was not met. A pre-registered miss that can be explained is stronger evidence of honest method than a threshold quietly relaxed to 0.98 after the fact.
+
+⚠️ **The heading verb was corrected on 2026-09-01.** It read "PASSED WITH CAVEAT" until then, which upgraded the verdict recorded in `results/gate_3_5_split_axis.json`, namely `INCONCLUSIVE`. The bar was never moved and the miss was always disclosed in the paragraph above; only the verb was softer than the artifact. The evidence for proceeding is unchanged.
 
 **The better test, not run, noted for completeness.** Fit the same model on a solver-dependent target (`edge_rotational_transform_over_n_field_periods`) and compare. If aspect ratio is clearly better predicted, the objection dies by contrast rather than by an absolute number. Skipped as the gate had already served its purpose and the day 1-2 grid produces those numbers anyway.
 
@@ -617,7 +619,7 @@ At `test_fraction = 0.2` on the winning axis and direction, the thinnest equal-w
 
 The geometry problem this run exposed was that the hole at the median reached only **0.20** standard deviations from the training region while the tail reached **2.13**, a factor of ten. The main figure's sharpest claim is "at matched distance, leaving the region costs more than filling a gap," and at the median that comparison existed only over 0 to 0.20, where the tail has barely begun to degrade. The three options were widen the hole, accept the weaker claim, or move the hole somewhere sparser.
 
-**Moving it won.** p30 sits immediately above the tail's p0 to p20 without overlapping it, so the two experiments never share a held-out configuration and the held-out sizes stay matched at 5,404 each. It reaches **0.45**, more than doubling the comparison range, with 583 points in the thinnest distance bin and δ = 0.041. It is the widest reach available to a non-overlapping hole, so 0.45 is the ceiling on the matched-distance claim unless the held-out fraction changes.
+**Moving it won.** p30 sits immediately above the tail's p0 to p20 without overlapping it, so the two experiments never share a held-out configuration and the held-out sizes stay matched at 5,404 and 5,405 (`tail_split` includes the boundary row). It reaches **0.45**, more than doubling the comparison range, with 583 points in the thinnest distance bin and δ = 0.041. It is the widest reach available to a non-overlapping hole, so 0.45 is the ceiling on the matched-distance claim unless the held-out fraction changes.
 
 **δ = 0.06 is unaffected.** It was always set by the tail's 276-point bin, and that band did not move.
 
@@ -828,7 +830,7 @@ RMSE on edge rotational transform per field period, whose pool std is 0.07892.
 
 **Where 25 comes from.** The step 0 history in `results/hp_check.json`, for the frozen recipe. Its validation loss is within 3x of its best by epoch 5, 1.5x by epoch 18, 1.2x by epoch 32, and it stops at 75. So 25 lands where the mean is substantially learned, with two thirds of the epoch budget left for the NLL phase. There is a range of defensible answers here, roughly 20 to 40, and what matters is that the number is fixed, documented, and identical at every N in the sweep. Making it a fraction of the run would vary it with N and break the recipe freeze.
 
-**Where 1e-6 comes from.** Training happens in z-scored space, where the target has unit variance, so 1e-6 is six orders of magnitude below the signal. It is safely above float32 resolution, so 1/variance cannot explode, and in physical units it is a standard deviation of 0.00008 on a target whose own spread is 0.0786. That is far below anything Stage 2 could resolve, which is the point: **the floor must be too small to manufacture an aleatoric term**, because a floor that binds would be read by the step 5 variance-head check as a working variance head.
+**Where 1e-6 comes from.** Training happens in z-scored space, where the target has unit variance, so 1e-6 is six orders of magnitude below the signal. It is safely above float32 resolution, so 1/variance cannot explode, and in physical units it is a standard deviation of 0.00008 on a target whose own spread is 0.078924. That is far below anything Stage 2 could resolve, which is the point: **the floor must be too small to manufacture an aleatoric term**, because a floor that binds would be read by the step 5 variance-head check as a working variance head.
 
 **β-NLL trigger, so this is not an open-ended option.** Adopt it if either symptom appears in the first mean-variance ensemble: the predicted variance sitting pinned on its floor across most of the in-region data, or training destabilising once warm-up ends. Both are visible in one run. If neither appears, β-NLL stays unused and is reported as considered-not-needed rather than untried.
 
@@ -882,7 +884,7 @@ RMSE on edge rotational transform per field period, whose pool std is 0.07892.
 
 **Proceeding anyway, on the evidence rather than on the verdict.** 1.75x Table 7 on RMSE, against their tuned ensemble, after one afternoon of bounded tuning. The sklearn single MLP was 2.3x, so the PyTorch port plus ensembling closed roughly a third of that gap. A pipeline bug does not look like 1.75x; it looks like 5x, or R² near zero.
 
-⚠️ **R² is NOT comparable to Table 7 and must not be reported as if it were.** Ours is 0.98181 against their 0.997, which reads far worse than the RMSE ratio implies. R² depends on the test set's own spread: our target has std 0.0786, while back-solving std = RMSE / NRMSE from their table gives about 0.115. Same RMSE, different denominator, different R². **RMSE is the comparable number; R² is not**, and 5.3 already restricts the comparability claim to RMSE and R² jointly, which this narrows further.
+⚠️ **R² is NOT comparable to Table 7 and must not be reported as if it were.** Ours is 0.98181 against their 0.997, which reads far worse than the RMSE ratio implies. R² depends on the test set's own spread: our target has std 0.078924, while back-solving std = RMSE / NRMSE from their table gives about 0.115. Same RMSE, different denominator, different R². **RMSE is the comparable number; R² is not**, and 5.3 already restricts the comparability claim to RMSE and R² jointly, which this narrows further.
 
 ⚠️ **Not a baseline for anything, corrected 2026-08-31.** This called the figure below "the baseline for steps 3 and 4". It is not comparable to them: `mse_ensemble.py` still aggregates as `mean(sqrt(variance))`, retired everywhere else on 2026-08-30, and this run used a different loss and 21,118 training rows against 16,794. Three changes at once. Steps 3 and 4 use step 2's own in-region 0.00887, so nothing downstream depends on it. **Incidental only:** in-region epistemic spread is 0.00631, which is 8% of the target's standard deviation and about 60% of the ensemble's total error. The members genuinely disagree even where the data is dense. That number has to grow off-distribution or the project has no subject.
 
@@ -1117,7 +1119,7 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 **Two readings, not separable from that table.** The estimator may be biased low, because pairs near-identical in the kept coordinates are probably also near-identical in the dropped ones: every shape in this pool came from the same optimizers, so the coefficients are correlated across modes and the pairs it finds do not actually differ in what was hidden. Or the hidden coefficients genuinely carry little independent information about the rotational transform, which is dominated by low-order structure. Probably both, partly.
 
-**The replacement: add Gaussian noise of a known standard deviation to the training targets**, at three levels chosen to bracket the baseline: 0.005, 0.020, 0.050, which are 6%, 25% and 64% of the target's own spread. Aleatoric should come out near sqrt(baseline² + σ²) at each. Evaluation is against clean targets, since independent noise averages out of a fitted mean.
+**The replacement: add Gaussian noise of a known standard deviation to the training targets**, at three levels chosen to bracket the baseline: 0.005, 0.020, 0.050, which are 6%, 25% and 63% of the target's own spread. Aleatoric should come out near sqrt(baseline² + σ²) at each. Evaluation is against clean targets, since independent noise averages out of a fitted mean.
 
 **Why this is a better instrument.** The injected magnitude is exact rather than estimated. No pair assumption, no root-two correction, no argument about estimator bias. Three levels rather than one, so the answer is a curve rather than a coincidence, and a head that merely rescales something fails the low level while a saturating head fails the high one.
 

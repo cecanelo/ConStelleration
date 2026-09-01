@@ -89,7 +89,7 @@ TARGET_COL = 'metrics.edge_rotational_transform_over_n_field_periods'
 AXIS_COL = 'metrics.aspect_ratio'
 
 # Chosen to bracket the baseline aleatoric of 0.01048 rather than to be round.
-# The target's own standard deviation is 0.0786, so these are 6%, 25% and 64%
+# The target's own standard deviation is 0.078924, so these are 6%, 25% and 63%
 # of it: one below the baseline, one clearly above, one dominant. A head that
 # merely rescales something would fail the low level; a head that saturates
 # would fail the high one.

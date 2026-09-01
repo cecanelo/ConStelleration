@@ -174,7 +174,7 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 **Step 1 done (2026-08-29), `scripts/mse_ensemble.py`, ten members in 454s. Ensemble RMSE 0.01052 against a pre-registered bar of 0.0105. `results/mse_ensemble.json` records `verdict: FAIL`, by 0.2%, and we proceeded on the evidence below.** The bar was badly calibrated, derived as a round number with no uncertainty, and the miss is recorded rather than the bar moved and rather than the seed rerolled. Proceeding on the evidence: 1.75x Table 7 against their tuned ensemble, the sklearn single MLP was 2.3x, and the ensemble beats its best member by 14% so it is not carried by one lucky run.
 
-⚠️ **Do not report R² against Table 7.** Ours is 0.982 against their 0.997, which reads far worse than the RMSE ratio implies, because R² depends on the test set's own spread: 0.0786 for us against roughly 0.115 back-solved from their table. RMSE is the comparable number, R² is not.
+⚠️ **Do not report R² against Table 7.** Ours is 0.982 against their 0.997, which reads far worse than the RMSE ratio implies, because R² depends on the test set's own spread: 0.078924 for us against roughly 0.115 back-solved from their table. RMSE is the comparable number, R² is not.
 
 **In-region epistemic spread is 0.00631**, 8% of the target std and about 60% of this ensemble's total error.
 
@@ -390,7 +390,7 @@ are marked below.
    `calibration.py`, `deferral.py` and `recalibration.py` all read.
 2. `seed_spread.py` needs the `--seed 1` and `--seed 2` runs to exist, and
    silently reports a single seed if they do not.
-3. `make_figures.py` and the notebook read `results/*.json`, so they come last.
+3. The notebook reads `results/*.json`, so it comes last.
 
 | script | needs data_raw | runtime | writes |
 |---|---|---|---|
@@ -409,7 +409,6 @@ are marked below.
 | `deferral.py` | no | seconds | `deferral.json`, `deferral_curve.csv` |
 | `recalibration.py` | no | seconds | `recalibration.{json,csv}` |
 | `seed_spread.py` | no | seconds | `seed_spread.{json,csv}` |
-| `make_figures.py` | yes | seconds plus the parquet read | 5 figures into `figures/` |
 | `time_device.py` | yes | ~2 min | nothing, prints a CPU/GPU comparison |
 
 **The full rebuild from scratch, in order**, is roughly 100 minutes on CPU plus
@@ -451,13 +450,20 @@ wheel was built for. **Compare to fifteen significant figures across machines an
 byte for byte within one.** All 13 figure PNGs did reproduce byte-identically
 across the two machines, which is the stronger check and the one to quote.
 
-**Figures: the notebook is the working copy and `make_figures.py` is stale.**
-`notebooks/figures.ipynb` holds all 13 figures plus the two tables and is what
-produced everything in `figures/`. `scripts/make_figures.py` covers only 5 of
-them (`split_design`, `distance_reach`, `grid_ratios`, `noise_floor`,
-`gate_3_5_deciles`) and predates the rest. **Do not edit both.** Porting the
-other eight is a real but optional cleanup; until then, regenerate figures by
-running the notebook top to bottom and executing its Save cell.
+**Figures: the notebook is the only source.** `notebooks/figures.ipynb` holds
+all 13 figures plus four tables and is what produced everything in `figures/`.
+Regenerate by running it top to bottom and executing its Save cell.
+
+⚠️ **`scripts/make_figures.py` was deleted on 2026-09-01.** It covered 5 of the
+13, and two of its behaviours had drifted from the notebook rather than merely
+lagging it: it still generated the `distance_reach` histogram that Figure 2
+deliberately replaced, and its `save_figure` omitted the `CreationDate: None`
+metadata, so its PDFs were not reproducible. A second, diverging definition of
+figures the notebook already owned is the same failure pattern as the two inline
+copies of the uncertainty aggregation, so it was removed rather than ported. If
+a terminal path is ever wanted, `jupyter nbconvert --execute --inplace
+notebooks/figures.ipynb` runs the notebook with no duplicated plotting code
+(nbconvert is not currently installed).
 
 ## The dataset (verified facts, do not re-derive)
 

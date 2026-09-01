@@ -10,7 +10,7 @@ truth, and to verify against code and `results/*.json`.
 digit. The measurement is sound. The risk sits almost entirely in the reporting,
 where prose compressed curves into single numbers the bins contradict.
 
-**Status: items 1 to 17 closed, all 2026-08-31. Every audit finding is addressed.** What remains is 18, the write-up, and 19, switching the studio back to CPU. Closed items keep their full text with the result appended, so the reasoning stays readable next to what it produced. Closed items keep their full text with the result appended, so the reasoning stays readable next to what it produced.
+**Status: items 1 to 17 closed, 2026-08-31 except item 4, closed 2026-09-01. Every audit finding is addressed.** What remains is 18, the write-up, and 19, switching the studio back to CPU. Closed items keep their full text with the result appended, so the reasoning stays readable next to what it produced.
 
 ---
 
@@ -124,12 +124,23 @@ over the shared range, against 0.04157 for the full tail, so most of the raw
 3.02-versus-1.80 gap is distance rather than edge. Verified that the refit left
 the per-split bins byte-identical.
 
-### 4. ~~Small stale numbers~~ ✅ PARTLY CLOSED 2026-08-31
+### 4. ~~Small stale numbers~~ ✅ CLOSED 2026-09-01
 
 - `scripts/calibration.py` docstring corrected: 1.04 to 1.18 in region, 0.66 to
-  0.69 out, epistemic 0.00887. ✅
-- Still open: "sizes stay matched at 5,404 each" should be **5,405**, and target
-  std quoted as 0.0786 should be **0.078924**.
+  0.69 out, epistemic 0.00887. ✅ 2026-08-31
+- "sizes stay matched at 5,404 each" corrected. The two held-out sets are
+  **5,404 and 5,405**, not equal, because `tail_split` includes the boundary
+  row. Verified against `results/calibration.json`. ✅ 2026-09-01
+- Target std corrected from 0.0786 to **0.078924** in CLAUDE.md, the decision
+  log (twice) and `scripts/variance_check.py`. Verified against `target_std` in
+  every `mv_ensemble_*.json`. ✅ 2026-09-01
+- ⚠️ **Knock-on the audit did not name.** The injected noise levels were
+  described as "6%, 25% and 64%" of the target spread, a rounding of the wrong
+  denominator. Against 0.078924 the third is 63.4%, so 64% became **63%** in
+  the decision log and in `variance_check.py`.
+
+All three are prose or comment edits, so no result or figure was regenerated
+and every committed artifact is unchanged.
 
 ---
 
