@@ -437,10 +437,19 @@ made replication additive rather than a refactor.
 `--restart` for a clean run. It refuses to resume across a change to its
 constants rather than silently mixing two configurations.
 
-⚠️ **Runs are deterministic**, so a rerun at the same seed reproduces the
-committed files byte for byte. That is the regression check: if a `_points.csv`
-changes after a refactor that was supposed to be behaviour-preserving, it was
-not.
+⚠️ **Runs are deterministic on a given machine**, so a rerun at the same seed
+reproduces the committed files byte for byte. That is the regression check: if a
+`_points.csv` changes after a refactor that was supposed to be
+behaviour-preserving, it was not.
+
+⚠️ **Across machines the last bit can move, and that is not a failure.**
+Measured 2026-09-01 when the repo moved from the Lightning studio to a laptop:
+two of forty rows in `recalibration.csv` differed in the final digit of the CRPS
+column, about 2 parts in 10^18. It is summation order inside `np.mean` over
+5,404 elements, which numpy splits differently depending on the SIMD width its
+wheel was built for. **Compare to fifteen significant figures across machines and
+byte for byte within one.** All 13 figure PNGs did reproduce byte-identically
+across the two machines, which is the stronger check and the one to quote.
 
 **Figures: the notebook is the working copy and `make_figures.py` is stale.**
 `notebooks/figures.ipynb` holds all 13 figures plus the two tables and is what
