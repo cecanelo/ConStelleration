@@ -16,7 +16,7 @@ where prose compressed curves into single numbers the bins contradict.
 
 ## A. The one real methodological issue
 
-### 1. ~~The target trim reads held-out labels and deletes the tail's hardest test rows~~ ✅ CLOSED 2026-08-31
+### 1. ~~The target trim reads held-out labels and deletes the tail's hardest test rows~~ CLOSED 2026-08-31
 
 `data.py:48-52`, called before the split in every script.
 
@@ -62,12 +62,12 @@ the files calibration and deferral read.
 
 ## B. Numbers the artifacts contradict
 
-### 2. ~~The furthest-bin PIT of 0.223 does not exist~~ ✅ CLOSED 2026-08-31
+### 2. ~~The furthest-bin PIT of 0.223 does not exist~~ CLOSED 2026-08-31
 
 No script computed per-bin PIT: decision log 7.1 cut PIT binned by distance. The
 number was written into both documents anyway. **The real value is 0.153.**
 
-**Fixed** by adding `pit_mean` to the calibration bin rows. ⚠️ 7.1's cut does not
+**Fixed** by adding `pit_mean` to the calibration bin rows. 7.1's cut does not
 forbid this: it cut the per-bin PIT *histogram*, where ten bars rest on about
 sixty points each, while a per-bin *mean* rests on all ~675. Two different
 objects, conflated when the cut was written.
@@ -89,7 +89,7 @@ The hole is flat between 0.52 and 0.55 across its whole range with no trend, so
 it is not biased anywhere. The tail is already at 0.429 in its nearest bin, so it
 is biased everywhere out of region and worsens with distance.
 
-### 3. ~~"The tail costs about 15% more at both 0.2 and 0.4 std"~~ ✅ CLOSED 2026-08-31
+### 3. ~~"The tail costs about 15% more at both 0.2 and 0.4 std"~~ CLOSED 2026-08-31
 
 The 15% came from interpolating two binned curves at their bin medians. The bins
 are equal-count, so their widths differ where the splits differ in density: the
@@ -110,7 +110,7 @@ identical fixed-width windows and writes `results/distance_error_matched.csv`.
 
 **Result: about 12% over the shared range.**
 
-⚠️ **The audit's proposed replacement was also a trend, and the trend is not
+**The audit's proposed replacement was also a trend, and the trend is not
 there.** It suggested "~3% at 0.2 std and ~27% at 0.4, so the premium grows with
 distance", and that was predicted again before this ran. Four of the five windows
 sit between 1.03 and 1.13 with no ordering, and the single 1.35 comes from the
@@ -124,17 +124,17 @@ over the shared range, against 0.04157 for the full tail, so most of the raw
 3.02-versus-1.80 gap is distance rather than edge. Verified that the refit left
 the per-split bins byte-identical.
 
-### 4. ~~Small stale numbers~~ ✅ CLOSED 2026-09-01
+### 4. ~~Small stale numbers~~ CLOSED 2026-09-01
 
 - `scripts/calibration.py` docstring corrected: 1.04 to 1.18 in region, 0.66 to
-  0.69 out, epistemic 0.00887. ✅ 2026-08-31
+  0.69 out, epistemic 0.00887. Closed 2026-08-31
 - "sizes stay matched at 5,404 each" corrected. The two held-out sets are
   **5,404 and 5,405**, not equal, because `tail_split` includes the boundary
-  row. Verified against `results/calibration.json`. ✅ 2026-09-01
+  row. Verified against `results/calibration.json`. Closed 2026-09-01
 - Target std corrected from 0.0786 to **0.078924** in CLAUDE.md, the decision
   log (twice) and `scripts/variance_check.py`. Verified against `target_std` in
-  every `mv_ensemble_*.json`. ✅ 2026-09-01
-- ⚠️ **Knock-on the audit did not name.** The injected noise levels were
+  every `mv_ensemble_*.json`. Closed 2026-09-01
+- **Knock-on the audit did not name.** The injected noise levels were
   described as "6%, 25% and 64%" of the target spread, a rounding of the wrong
   denominator. Against 0.078924 the third is 63.4%, so 64% became **63%** in
   the decision log and in `variance_check.py`.
@@ -146,7 +146,7 @@ and every committed artifact is unchanged.
 
 ## C. Sentences that overclaim their own tables
 
-### 5. ~~"Coverage degrades monotonically with distance"~~ ✅ CLOSED 2026-08-31
+### 5. ~~"Coverage degrades monotonically with distance"~~ CLOSED 2026-08-31
 
 **Fixed** in CLAUDE.md and the decision log: "falls from 0.93 to 0.59 with one non-monotone step".
 
@@ -154,7 +154,7 @@ Tail bins: 0.928, 0.873, 0.781, **0.822**, 0.803, 0.766, 0.675, 0.587. The hole
 rises first too. Downward trend, not monotone. Say "falls from 0.93 to 0.59 with
 one non-monotone step".
 
-### 6. ~~"The irreducible part sits at 0.020 and does not move"~~ ✅ CLOSED 2026-08-31
+### 6. ~~"The irreducible part sits at 0.020 and does not move"~~ CLOSED 2026-08-31
 
 **Fixed** in both documents and in `n_sweep.py`'s own docstring, which carried the same wording. Replaced with the convergence and its mechanism rather than a softened adjective.
 
@@ -169,7 +169,7 @@ convergence evidence rather than noise. The pre-registered form, "the noisy
 curve flattens near sqrt(misfit² + σ²)", was already correct; the "does not
 move" gloss was written over it afterwards.
 
-### 7. ~~"Total beats epistemic at every rate and in both regions"~~ ✅ CLOSED 2026-08-31
+### 7. ~~"Total beats epistemic at every rate and in both regions"~~ CLOSED 2026-08-31
 
 **Fixed:** 48 of 49 rates per region, exceptions losing by 0.000012 and 0.000007.
 
@@ -177,7 +177,7 @@ move" gloss was written over it afterwards.
 in-region (one loss by 0.000007). The AUC lean and the "consistent lean, not a
 finding" framing both survive. "At every rate" is literally false.
 
-### 8. ~~Verdict verbs disagree with the artifacts~~ ✅ CLOSED 2026-08-31
+### 8. ~~Verdict verbs disagree with the artifacts~~ CLOSED 2026-08-31
 
 **Fixed:** gate 3.5 now reads "returned INCONCLUSIVE and we proceeded on the evidence", step 1 now cites `verdict: FAIL` from its own JSON. Reasons for proceeding kept verbatim.
 
@@ -190,7 +190,7 @@ credit. Align the verbs with the artifacts and keep the stated reasons for
 proceeding. **"The bar failed and here is why we proceeded" is more credible
 than a softened verb.**
 
-### 9. ~~Step 1's epistemic 0.00631 is not comparable to any later number~~ ✅ CLOSED 2026-08-31
+### 9. ~~Step 1's epistemic 0.00631 is not comparable to any later number~~ CLOSED 2026-08-31
 
 **Fixed:** marked non-comparable in both documents, naming all three simultaneous changes (aggregation, loss, training size), and noting that nothing downstream uses it.
 
@@ -202,13 +202,13 @@ and training size (21,118 against 16,794). Nothing downstream uses it, since the
 hole and tail comparisons use step 2's own 0.00887. Mark it non-comparable, or
 update the script and rerun.
 
-### 10. ~~Single-seed disclosure~~ ✅ CLOSED 2026-08-31
+### 10. ~~Single-seed disclosure~~ CLOSED 2026-08-31
 
 **Fixed twice, and the second fix superseded the first.** Initially a disclosure: one paragraph above the headline table saying every figure except the N-sweep was seed 0. Later the same day, replicated properly instead. All three splits rerun at seeds 1 and 2 (`mv_ensemble.py --seed`), plus `distance_error.py`, aggregated by the new `scripts/seed_spread.py`.
 
 **Seed noise is 0.2% to 6.7%, mostly 2 to 5%, and every headline clears it by roughly an order of magnitude.** Out-over-in RMSE: random 1.03 ± 0.01, hole 1.90 ± 0.12, tail 3.32 ± 0.10, with no overlap. Tail calibration 1.132 ± 0.034 in region against 0.677 ± 0.021 out. PIT 0.353 ± 0.012 at the tail against 0.534 ± 0.002 at the hole.
 
-⚠️ **A trap that would have made this measure nothing.** `train_mv_ensemble` uses `seed = base_seed + k`, so consecutive replication seeds would have shared nine of ten member initialisations. Fixed by spacing base seeds by `N_MEMBERS`; seed 0 is unchanged, which is how the existing results stayed byte-identical.
+**A trap that would have made this measure nothing.** `train_mv_ensemble` uses `seed = base_seed + k`, so consecutive replication seeds would have shared nine of ten member initialisations. Fixed by spacing base seeds by `N_MEMBERS`; seed 0 is unchanged, which is how the existing results stayed byte-identical.
 
 **Two claims changed status.** Total-versus-epistemic deferral moved from "a lean, not a finding" to winning all nine paired runs. The matched-distance premium is 1.156 ± 0.052, about 3 sigma from no effect, and is now the weakest headline claim rather than an unqualified one.
 
@@ -220,7 +220,7 @@ not for the headline numbers.
 One plain sentence beside the headline table, rather than scattered caveats.
 Stated once it retires the objection; discovered, it reads as an omission.
 
-### 11. ~~The N-sweep pre-registration cannot be verified from the repository~~ ✅ CLOSED 2026-08-31
+### 11. ~~The N-sweep pre-registration cannot be verified from the repository~~ CLOSED 2026-08-31
 
 **Fixed:** the attestation is now stated as this session's record rather than the repository's, with the git evidence named. **Standing rule adopted: commit a prediction in its own commit before the run that tests it.**
 
@@ -233,7 +233,7 @@ The predictions did land (~0.023 predicted against 0.0236 measured at full N).
 Note the attestation honestly, and **from now on commit predictions in their own
 commit before running.**
 
-### 12. ~~Decision 4.7's "500 validation points confirmed sufficient at N=1000"~~ ✅ CLOSED 2026-08-31
+### 12. ~~Decision 4.7's "500 validation points confirmed sufficient at N=1000"~~ CLOSED 2026-08-31
 
 **Fixed:** the N=1000 half is withdrawn, since that row ran at lr 3e-4 rather than the frozen 1e-3. Superseded by better evidence: the N-sweep's three seeds at N=1000 under the frozen recipe, epistemic 0.01477 / 0.01486 / 0.01462.
 
@@ -250,7 +250,7 @@ about ±1%. That is better evidence under the recipe actually used.
 
 ## D. Latent code hazards, none of which has fired
 
-### 13. ~~The variance clamp zeroes the gradient in both directions~~ ✅ CLOSED 2026-08-31
+### 13. ~~The variance clamp zeroes the gradient in both directions~~ CLOSED 2026-08-31
 
 **Fixed:** recorded in `gaussian_nll`'s docstring, naming the `pinned_fraction` monitor as the only thing catching it and instructing that it not be removed.
 
@@ -265,7 +265,7 @@ Never fired: `pinned_fraction` is 0.0 in all three runs. The monitor at
 `mv_ensemble.py:190-195` is the only thing standing between this and a silent
 wrong number. Record that in a comment beside it.
 
-### 14. ~~Warm-up checkpoint escape~~ ✅ CLOSED 2026-08-31
+### 14. ~~Warm-up checkpoint escape~~ CLOSED 2026-08-31
 
 **Fixed:** `train_one_mv` raises when `max_epochs <= warmup_epochs`. Two tests, one for the rejection and one bounding it (`max_epochs = warmup_epochs + 1` must still run).
 
@@ -277,7 +277,7 @@ head, silently. Unreachable with the frozen constants (500 > 25).
 
 Add `if max_epochs <= warmup_epochs: raise`, plus a test.
 
-### 15. ~~NaN targets vanish silently in the trim~~ ✅ CLOSED 2026-08-31
+### 15. ~~NaN targets vanish silently in the trim~~ CLOSED 2026-08-31
 
 **Fixed:** `trim_target_tails` raises on NaN targets rather than folding them into the tail fraction. Docstring also now records that the function reads labels before any split exists, pointing at 1.4.
 
@@ -285,7 +285,7 @@ Add `if max_epochs <= warmup_epochs: raise`, plus a test.
 trim with no count discrepancy attributable to it. Zero NaNs in the current pool,
 so latent only. Add an explicit guard.
 
-### 16. ~~Two comment inaccuracies~~ ✅ CLOSED 2026-08-31
+### 16. ~~Two comment inaccuracies~~ CLOSED 2026-08-31
 
 **Fixed:** the distance-reference comment now says fit ∪ validation and why that is deliberate; `n_sweep.py`'s unused distance computation is deleted along with its now-unused import.
 
@@ -298,7 +298,7 @@ so latent only. Add an explicit guard.
 
 ## E. Remaining deliverable work
 
-### 17. ~~Three missing story assets~~ ✅ CLOSED 2026-08-31
+### 17. ~~Three missing story assets~~ CLOSED 2026-08-31
 
 Designed from the narrative rather than from the notebook:
 
@@ -307,9 +307,9 @@ cannot drift from the artifacts.
 
 - **Table 1, ours against Table 7.** Three rows: our 10-member MSE ensemble at
   1.75x on edge rotational transform, plus one untuned MLP on each of two
-  metrics at 2.4x and 2.8x. ⚠️ The second pair is the real point: a pipeline bug
+  metrics at 2.4x and 2.8x. The second pair is the real point: a pipeline bug
   would not produce a consistent factor across two unrelated metrics. RMSE only,
-  never R². ⚠️ There is no log10 qi ensemble and the cell says so, since quoting
+  never R². There is no log10 qi ensemble and the cell says so, since quoting
   2.8x as "our qi result" would be wrong.
 - **Table 2, the six-row decomposition.** From `calibration.json`, carrying the
   single-seed caveat and the ~2% trim conservatism in its own markdown so the
@@ -321,7 +321,7 @@ Notebook renumbered and verified: 11 figures, 13 unique headings, all rendered.
 
 ### 18. The write-up
 
-### 19. ~~Switch the studio back to CPU~~ ✅ CLOSED 2026-08-31
+### 19. ~~Switch the studio back to CPU~~ CLOSED 2026-08-31
 
 Nothing remaining needs the T4 except item 1's sensitivity run, which ran on CPU
 in 129s. Decision log 8.6's solver-failure check also ran on CPU, five gradient
@@ -332,8 +332,8 @@ boosters in about a minute.
 ## Suggested order
 
 1. ~~Item 1~~ done 2026-08-31, on CPU in 129s
-2. ~~Items 2 and 3~~ ✅ done 2026-08-31, both results files regenerated
-3. ~~Everything in B, C and D~~ ✅ done 2026-08-31
+2. ~~Items 2 and 3~~ done 2026-08-31, both results files regenerated
+3. ~~Everything in B, C and D~~ done 2026-08-31
 4. ~~E~~ 17 and 19 done; **18, the write-up, is the only item left**
 
 **Cut for the pitch, keep in an appendix:** coverage-versus-nominal, the

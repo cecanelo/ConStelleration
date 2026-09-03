@@ -10,7 +10,7 @@ Work top to bottom. Items marked `SETTLED` are already decided; the reasoning is
 
 Write your own reasoning in the blockquote under each open item, in your own words. That text is what you will use to answer "why did you do it that way" three weeks from now.
 
-⚠️ marks the two decisions that fail silently if you get them wrong.
+Two decisions fail silently if you get them wrong. Both are called out in bold where they appear.
 
 ---
 
@@ -83,7 +83,7 @@ Write your own reasoning in the blockquote under each open item, in your own wor
 
 **HF Community tab:** two threads only. One Parquet bot, one unanswered question from a month ago asking whether the task is boundary-to-metrics or metrics-to-boundary. Nothing competing, and a mild signal that the forward direction is uncrowded.
 
-⚠️ **The claim is dated on purpose.** If the write-up or interview lands materially later than August 2026, re-run the search before repeating the claim.
+**The claim is dated on purpose.** If the write-up or interview lands materially later than August 2026, re-run the search before repeating the claim.
 
 **My decision:**
 > Narrow and dated. I searched four channels, found about fourteen works using the dataset, and read the four that could have collided. Two come close on method but neither studies calibration or extrapolation, and I can name both. A broad claim would get knocked down in one sentence by anyone who knows the field.
@@ -138,7 +138,7 @@ Write your own reasoning in the blockquote under each open item, in your own wor
 
 ---
 
-**1.4 Outlier trimming** `SETTLED` ⚠️
+**1.4 Outlier trimming** `SETTLED` 
 
 - [x] Decided
 
@@ -149,13 +149,13 @@ Write your own reasoning in the blockquote under each open item, in your own wor
 - **A squared-error metric must not be decided by 0.1% of rows.** The 28 rows the trim removes carry targets 3 to 10 standard deviations from the mean. In a random 20% test slice about six of them would land in the test set and would dominate RMSE outright, so the reported accuracy would be a fact about six rows rather than about the model.
 - **The extreme low tail is a sign-convention artifact.** Those rows carry *negative* edge rotational transform, and Proxima's own benchmark scorer applies `np.abs()` before scoring (`problems.py` 174, 248, 384). Under their scoring a configuration at −0.46 has value 0.46, an ordinary high number. The signed target is bimodal for a reason that is not physically fundamental, and the trim removes that second mode.
 
-**A.4 alignment is now a bonus, not the justification.** ⚠️ Three reasons it cannot carry the weight:
+**A.4 alignment is now a bonus, not the justification.** Three reasons it cannot carry the weight:
 
 - **It is inferred from prose, not verified against code.** The paper's appendix says "0.05% tails trimmed per metric" and the A.4 training code is not in the public repo. Contrast 1.5, where the 80-column input vector was verified against their actual `_to_X` source. Nothing equivalent exists here and nothing can.
 - **Three things about their procedure are unknown:** whether 0.05% means per tail or in total, whether the trim is per metric independently or the union across all twelve, and whether it happens before or after their split. The third is the one that matters.
 - **We already know something differs**, since our pool is 27,050 against their stated ~23k and this document records that the trim cannot close that gap.
 
-⚠️ **And matching them would not make the trim safe here anyway.** A.4 used a random split, where rows deleted by extreme target land in train and test proportionally and nothing systematic happens. This project splits deliberately along an axis correlated with the target, so the deleted rows concentrate in the held-out set. **"We did what they did" is a comparability argument, not a validity argument**, and this entry previously used it as both.
+**And matching them would not make the trim safe here anyway.** A.4 used a random split, where rows deleted by extreme target land in train and test proportionally and nothing systematic happens. This project splits deliberately along an axis correlated with the target, so the deleted rows concentrate in the held-out set. **"We did what they did" is a comparability argument, not a validity argument**, and this entry previously used it as both.
 
 **MEASURED 2026-08-31, `scripts/mv_ensemble.py tail --sensitivity`.** The leak is real and small. The trim reads held-out labels, and 22 of the 28 deleted rows fall inside the tail split's held-out region.
 
@@ -178,7 +178,7 @@ Write your own reasoning in the blockquote under each open item, in your own wor
 
 ---
 
-**1.5 Input vector** `SETTLED` ✅ VERIFIED 2026-08-26
+**1.5 Input vector** `SETTLED` VERIFIED 2026-08-26
 
 **Decided:** The 80 coefficients as the paper defines them, with major radius fixed at 1.
 
@@ -203,7 +203,7 @@ x = np.concatenate([
 
 ---
 
-**1.6 Failed rows** `SETTLED` ✅ VERIFIED 2026-08-26
+**1.6 Failed rows** `SETTLED` VERIFIED 2026-08-26
 
 **Decided:** Load `default` unfiltered to get the ~24k flagged failures. Use them only for the survivorship figure, never for training.
 
@@ -222,7 +222,7 @@ errors_dframe = dframe[[
 dframe = dframe[~errors_dframe.any(axis=1)]
 ```
 
-⚠️ **THE NULL-ROW TRAP.** Exactly one row in 182,222 (file 3, index 60739) has `boundary.r_cos`, `boundary.z_sin`, `n_field_periods` and every metric set to `None`. It failed at boundary *generation*, so the solver never ran on it, so:
+**THE NULL-ROW TRAP.** Exactly one row in 182,222 (file 3, index 60739) has `boundary.r_cos`, `boundary.z_sin`, `n_field_periods` and every metric set to `None`. It failed at boundary *generation*, so the solver never ran on it, so:
 
 ```
 misc.has_optimize_boundary_omnigenity_desc_error : True
@@ -258,7 +258,7 @@ Negating every `z_sin` coefficient leaves R untouched and sends Z to −Z, which
 
 **Why not canonicalize, second and independent reason:** the two handedness classes are not interchangeable. The sign of the reference coefficient correlates with the target at −0.29 across the 27,022-row pool, and the classes have different aspect ratio, elongation and triangularity distributions. Folding them together discards a signal the model can currently use.
 
-⚠️ **The original justification does not survive contact with their code. Corrected 2026-08-27.** This entry previously argued that mirroring flips the sign of rotational transform, so canonicalizing inputs without flipping targets would create identical inputs with opposite labels. Checked against both the repo (cloned, read directly) and the pool:
+**The original justification does not survive contact with their code. Corrected 2026-08-27.** This entry previously argued that mirroring flips the sign of rotational transform, so canonicalizing inputs without flipping targets would create identical inputs with opposite labels. Checked against both the repo (cloned, read directly) and the pool:
 
 - Their canonicalizer keys on `z_sin[0, DATASET_MAX_TOROIDAL_MODE + 1]`, and that constant is 4, so the reference coefficient is `z_sin[m=0,n=1]`. Confirms the column used above is the right one. Its docstring reads "Flip theta sign."
 - `forward_model.py:135-144` interpolates `equilibrium.iotaf` to normalized effective radius 1.0 and passes it straight through, divided by NFP at line 217. The stored metric is VMEC's **signed** edge iota. No absolute value anywhere in the forward model.
@@ -268,7 +268,7 @@ Negating every `z_sin` coefficient leaves R untouched and sends Z to −Z, which
 
 Read together: the generation optimizer selected for positive signed iota, which is why negatives are rare, and handedness does not determine the sign of the stored target. The most consistent reading is that VMEC's iota sign follows its own toroidal flux convention rather than boundary handedness, and the `np.abs()` in `problems.py` is defensive coding for cases where it might not.
 
-⚠️ **Retracted supporting evidence.** This entry previously cited "the target takes both signs in the data (minimum −0.49 and −0.56 in the two sign groups)" as showing handedness is a real varying property. It shows no such thing. A negative minimum within each group is consistent with a 0.5% negative tail and says nothing about handedness. Do not reuse that sentence.
+**Retracted supporting evidence.** This entry previously cited "the target takes both signs in the data (minimum −0.49 and −0.56 in the two sign groups)" as showing handedness is a real varying property. It shows no such thing. A negative minimum within each group is consistent with a 0.5% negative tail and says nothing about handedness. Do not reuse that sentence.
 
 **Still open, deliberately parked:** whether a genuine mirrored *pair* carries opposite iota. Neither their code nor the class-level distributions settle it, because two rows in opposite handedness classes are not necessarily mirror images of one another. Testable via the pair search folded into 2.2. Nothing downstream depends on the answer.
 
@@ -279,7 +279,7 @@ Read together: the generation optimizer selected for positive signed iota, which
 
 ---
 
-**1.8 The filter chain** `SETTLED` ✅ VERIFIED 2026-08-26
+**1.8 The filter chain** `SETTLED` VERIFIED 2026-08-26
 
 - [x] Decided
 
@@ -300,7 +300,7 @@ Steps 1 to 3 are Proxima's own filters, copied from their loader for Table 7 com
 
 **Generation pathway has no single column.** It is read off which of four settings blocks has a non-null `.id`. This partitions cleanly: 182,221 of 182,222 rows have exactly one populated. Counts match the documented pathways: `desc` 87,727 (~88k), `nae_init` 48,851 (~49k), `qp_init` 29,886 (~30k), `vmec` 15,757 (~15k). Note these `.id` values identify *settings groups*, not rows: 17,671 desc rows share only 148 unique ids, so they cannot be used for deduplication.
 
-**⚠️ Unresolved: 27,050 vs A.4's stated ~23k.** Ruled out by direct test: duplicates (only 8 identical boundaries in 27,050), the five-flag filter (removes 1 extra row over the NeurIPS flag alone), and the documented 0.05% per-metric trim (leaves 26,746; reaching 23k would need roughly a 1% trim). Two surviving explanations, not distinguishable from public information: A.4's appendix describes its filter chain incompletely, or the HF dataset grew after the NeurIPS submission.
+**Unresolved: 27,050 vs A.4's stated ~23k.** Ruled out by direct test: duplicates (only 8 identical boundaries in 27,050), the five-flag filter (removes 1 extra row over the NeurIPS flag alone), and the documented 0.05% per-metric trim (leaves 26,746; reaching 23k would need roughly a 1% trim). Two surviving explanations, not distinguishable from public information: A.4's appendix describes its filter chain incompletely, or the HF dataset grew after the NeurIPS submission.
 
 **Decided:** accept 27,050 and document the discrepancy honestly in the write-up. A.4's training code is not published (same reason its NRMSE/SNR formulas are unrecoverable, see 5.3), so exact reproduction may not be achievable, and a 15% pool difference will not change which (axis, direction) pair wins the day 1-2 grid.
 
@@ -323,7 +323,7 @@ Steps 1 to 3 are Proxima's own filters, copied from their loader for Table 7 com
 
 ---
 
-**2.2 Duplicate detection tolerance** `SETTLED` ✅ 2026-08-27 (mirror-pair search still open)
+**2.2 Duplicate detection tolerance** `SETTLED` 2026-08-27 (mirror-pair search still open)
 
 - [x] Decided (exact-match and tolerance-based passes both done)
 
@@ -359,7 +359,7 @@ Third question answered by the same index, at roughly ten extra lines. Settles t
 - **Do not pick a tolerance blind.** Compare two distributions: each row's distance to its nearest *real* neighbour excluding itself, against each mirrored query's distance to its nearest real row. The first is the yardstick for how close two independently generated designs normally land. Overlapping distributions mean genuine pairs plausibly exist; mirrored distances sitting systematically further out mean the dataset never contains both handedness versions of any shape. **That comparison is the result.** Everything else is plumbing.
 - **Verdict.** For pairs inside tolerance, scatter partner target against original. On `y_j = +y_i` the target is mirror-invariant. On `y_j = −y_i` it flips. No pairs at all is a clean answer too.
 
-⚠️ **"No pairs exist" does not make canonicalizing safe.** It only means the training set holds no contradictory labels today. The model still meets both handednesses at test time, and folding them together still discards the −0.29 signal. All three outcomes leave the 1.7 decision standing.
+**"No pairs exist" does not make canonicalizing safe.** It only means the training set holds no contradictory labels today. The model still meets both handednesses at test time, and folding them together still discards the −0.29 signal. All three outcomes leave the 1.7 decision standing.
 
 **When:** here, inside 2.3's index build. Not as its own task, which is what would make it expensive. Run it standalone only if the sign claim is challenged in review, or if `aspect_ratio_over_edge_rotational_transform` is ever promoted to a target, since it inherits the sign.
 
@@ -394,9 +394,9 @@ Third question answered by the same index, at roughly ten extra lines. Settles t
 
 **The single strongest line in the output:** the 28 pairs closer than distance 0.197 have a median target difference of **0.000000 for both targets**. Shapes that are effectively identical carry identical answers to six decimals. That is determinism measured rather than asserted, and it is the sentence worth quoting.
 
-⚠️ **Binning matters more than expected, and the first pass got it wrong.** With uniform deciles, log10 qi came out ABOVE FLOOR at intercept 0.021, twice its bar. The cause was the bottom decile spanning distance 0 to 1.53 while genuinely close pairs live below 0.5, so the fit window sat at distances 1.1 to 2.4 and the intercept was a long extrapolation into unobserved territory. qi is about 12x steeper in shape than edge rotational transform (slope 0.053 vs 0.0044), and steeper functions curve more, so a linear extrapolation overshoots hardest there. Rebinning with quantile edges packed into the left tail (`BIN_QUANTILES = [0, 0.001, 0.005, 0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 1.0]`) dropped the intercept 10x to 0.0018 and flipped the verdict. **Record this rather than hiding it:** the first answer was a binning artifact, diagnosed by noticing the fit window never came near zero.
+**Binning matters more than expected, and the first pass got it wrong.** With uniform deciles, log10 qi came out ABOVE FLOOR at intercept 0.021, twice its bar. The cause was the bottom decile spanning distance 0 to 1.53 while genuinely close pairs live below 0.5, so the fit window sat at distances 1.1 to 2.4 and the intercept was a long extrapolation into unobserved territory. qi is about 12x steeper in shape than edge rotational transform (slope 0.053 vs 0.0044), and steeper functions curve more, so a linear extrapolation overshoots hardest there. Rebinning with quantile edges packed into the left tail (`BIN_QUANTILES = [0, 0.001, 0.005, 0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 1.0]`) dropped the intercept 10x to 0.0018 and flipped the verdict. **Record this rather than hiding it:** the first answer was a binning artifact, diagnosed by noticing the fit window never came near zero.
 
-⚠️ **High-dimensional caveat, belongs in the write-up.** Median nearest-neighbour distance is 3.84 in z-scored 80-dimensional space, which is far. In high dimensions everything is far from everything, so genuine near-twins barely exist outside the bottom percentile. This caps what the check can prove, and it is better stated by us than discovered by a reviewer.
+**High-dimensional caveat, belongs in the write-up.** Median nearest-neighbour distance is 3.84 in z-scored 80-dimensional space, which is far. In high dimensions everything is far from everything, so genuine near-twins barely exist outside the bottom percentile. This caps what the check can prove, and it is better stated by us than discovered by a reviewer.
 
 ---
 
@@ -417,7 +417,7 @@ Third question answered by the same index, at roughly ten extra lines. Settles t
 
 ---
 
-**2.5 GATE: does the data behave as expected?** `GATE` ✅ PASSED 2026-08-27
+**2.5 GATE: does the data behave as expected?** `GATE` PASSED 2026-08-27
 
 - [x] Passed
 
@@ -440,7 +440,7 @@ Third question answered by the same index, at roughly ten extra lines. Settles t
 
 ---
 
-**3.1 Primary target** `SETTLED` ✅ 2026-08-27
+**3.1 Primary target** `SETTLED` 2026-08-27
 
 - [x] Decided
 
@@ -475,7 +475,7 @@ Third question answered by the same index, at roughly ten extra lines. Settles t
 
 **CLOSED 2026-08-31: no secondary target.** Superseded by 9.1, second target, which cut it on cost: `mv_ensemble.py` has no `--target` flag and no log10 handling, and both downstream scripts hardcode the points filenames, so it is about 90 minutes rather than the one line of code that was assumed. Per the standing decision it would have got its own ensemble and never its own N-sweep, but it does not get one.
 
-⚠️ **The comparative claim in the Why above survives in weakened form, and should be made.** The grid table already shows the two targets fail differently, so the write-up can say the extrapolation premise is not target-specific while stating plainly that every *uncertainty* finding rests on one target. See 9.1 for the wording and the future-work framing.
+**The comparative claim in the Why above survives in weakened form, and should be made.** The grid table already shows the two targets fail differently, so the write-up can say the extrapolation premise is not target-specific while stating plainly that every *uncertainty* finding rests on one target. See 9.1 for the wording and the future-work framing.
 
 ---
 
@@ -487,7 +487,7 @@ Third question answered by the same index, at roughly ten extra lines. Settles t
 
 ---
 
-**3.4 Split axis** `SETTLED` ✅ 2026-08-27
+**3.4 Split axis** `SETTLED` 2026-08-27
 
 - [x] Decided
 
@@ -529,7 +529,7 @@ Elongation has a pathological outlier tail: its tail-high held-out set reaches 3
 
 ---
 
-**3.5 GATE: is the split axis really a function of the inputs?** `GATE` ⚠️ INCONCLUSIVE 2026-08-27, proceeded on the evidence
+**3.5 GATE: is the split axis really a function of the inputs?** `GATE` INCONCLUSIVE 2026-08-27, proceeded on the evidence
 
 - [x] Recorded as inconclusive, proceeded on the evidence
 
@@ -559,11 +559,11 @@ std of y is 1.639 for scale.
 - **Not converged.** Every increase in training budget raised the number (GBM 0.983 to 0.988 on iterations alone; the MLP early-stopped at 116 then 179 iterations, never approaching its cap). Budget-limited, not information-limited, which is the signature of a mapping that exists.
 - **Error is diffuse, not structural.** Median absolute error 0.072, p90 0.265.
 
-⚠️ **The caveat: it scored 0.988 against a pre-registered 0.99, so it technically missed.** The bar was set from the information floor implied by the dropped R(0,0). That was the wrong instrument twice over. First, an information floor bounds what *any* model could know; it says nothing about what a quick untuned model reaches on 21k points, so it conflated knowable with learnable. Second, the gate's question is qualitative, input-measurable versus solver output, and a single absolute R² cannot answer it without a reference for what each category looks like on this data.
+**The caveat: it scored 0.988 against a pre-registered 0.99, so it technically missed.** The bar was set from the information floor implied by the dropped R(0,0). That was the wrong instrument twice over. First, an information floor bounds what *any* model could know; it says nothing about what a quick untuned model reaches on 21k points, so it conflated knowable with learnable. Second, the gate's question is qualitative, input-measurable versus solver output, and a single absolute R² cannot answer it without a reference for what each category looks like on this data.
 
 **Decided: record the miss, do not move the bar.** The threshold stays 0.99 in the script and this entry documents why it was not met. A pre-registered miss that can be explained is stronger evidence of honest method than a threshold quietly relaxed to 0.98 after the fact.
 
-⚠️ **The heading verb was corrected on 2026-09-01.** It read "PASSED WITH CAVEAT" until then, which upgraded the verdict recorded in `results/gate_3_5_split_axis.json`, namely `INCONCLUSIVE`. The bar was never moved and the miss was always disclosed in the paragraph above; only the verb was softer than the artifact. The evidence for proceeding is unchanged.
+**The heading verb was corrected on 2026-09-01.** It read "PASSED WITH CAVEAT" until then, which upgraded the verdict recorded in `results/gate_3_5_split_axis.json`, namely `INCONCLUSIVE`. The bar was never moved and the miss was always disclosed in the paragraph above; only the verb was softer than the artifact. The evidence for proceeding is unchanged.
 
 **The better test, not run, noted for completeness.** Fit the same model on a solver-dependent target (`edge_rotational_transform_over_n_field_periods`) and compare. If aspect ratio is clearly better predicted, the objection dies by contrast rather than by an absolute number. Skipped as the gate had already served its purpose and the day 1-2 grid produces those numbers anyway.
 
@@ -575,7 +575,7 @@ std of y is 1.639 for scale.
 
 ---
 
-**3.6 Split direction** `SETTLED` ✅ 2026-08-27
+**3.6 Split direction** `SETTLED` 2026-08-27
 
 - [x] Decided
 
@@ -605,7 +605,7 @@ Holding out the compact end triples the error. Holding out the high end costs 14
 
 ---
 
-**3.7 Threshold and held-out fraction** `SETTLED` ✅ 2026-08-27
+**3.7 Threshold and held-out fraction** `SETTLED` 2026-08-27
 
 - [x] Decided
 
@@ -623,13 +623,13 @@ The geometry problem this run exposed was that the hole at the median reached on
 
 **δ = 0.06 is unaffected.** It was always set by the tail's 276-point bin, and that band did not move.
 
-⚠️ **The sweep revised a headline finding.** The day 1-2 result had the hole at the median costing nothing, 0.95 against the tail's 3.02, which read as clean interpolation versus failed extrapolation. That held for one placement only. Across centres the penalty is a **U in percentile**, lowest in the dense middle and rising at both ends: at 20% held out, 1.96 / 1.80 / 1.12 / 0.95 / 0.90 / 0.80 / 0.82 for centres p20 through p80; at 10% held out, which is the only run that reaches p90, 1.79 / 1.47 / 1.48 / 0.94 / 0.82 / 0.73 / 0.78 / 0.75 / 0.91. Ratio tracks reach almost monotonically, so gap **width** drives most of the penalty and sparsity matters because it makes gaps wide.
+**The sweep revised a headline finding.** The day 1-2 result had the hole at the median costing nothing, 0.95 against the tail's 3.02, which read as clean interpolation versus failed extrapolation. That held for one placement only. Across centres the penalty is a **U in percentile**, lowest in the dense middle and rising at both ends: at 20% held out, 1.96 / 1.80 / 1.12 / 0.95 / 0.90 / 0.80 / 0.82 for centres p20 through p80; at 10% held out, which is the only run that reaches p90, 1.79 / 1.47 / 1.48 / 0.94 / 0.82 / 0.73 / 0.78 / 0.75 / 0.91. Ratio tracks reach almost monotonically, so gap **width** drives most of the penalty and sparsity matters because it makes gaps wide.
 
-⚠️ **A 20% band cannot be centred above p80.** It runs off the end of the data and stops being an interior hole. Reaching p90 needs the 10% sweep, and p95 to p100 can host no interior hole at any width. That region is tail-high territory only.
+**A 20% band cannot be centred above p80.** It runs off the end of the data and stops being an interior hole. Reaching p90 needs the 10% sweep, and p95 to p100 can host no interior hole at any width. That region is tail-high territory only.
 
-⚠️ **Ratios below 1.0 are expected, not anomalous.** The denominator is a random in-region slice drawn from the whole training region including its thin compact end, while a hole in the dense middle contains none of those hard cases. A ratio of 0.80 means filling that gap was easier than the model's average job, not that removing data helped.
+**Ratios below 1.0 are expected, not anomalous.** The denominator is a random in-region slice drawn from the whole training region including its thin compact end, while a hole in the dense middle contains none of those hard cases. A ratio of 0.80 means filling that gap was easier than the model's average job, not that removing data helped.
 
-⚠️ **Two rows carry the U's upper arm and they are the weakest in either table.** The 10% sweep's p90 and tail-low bins hold about 130 points against roughly 310 elsewhere, at a single seed. Before leaning on the asymmetry, rerun p30 and p90 at seeds 0, 1, 2. Six fits, about six minutes.
+**Two rows carry the U's upper arm and they are the weakest in either table.** The 10% sweep's p90 and tail-low bins hold about 130 points against roughly 310 elsewhere, at a single seed. Before leaning on the asymmetry, rerun p30 and p90 at seeds 0, 1, 2. Six fits, about six minutes.
 
 **Options:** fixed percentile / fixed aspect ratio value / sized to hit a target test-set count
 
@@ -669,7 +669,7 @@ RMSE on edge rotational transform per field period, whose pool std is 0.07892.
 
 **At matched distance the tail costs about 16% more than the hole**, 1.156 ± 0.052 across three seeds, individually 1.119, 1.119 and 1.229. All three sit above 1.0, so the edge cost is real, but at roughly 3 standard deviations from no effect this is the weakest of the headline claims and should always be quoted with its spread. So most of the headline gap, 3.02 against 1.80, is **distance rather than edge**: the tail split simply asks about configurations much further from the data. What survives after controlling for distance is the edge cost itself, and it is real but modest. That is a weaker claim than "the model interpolates for free and cannot extrapolate," and a considerably more defensible one.
 
-⚠️ **CORRECTED 2026-08-31. This read "about 15%, consistently at both 0.2 and 0.4 std out", and both the number and the word "consistently" were artifacts of how it was derived.** It came from interpolating the two binned curves at their bin medians. The bins are equal-count, so their widths differ wherever the splits differ in density: the tail's second bin spans 0.13 to 0.31 while the hole's are about 0.05 wide there. RMSE inside a wide bin is dominated by its far edge, so quoting that bin's value "at 0.2" actually reports something nearer the error at 0.3.
+**CORRECTED 2026-08-31. This read "about 15%, consistently at both 0.2 and 0.4 std out", and both the number and the word "consistently" were artifacts of how it was derived.** It came from interpolating the two binned curves at their bin medians. The bins are equal-count, so their widths differ wherever the splits differ in density: the tail's second bin spans 0.13 to 0.31 while the hole's are about 0.05 wide there. RMSE inside a wide bin is dominated by its far edge, so quoting that bin's value "at 0.2" actually reports something nearer the error at 0.3.
 
 **`distance_error.matched_windows` now computes it** in identical fixed-width windows, writing `results/distance_error_matched.csv`. Fixed width rather than equal count, because equal counts and equal windows cannot both hold when the two splits differ in density, and here the window is what must match.
 
@@ -682,7 +682,7 @@ RMSE on edge rotational transform per field period, whose pool std is 0.07892.
 | 0.4 to 0.5 | 593 | 277 | 0.03305 | 0.04457 | 1.35 |
 | **whole shared range** | **5,403** | **1,826** | **0.02615** | **0.02929** | **1.12** |
 
-⚠️ **A trend was predicted before this ran and the data does not support it.** The expectation, stated in advance, was that the cost would grow with distance, from near zero at 0.2 std to roughly 27% at 0.4. The first four windows instead sit between 1.03 and 1.13 with no ordering, and the single high value of 1.35 comes from the thinnest window, which also has the worst-matched medians (0.426 against 0.448) in the range where error rises fastest, so part of it is residual distance mismatch rather than edge effect.
+**A trend was predicted before this ran and the data does not support it.** The expectation, stated in advance, was that the cost would grow with distance, from near zero at 0.2 std to roughly 27% at 0.4. The first four windows instead sit between 1.03 and 1.13 with no ordering, and the single high value of 1.35 comes from the thinnest window, which also has the worst-matched medians (0.426 against 0.448) in the range where error rises fastest, so part of it is residual distance mismatch rather than edge effect.
 
 **Report the 12% over the shared range and nothing finer.** Reading a trend off five noisy windows would be the same mistake, one level down, that produced the original 15%.
 
@@ -690,13 +690,13 @@ RMSE on edge rotational transform per field period, whose pool std is 0.07892.
 
 **The far tail number is the one to quote in a pitch.** At 1.83 standard deviations out, RMSE is 73% of the target's own standard deviation. Predicting the dataset mean and ignoring the input entirely would score 100%. The surrogate is barely beating nothing out there while still returning a confident-looking number, which is the deferral argument in one line.
 
-⚠️ **Two measurement choices that would otherwise flatter the result.** Distance is computed against the fit set, not the training mask; using the mask would include the in-region slice in its own reference set and hand those points distance 0 by construction rather than by measurement. And the in-region slice is a single anchor at distance 0, not part of the binned curve: it is half the evaluation set, so quantile binning over the combined set spent three of eight bins stacking it on the y axis.
+**Two measurement choices that would otherwise flatter the result.** Distance is computed against the fit set, not the training mask; using the mask would include the in-region slice in its own reference set and hand those points distance 0 by construction rather than by measurement. And the in-region slice is a single anchor at distance 0, not part of the binned curve: it is half the evaluation set, so quantile binning over the combined set spent three of eight bins stacking it on the y axis.
 
 ---
 
 **ENSEMBLE MEASUREMENT 2026-08-29, `scripts/mv_ensemble.py`, three ten-member mean-variance ensembles.** Steps 2, 4 and 5. This is the headline result the project was built to produce.
 
-⚠️ **Re-aggregated 2026-08-30. Every uncertainty column below rose and no model changed.** The scripts summarised per-point variances as mean(sqrt(variance)) rather than sqrt(mean(variance)); full reasoning in 5.4 below and in `metrics.rms_uncertainty`. Reruns produced byte-identical per-point predictions, so this was a reporting fix. The superseded ratios were 1.05 / 1.03 / 0.93 / 0.62 / 0.96 / 0.56.
+**Re-aggregated 2026-08-30. Every uncertainty column below rose and no model changed.** The scripts summarised per-point variances as mean(sqrt(variance)) rather than sqrt(mean(variance)); full reasoning in 5.4 below and in `metrics.rms_uncertainty`. Reruns produced byte-identical per-point predictions, so this was a reporting fix. The superseded ratios were 1.05 / 1.03 / 0.93 / 0.62 / 0.96 / 0.56.
 
 | split | region | RMSE | epistemic | aleatoric | total | total / RMSE | cov @ 0.9 | PIT mean |
 |---|---|---|---|---|---|---|---|---|
@@ -717,11 +717,11 @@ RMSE on edge rotational transform per field period, whose pool std is 0.07892.
 
 **The hole-versus-tail contrast survives the move to ensembles.** Out-of-region RMSE is 1.98x in-region for the hole against 3.24x for the tail, against 1.80 and 3.02 from the single-MLP grid. Same story, slightly compressed.
 
-⚠️ **Aleatoric rises off-distribution too**, 0.01032 to 0.02189 at the tail, and by a larger factor than epistemic does (2.1x against 1.7x). Noise in the world cannot depend on where you stand, so this is further evidence that the term measures model misfit rather than label noise, consistent with 5.1's first measurement. Say it plainly in the write-up rather than being caught on it.
+**Aleatoric rises off-distribution too**, 0.01032 to 0.02189 at the tail, and by a larger factor than epistemic does (2.1x against 1.7x). Noise in the world cannot depend on where you stand, so this is further evidence that the term measures model misfit rather than label noise, consistent with 5.1's first measurement. Say it plainly in the write-up rather than being caught on it.
 
-⚠️ **The tail is BIASED, not merely overconfident. Found 2026-08-30 by step 6, and it is new.** PIT mean out of region is 0.348 at the tail against 0.51 to 0.53 in every other cell, dropping to **0.153** in the furthest bin. PIT below 0.5 means the truth lands below the predicted mean, so the model **systematically over-predicts** edge rotational transform at the compact edge. That is a fault of the mean, not of the interval, and widening the error bars would not address it. The hole shows nothing comparable at 0.531, so this separates the hole and tail conditions a second time and independently of the coverage gap.
+**The tail is BIASED, not merely overconfident. Found 2026-08-30 by step 6, and it is new.** PIT mean out of region is 0.348 at the tail against 0.51 to 0.53 in every other cell, dropping to **0.153** in the furthest bin. PIT below 0.5 means the truth lands below the predicted mean, so the model **systematically over-predicts** edge rotational transform at the compact edge. That is a fault of the mean, not of the interval, and widening the error bars would not address it. The hole shows nothing comparable at 0.531, so this separates the hole and tail conditions a second time and independently of the coverage gap.
 
-⚠️ **That comparison was confounded until 2026-08-31, and the confound is now removed rather than assumed away.** The tail's held-out points reach 2.13 std out while the hole's stop at 0.45, so comparing the two aggregate PIT values compared different distance distributions. If bias grows with distance, the whole contrast could have been a distance effect. This is precisely the error 3.11's matched-distance analysis exists to prevent, occurring one diagnostic over.
+**That comparison was confounded until 2026-08-31, and the confound is now removed rather than assumed away.** The tail's held-out points reach 2.13 std out while the hole's stop at 0.45, so comparing the two aggregate PIT values compared different distance distributions. If bias grows with distance, the whole contrast could have been a distance effect. This is precisely the error 3.11's matched-distance analysis exists to prevent, occurring one diagnostic over.
 
 **PIT is now binned by distance** (`scripts/calibration.py`, `results/calibration_bins.csv`) and the contrast survives:
 
@@ -732,9 +732,9 @@ RMSE on edge rotational transform per field period, whose pool std is 0.07892.
 
 **The hole sits flat between 0.52 and 0.55 across its entire range with no trend at all**, so it is not biased anywhere. **The tail is already at 0.429 in its nearest bin**, so it is biased everywhere out of region and worsens with distance. The contrast is real at matched distance, and it is stronger than the aggregates suggested.
 
-⚠️ **The previously quoted 0.223 for the furthest bin was never computed by anything.** No script produced per-bin PIT before this change. The real value is 0.153.
+**The previously quoted 0.223 for the furthest bin was never computed by anything.** No script produced per-bin PIT before this change. The real value is 0.153.
 
-⚠️ **This does not reopen 7.1.** That entry cut the per-bin PIT *histogram*, where ten bars rest on about sixty points each and jump around from sampling noise alone. A per-bin PIT *mean* rests on all ~675 points in the bin. Two different objects, conflated when the cut was written. Consequence for the write-up: do not describe the tail's calibration failure as purely a variance problem. Consequence for method: this came from the aggregate PIT histogram, which was cut from 7.1 and reinstated the same day, and it justified itself on its first run.
+**This does not reopen 7.1.** That entry cut the per-bin PIT *histogram*, where ten bars rest on about sixty points each and jump around from sampling noise alone. A per-bin PIT *mean* rests on all ~675 points in the bin. Two different objects, conflated when the cut was written. Consequence for the write-up: do not describe the tail's calibration failure as purely a variance problem. Consequence for method: this came from the aggregate PIT histogram, which was cut from 7.1 and reinstated the same day, and it justified itself on its first run.
 
 **Nothing pinned on the variance floor in any of the three runs**, so 4.4's β-NLL question stays closed across all five ensembles trained so far.
 
@@ -786,7 +786,7 @@ RMSE on edge rotational transform per field period, whose pool std is 0.07892.
 
 **Why:** Proxima found this by Bayesian optimization over depth, width, activation, and learning rate. Do not spend two days rediscovering it.
 
-⚠️ **Comparability caveat, do not overstate this.** The paper never says whether A.4's ensemble is one shared network with a twelve-metric output or twelve separate single-metric ensembles built from the same architecture template. "The MLPs mapped coefficients to target key metrics" is genuinely ambiguous, and the A.4 training code is not in the public repo (checked directly). What is certain is our side: single-target, one mean-variance network per metric. So the claim is same-metric test performance, not a verified same-or-different architecture claim in either direction. Saying "I used their architecture" is fine; saying "I reproduced their model" is not.
+**Comparability caveat, do not overstate this.** The paper never says whether A.4's ensemble is one shared network with a twelve-metric output or twelve separate single-metric ensembles built from the same architecture template. "The MLPs mapped coefficients to target key metrics" is genuinely ambiguous, and the A.4 training code is not in the public repo (checked directly). What is certain is our side: single-target, one mean-variance network per metric. So the claim is same-metric test performance, not a verified same-or-different architecture claim in either direction. Saying "I used their architecture" is fine; saying "I reproduced their model" is not.
 
 ---
 
@@ -818,7 +818,7 @@ RMSE on edge rotational transform per field period, whose pool std is 0.07892.
 
 ---
 
-**4.4 Loss and variance-collapse fix** `SETTLED` ✅ 2026-08-29
+**4.4 Loss and variance-collapse fix** `SETTLED` 2026-08-29
 
 - [x] Decided
 
@@ -838,7 +838,7 @@ RMSE on edge rotational transform per field period, whose pool std is 0.07892.
 
 **No separate tuning run for these.** Step 5, the variance-head check, already asks the only question that matters here: does the variance head recover a magnitude that was deliberately injected. A second check for the same thing is scope this budget does not survive.
 
-⚠️ **Reorder steps 2 to 5 because of this entry.** The original order built three mean-variance ensembles and then checked the variance head. If the loss is wrong that means redoing three. Run the random-split ensemble first, then the variance-head check on it, then the hole and tail ensembles. A bad loss then costs one ensemble instead of three, and the reordering costs nothing.
+**Reorder steps 2 to 5 because of this entry.** The original order built three mean-variance ensembles and then checked the variance head. If the loss is wrong that means redoing three. Run the random-split ensemble first, then the variance-head check on it, then the hole and tail ensembles. A bad loss then costs one ensemble instead of three, and the reordering costs nothing.
 
 **My decision:**
 > Warm-up 25 epochs, floor the variance at 1e-6, and write the β-NLL trigger down as an observable symptom rather than leaving it as a vague reserve. Then move the variance-head check to immediately after the first mean-variance ensemble, so if any of this is wrong I find out after one run rather than three.
@@ -876,17 +876,17 @@ RMSE on edge rotational transform per field period, whose pool std is 0.07892.
 
 **Where that number comes from.** Table 7 reports 0.006 for this metric. The sklearn single MLP gave 0.0138 and the frozen PyTorch recipe gives 0.01149 for one network (4.10). Averaging ten members should improve on a single member comfortably, so 0.0105 is a modest bar rather than a stretch, and it still sits about 1.75x above Table 7, which is expected against a tuned ensemble. Missing it points at the pipeline, which is the only thing this run exists to test.
 
-⚠️ **Registered before seeing the result on purpose.** Gate 3.5 set its bar from an argument that did not apply, missed it, and the miss was recorded rather than the bar moved. That only works if the bar exists first. Judging afterwards always produces a pass.
+**Registered before seeing the result on purpose.** Gate 3.5 set its bar from an argument that did not apply, missed it, and the miss was recorded rather than the bar moved. That only works if the bar exists first. Judging afterwards always produces a pass.
 
-**RESULT 2026-08-29, `scripts/mse_ensemble.py`, ten members in 454s. `results/mse_ensemble.json` records `verdict: FAIL`, by 0.2%.** ⚠️ This entry said "MISSED" until 2026-08-31, which softened the artifact's own verdict. The bar was not moved and the miss was always disclosed; only the verb was gentler than the JSON. Ensemble RMSE **0.01052** against the 0.0105 bar. The second condition passed cleanly: 0.01052 against a best member of 0.01223, a 14% improvement, so the ensemble is not being carried by one lucky member. Per-member RMSE spans 0.01223 to 0.01304 across ten seeds, with nothing pathological.
+**RESULT 2026-08-29, `scripts/mse_ensemble.py`, ten members in 454s. `results/mse_ensemble.json` records `verdict: FAIL`, by 0.2%.** This entry said "MISSED" until 2026-08-31, which softened the artifact's own verdict. The bar was not moved and the miss was always disclosed; only the verb was gentler than the JSON. Ensemble RMSE **0.01052** against the 0.0105 bar. The second condition passed cleanly: 0.01052 against a best member of 0.01223, a 14% improvement, so the ensemble is not being carried by one lucky member. Per-member RMSE spans 0.01223 to 0.01304 across ten seeds, with nothing pathological.
 
-⚠️ **The bar was badly calibrated, and that is the finding, not a pipeline defect.** 0.0105 was derived as "a modest improvement over the single network's 0.01149" and rounded, with no uncertainty attached. The run landed 0.00002 away, inside any sensible error bar on a number chosen that way. Same failure as gate 3.5's 0.99: a threshold that sounded principled and was not. The bar is recorded as missed and is **not** moved retroactively, and the run was **not** repeated with a different seed until it passed.
+**The bar was badly calibrated, and that is the finding, not a pipeline defect.** 0.0105 was derived as "a modest improvement over the single network's 0.01149" and rounded, with no uncertainty attached. The run landed 0.00002 away, inside any sensible error bar on a number chosen that way. Same failure as gate 3.5's 0.99: a threshold that sounded principled and was not. The bar is recorded as missed and is **not** moved retroactively, and the run was **not** repeated with a different seed until it passed.
 
 **Proceeding anyway, on the evidence rather than on the verdict.** 1.75x Table 7 on RMSE, against their tuned ensemble, after one afternoon of bounded tuning. The sklearn single MLP was 2.3x, so the PyTorch port plus ensembling closed roughly a third of that gap. A pipeline bug does not look like 1.75x; it looks like 5x, or R² near zero.
 
-⚠️ **R² is NOT comparable to Table 7 and must not be reported as if it were.** Ours is 0.98181 against their 0.997, which reads far worse than the RMSE ratio implies. R² depends on the test set's own spread: our target has std 0.078924, while back-solving std = RMSE / NRMSE from their table gives about 0.115. Same RMSE, different denominator, different R². **RMSE is the comparable number; R² is not**, and 5.3 already restricts the comparability claim to RMSE and R² jointly, which this narrows further.
+**R² is NOT comparable to Table 7 and must not be reported as if it were.** Ours is 0.98181 against their 0.997, which reads far worse than the RMSE ratio implies. R² depends on the test set's own spread: our target has std 0.078924, while back-solving std = RMSE / NRMSE from their table gives about 0.115. Same RMSE, different denominator, different R². **RMSE is the comparable number; R² is not**, and 5.3 already restricts the comparability claim to RMSE and R² jointly, which this narrows further.
 
-⚠️ **Not a baseline for anything, corrected 2026-08-31.** This called the figure below "the baseline for steps 3 and 4". It is not comparable to them: `mse_ensemble.py` still aggregates as `mean(sqrt(variance))`, retired everywhere else on 2026-08-30, and this run used a different loss and 21,118 training rows against 16,794. Three changes at once. Steps 3 and 4 use step 2's own in-region 0.00887, so nothing downstream depends on it. **Incidental only:** in-region epistemic spread is 0.00631, which is 8% of the target's standard deviation and about 60% of the ensemble's total error. The members genuinely disagree even where the data is dense. That number has to grow off-distribution or the project has no subject.
+**Not a baseline for anything, corrected 2026-08-31.** This called the figure below "the baseline for steps 3 and 4". It is not comparable to them: `mse_ensemble.py` still aggregates as `mean(sqrt(variance))`, retired everywhere else on 2026-08-30, and this run used a different loss and 21,118 training rows against 16,794. Three changes at once. Steps 3 and 4 use step 2's own in-region 0.00887, so nothing downstream depends on it. **Incidental only:** in-region epistemic spread is 0.00631, which is 8% of the target's standard deviation and about 60% of the ensemble's total error. The members genuinely disagree even where the data is dense. That number has to grow off-distribution or the project has no subject.
 
 **My decision:**
 > Train the plain MSE version first. It is what A.4 actually built so it is the fair comparison, and it verifies the whole pipeline in one cheap run. After that, if the mean-variance means come out worse, I know the cause is the variance head and not the data handling.
@@ -911,7 +911,7 @@ RMSE on edge rotational transform per field period, whose pool std is 0.07892.
 | max epochs | 500 | cap, not a target |
 | patience | 20, restoring best weights | ours |
 
-⚠️ **The chosen learning rate is not the sanity check's nominal winner, and that is deliberate.** 3e-4 at batch 128 scored best_val 0.02119 against 1e-3's 0.02138, a 0.9% difference at a single seed, which is noise. It cost 210 epochs against 75. The sweep trains 300 networks, so that is roughly 3.7 hours against 1.3 on CPU for a difference that would not survive a second seed. Ties on accuracy are broken on cost, and the reasoning is recorded here so the table's apparent winner does not look like an error later.
+**The chosen learning rate is not the sanity check's nominal winner, and that is deliberate.** 3e-4 at batch 128 scored best_val 0.02119 against 1e-3's 0.02138, a 0.9% difference at a single seed, which is noise. It cost 210 epochs against 75. The sweep trains 300 networks, so that is roughly 3.7 hours against 1.3 on CPU for a difference that would not survive a second seed. Ties on accuracy are broken on cost, and the reasoning is recorded here so the table's apparent winner does not look like an error later.
 
 **Batch 512 lost outright** across all three learning rates, which is the one unambiguous result in the check.
 
@@ -946,7 +946,7 @@ RMSE on edge rotational transform per field period, whose pool std is 0.07892.
 
 ---
 
-**4.10 Hyperparameter sanity check** `SETTLED` ✅ 2026-08-29
+**4.10 Hyperparameter sanity check** `SETTLED` 2026-08-29
 
 - [x] Decided
 
@@ -960,7 +960,7 @@ RMSE on edge rotational transform per field period, whose pool std is 0.07892.
 
 **The check.** Three learning rates by two batch sizes, six fits, single networks and not ensembles. Starting box: Adam, lr in {3e-4, 1e-3, 3e-3}, batch in {128, 512}. Select on in-region validation loss. An afternoon at most.
 
-⚠️ **The serious trap.** Run the check on the **random split only**, and select on the **in-region validation set** only. Selecting hyperparameters by looking at tail-split performance leaks the extrapolation condition into the model choice and invalidates the entire study, in a way no reviewer could detect from the results. This is the same failure mode as recalibrating on out-of-region data, and it is easier to commit by accident.
+**The serious trap.** Run the check on the **random split only**, and select on the **in-region validation set** only. Selecting hyperparameters by looking at tail-split performance leaks the extrapolation condition into the model choice and invalidates the entire study, in a way no reviewer could detect from the results. This is the same failure mode as recalibrating on out-of-region data, and it is easier to commit by accident.
 
 **Then freeze.** The chosen values get written into 4.7, which currently declares the recipe frozen without recording what it froze, and they do not move again.
 
@@ -990,13 +990,13 @@ RMSE on edge rotational transform per field period, whose pool std is 0.07892.
 | aleatoric | 0.01194 | 0.01161 |
 | total | 0.01487 | 0.01466 |
 
-⚠️ **Re-aggregated 2026-08-30, see 5.4.** The originally reported values were epistemic 0.00768, aleatoric 0.01048, total 0.01314, all biased low by averaging standard deviations instead of variances.
+**Re-aggregated 2026-08-30, see 5.4.** The originally reported values were epistemic 0.00768, aleatoric 0.01048, total 0.01314, all biased low by averaging standard deviations instead of variances.
 
-**The uncertainty is slightly conservative in-region.** Total 0.01487 against an actual RMSE of 0.01256, 18% over-dispersed, and confirmed independently by coverage at nominal 0.9 landing at 0.966. In and out are near-identical, which is the correct answer for a random split and the baseline the hole and tail runs have to move. ⚠️ The first version of this entry read "well calibrated on the first attempt, 4.6% over-dispersed", which was the aggregation bug flattering the result. Slightly conservative is a more plausible claim anyway, since a fresh ensemble landing exactly on calibrated invites the question of what was tuned.
+**The uncertainty is slightly conservative in-region.** Total 0.01487 against an actual RMSE of 0.01256, 18% over-dispersed, and confirmed independently by coverage at nominal 0.9 landing at 0.966. In and out are near-identical, which is the correct answer for a random split and the baseline the hole and tail runs have to move. The first version of this entry read "well calibrated on the first attempt, 4.6% over-dispersed", which was the aggregation bug flattering the result. Slightly conservative is a more plausible claim anyway, since a fresh ensemble landing exactly on calibrated invites the question of what was tuned.
 
 **Nothing pinned on the variance floor, 0.00%**, so the β-NLL trigger in 4.4 did not fire and warm-up plus floor was sufficient.
 
-⚠️ **Aleatoric is 0.01194, not near zero, and the prediction that it would be near zero was wrong.** It is 15% of the target's standard deviation and larger than the epistemic term. This does not contradict Stage 2, which measured near-twin shapes differing by exactly 0.000000. The two answer different questions.
+**Aleatoric is 0.01194, not near zero, and the prediction that it would be near zero was wrong.** It is 15% of the target's standard deviation and larger than the epistemic term. This does not contradict Stage 2, which measured near-twin shapes differing by exactly 0.000000. The two answer different questions.
 
 - **Stage 2 measured whether the world is noisy.** It is not. The solver is deterministic and the inputs are fully observed.
 - **The variance head measures residual scatter this model cannot predict**, which includes its own misfit. A three-layer MLP on 80 coefficients cannot represent the map exactly, so it is consistently off by about 0.01, and from inside the model that error is indistinguishable from noise. Under NLL the calibrated response is to widen the interval, so it does.
@@ -1010,7 +1010,7 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 ---
 
-**5.4 How the uncertainty terms are aggregated over a set of points** `SETTLED 2026-08-30` ⚠️
+**5.4 How the uncertainty terms are aggregated over a set of points** `SETTLED 2026-08-30` 
 
 - [x] Decided
 
@@ -1079,19 +1079,19 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 **Both noise conditions** (see 6.2), so the whole sweep runs twice: clean targets, and targets with Gaussian noise of σ = 0.020 added.
 
-⚠️ **This used to say "both input conditions", meaning all 80 coefficients against high mode-numbers hidden. Amended 2026-08-29.** 6.2 retired the hidden-coefficient instrument after measuring that it injects about 0.003 no matter how much is dropped, which is inside seed noise. The sweep inherits the replacement: clean against added noise.
+**This used to say "both input conditions", meaning all 80 coefficients against high mode-numbers hidden. Amended 2026-08-29.** 6.2 retired the hidden-coefficient instrument after measuring that it injects about 0.003 no matter how much is dropped, which is inside seed noise. The sweep inherits the replacement: clean against added noise.
 
 **Why the sweep needs a second condition at all is unchanged.** One of its three questions is whether aleatoric stays flat as N grows. On clean targets aleatoric is the model's own misfit, which *does* shrink as the model gets more data, so the question has no content there. Adding a fixed known noise floor gives it something that genuinely should not move with N, and the contrast is the result: epistemic decaying toward a flat aleatoric floor.
 
 **σ = 0.020 for the noisy condition.** From the three levels in 6.2: 0.005 is too close to the baseline misfit to separate from it, and 0.050 dominates everything so the epistemic decay would be invisible next to it. 0.020 is 25% of the target's spread, roughly twice the baseline aleatoric, and it recovered at ratio 1.09.
 
-⚠️ **This makes the sweep's aleatoric claim sharper than it was.** Under hidden coefficients, "aleatoric stays flat" would have been checked against an injection that was itself only estimated. With added noise the floor is exact, so the claim becomes "aleatoric stays at 0.020 as N grows twentyfold", which is falsifiable to a number rather than to a trend.
+**This makes the sweep's aleatoric claim sharper than it was.** Under hidden coefficients, "aleatoric stays flat" would have been checked against an injection that was itself only estimated. With added noise the floor is exact, so the claim becomes "aleatoric stays at 0.020 as N grows twentyfold", which is falsifiable to a number rather than to a trend.
 
 **Budget: 5 N × 3 seeds × 2 noise conditions = 30 ensembles, 300 member networks.** Written down deliberately. Read unbounded, across three splits and two targets, this is 180 ensembles and 1800 networks, which does not survive the time budget. Any expansion past 30 is a visible decision, not a drift.
 
 **If the schedule slips, shrink the grid, never drop the sweep** (amended 2026-08-29). The floor is 3 N × 2 seeds × 2 noise conditions = 12 ensembles. This decision already commits to reporting the *shape* of the epistemic decay rather than a fitted exponent, and 12 points show the shape. Dropping the sweep entirely is not an option, because nothing else can test whether the epistemic term is reducible with data, which is the only thing that earns it the name. An earlier version of 6.5 named the sweep as the first thing to cut; that was wrong and is retracted.
 
-⚠️ **Do not assume the sweep is expensive before measuring it.** It was described as the largest remaining compute item on the basis of its ensemble count alone. These are small networks on GPU, so 300 of them may well be an hour or two. Time a single member network before the ensemble work starts, and settle the scheduling question with a measurement instead of a guess.
+**Do not assume the sweep is expensive before measuring it.** It was described as the largest remaining compute item on the basis of its ensemble count alone. These are small networks on GPU, so 300 of them may well be an hour or two. Time a single member network before the ensemble work starts, and settle the scheduling question with a measurement instead of a guess.
 
 **My decision:**
 > Pin it to the tail split and the primary target. The sweep exists to prove the uncertainty signal behaves, not to produce a result per metric, so once it works on one target and one split I have what I need. Writing the ensemble count down is what stops it quietly growing later.
@@ -1138,7 +1138,7 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 **All three ratios land inside 0.94 to 1.07**, against an acceptance band of 0.75 to 1.35, across a tenfold range of injected magnitude. Monotone in σ, which rules out a head reporting a constant. The smallest level was the one at risk, since its injection is below the baseline aleatoric, and it came out at 1.05.
 
-⚠️ **Re-aggregated per 5.4.** The originally reported ratios were 1.07 / 1.09 / 0.94, so the verdict never depended on the fix. Both `expected` and `measured` shifted, which is mild evidence the check is robust to how it is summarised, though the shift was not identical across rows: the aggregation bias changes with σ, so it could not have cancelled cleanly and the agreement is not automatic.
+**Re-aggregated per 5.4.** The originally reported ratios were 1.07 / 1.09 / 0.94, so the verdict never depended on the fix. Both `expected` and `measured` shifted, which is mild evidence the check is robust to how it is summarised, though the shift was not identical across rows: the aggregation bias changes with σ, so it could not have cancelled cleanly and the agreement is not automatic.
 
 **This is the entry that converts 5.1 from an assertion into a measurement.** The variance head reports a quantity that tracks a magnitude chosen in advance, so the aleatoric term is measuring something rather than emitting a number.
 
@@ -1148,7 +1148,7 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 **RMSE against clean targets also rises, 0.01256 to 0.02164.** So "independent noise averages out of the fitted mean" holds only partly; at σ = 0.05 the mean is 72% worse. State that rather than glossing it.
 
-⚠️ **One reading that looks like a failure and is not, worth getting right in the write-up.** At σ = 0.05 the total predicted uncertainty is about 0.053 while the error against clean targets is 0.0216, which reads as badly over-dispersed. It is not. The model estimates uncertainty for the noisy distribution it was trained on, and is being scored against clean targets that do not contain that noise. Against noisy targets the expected error is sqrt(0.0216² + 0.05²) = 0.0545 against a predicted 0.053. Correctly calibrated for its own distribution.
+**One reading that looks like a failure and is not, worth getting right in the write-up.** At σ = 0.05 the total predicted uncertainty is about 0.053 while the error against clean targets is 0.0216, which reads as badly over-dispersed. It is not. The model estimates uncertainty for the noisy distribution it was trained on, and is being scored against clean targets that do not contain that noise. Against noisy targets the expected error is sqrt(0.0216² + 0.05²) = 0.0545 against a predicted 0.053. Correctly calibrated for its own distribution.
 
 ---
 
@@ -1164,7 +1164,7 @@ So the reported aleatoric means "irreducible given this architecture and this in
 | 8,000 | 0.00984 | 0.01431 | 0.02648 | 0.0223 ± 0.0009 |
 | 16,793 | 0.00873 | 0.01111 | 0.02362 | **0.0208 ± 0.0003** |
 
-⚠️ **The "does not move" wording was withdrawn 2026-08-31.** The recovered column converges to 0.020 **from above**, running 0.0318, 0.0241, 0.0223, 0.0223, 0.0208, with all fifteen cells sitting above 0.020. State the mechanism rather than softening the sentence: `sqrt(noisy² − clean²)` credits the *clean* run's misfit to the noisy run, but noisy training fits worse, so the subtraction over-attributes; both misfits shrink with N, so the excess shrinks with it. The convergence is therefore evidence for the decomposition rather than noise against it. The pre-registered form, "the noisy curve flattens near sqrt(misfit² + σ²)", was already correct and the gloss was written over it afterwards.
+**The "does not move" wording was withdrawn 2026-08-31.** The recovered column converges to 0.020 **from above**, running 0.0318, 0.0241, 0.0223, 0.0223, 0.0208, with all fifteen cells sitting above 0.020. State the mechanism rather than softening the sentence: `sqrt(noisy² − clean²)` credits the *clean* run's misfit to the noisy run, but noisy training fits worse, so the subtraction over-attributes; both misfits shrink with N, so the excess shrinks with it. The convergence is therefore evidence for the decomposition rather than noise against it. The pre-registered form, "the noisy curve flattens near sqrt(misfit² + σ²)", was already correct and the gloss was written over it afterwards.
 
 **The claim, in the form that survives scrutiny.** The recovered column is the injected component pulled back out within seed by quadrature subtraction, sqrt(noisy² − clean²), which is the right operation because the two contributions add in variance. **The reducible part of the aleatoric term falls from 0.0398 to 0.0111 as N grows seventeenfold, while the irreducible part sits at 0.020 and does not move**, converging to 0.0208 ± 0.0003. Epistemic shrinks monotonically in both conditions, x0.59 clean and x0.72 noisy, with per-rung seed spreads near ±1%.
 
@@ -1174,11 +1174,11 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 **Second finding, unplanned: the extrapolation gap widens with data.** Out-of-region over in-region RMSE, averaged over seeds: 1.71, 2.13, 2.53, 2.92, **3.39**, monotone with spreads of ±0.06 to ±0.14 and non-overlapping endpoints. In-region error falls 67% across the sweep; out-of-region falls 29%.
 
-⚠️ **Scope that finding carefully or it overreaches.** Subsampling happens within the training region, so "more data" means more of the same distribution, and more of a distribution cannot populate a region it excludes. The defensible claim is that scaling the existing dataset does not buy extrapolation reliability, which makes the remedies targeted sampling in the sparse region or deferral. That is what the two 2026 compact-stellarator papers are doing, so the finding connects to live work rather than standing alone.
+**Scope that finding carefully or it overreaches.** Subsampling happens within the training region, so "more data" means more of the same distribution, and more of a distribution cannot populate a region it excludes. The defensible claim is that scaling the existing dataset does not buy extrapolation reliability, which makes the remedies targeted sampling in the sparse region or deferral. That is what the two 2026 compact-stellarator papers are doing, so the finding connects to live work rather than standing alone.
 
-⚠️ **A third claim was drafted and withdrawn on the evidence, before it reached a figure.** "Out-of-region calibration degrades as N grows" was read off seed 0 alone, where the ratio runs 0.96 down to 0.62. Across all three seeds it is 0.85 ± 0.11 at N = 1,000 and then flat within noise: 0.622, 0.615, 0.652, 0.661. The whole apparent trend was the N = 1,000 rung, where the model is poor everywhere and its uncertainty is honestly large. **The correct statement is that out-of-region calibration is stuck near 0.65 and more data does not repair it**, which supports deferral without pretending to a trend. Recorded here rather than deleted, in the same spirit as 3.7's placement retraction: the single-seed reading was the mistake, and three seeds is what caught it.
+**A third claim was drafted and withdrawn on the evidence, before it reached a figure.** "Out-of-region calibration degrades as N grows" was read off seed 0 alone, where the ratio runs 0.96 down to 0.62. Across all three seeds it is 0.85 ± 0.11 at N = 1,000 and then flat within noise: 0.622, 0.615, 0.652, 0.661. The whole apparent trend was the N = 1,000 rung, where the model is poor everywhere and its uncertainty is honestly large. **The correct statement is that out-of-region calibration is stuck near 0.65 and more data does not repair it**, which supports deferral without pretending to a trend. Recorded here rather than deleted, in the same spirit as 3.7's placement retraction: the single-seed reading was the mistake, and three seeds is what caught it.
 
-⚠️ **One artifact, already understood from 6.2.** In-region coverage in the noisy condition rises to 0.99. The model estimates uncertainty for the noisy distribution it trained on and is scored against clean targets, so over-covering is correct.
+**One artifact, already understood from 6.2.** In-region coverage in the noisy condition rises to 0.99. The model estimates uncertainty for the noisy distribution it trained on and is scored against clean targets, so over-covering is correct.
 
 **No exponent is fitted**, per 6.3 below.
 
@@ -1202,7 +1202,7 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 ---
 
-**6.5 When the sweep runs** `SETTLED` ✅ 2026-08-29
+**6.5 When the sweep runs** `SETTLED` 2026-08-29
 
 - [x] Decided
 
@@ -1216,7 +1216,7 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 **What the sweep uniquely tests** is narrower: whether splitting the uncertainty into ignorance and noise is a real split or two labels. Epistemic must shrink as training data grows, aleatoric must not. A signal can rank points perfectly well, and so produce valid calibration and deferral results, while failing that decomposition test. That is why the sweep can go last without putting the deliverables at risk.
 
-⚠️ **The one risk that does not wait.** The variance-head check (6.2) is the only check that can catch a variance head pinned at its floor rather than working. Aleatoric sits at the numerical floor on this dataset by construction (Stage 2), so a variance head that always reports approximately zero looks correct and is untestable.
+**The one risk that does not wait.** The variance-head check (6.2) is the only check that can catch a variance head pinned at its floor rather than working. Aleatoric sits at the numerical floor on this dataset by construction (Stage 2), so a variance head that always reports approximately zero looks correct and is untestable.
 
 **The mitigation: one extra ensemble.** The tail split's mean-variance ensemble already provides the all-80 reference. The check adds a single ensemble on the same split with high mode-number coefficients hidden, then compares the two aleatoric estimates. If the hidden version does not report roughly the magnitude that was removed, the variance head is not working. Ten member networks, run as soon as the tail ensemble exists.
 
@@ -1251,7 +1251,7 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 **Why coverage and CRPS.** Coverage versus nominal is the one diagnostic that turns the headline into something actionable: "at the 90% level the interval contains the truth X% of the time, and X falls off past this distance" is a deferral threshold, while "the score got worse" is not. CRPS is free, scores the whole predictive distribution rather than just one interval, and is already required as the deferral curve's y-axis under 8.3, so computing it here costs nothing and keeps the two deliverables on one scale.
 
-⚠️ **This entry was narrower on 2026-08-30 and initially cut too much.** The first version read "PIT histograms and reliability diagrams are out," justified as "each is itself a histogram, so it needs its own binning on top of the distance bins." Two things are wrong with that, both found by challenging the cut on the same day, before any figure was drawn.
+**This entry was narrower on 2026-08-30 and initially cut too much.** The first version read "PIT histograms and reliability diagrams are out," justified as "each is itself a histogram, so it needs its own binning on top of the distance bins." Two things are wrong with that, both found by challenging the cut on the same day, before any figure was drawn.
 
 **First, "reliability diagram" named things already in the set.** In regression the term covers two distinct plots, and neither was ever a candidate for cutting. Nominal confidence against empirical hit rate **is** coverage-versus-nominal under a different name. Predicted uncertainty against realised error (the spread-skill plot) is already a standing commitment under 7.2, which requires coverage binned by predicted uncertainty. So the phrase cut nothing and only obscured what the set contains. It is struck from the decision.
 
@@ -1273,7 +1273,7 @@ So the reported aleatoric means "irreducible given this architecture and this in
 
 - **CRPS.** One number per point, averages straight into the existing distance bins at no extra cost. Almost certainly in regardless.
 - **Coverage versus nominal.** Needs enough points to estimate a rate per nominal level, the same proportion maths as 3.7. Moderate cost.
-- **PIT histogram and reliability diagram.** Both are themselves histograms, so they need their own bins on top of the distance bins. Most data-hungry by a clear margin. ⚠️ Half right, and corrected above: it holds for PIT binned by distance and for nothing else. Aggregate PIT is not data-hungry at 4,800 points a panel, and "reliability diagram" turned out to name plots already committed elsewhere.
+- **PIT histogram and reliability diagram.** Both are themselves histograms, so they need their own bins on top of the distance bins. Most data-hungry by a clear margin. Half right, and corrected above: it holds for PIT binned by distance and for nothing else. Aggregate PIT is not data-hungry at 4,800 points a panel, and "reliability diagram" turned out to name plots already committed elsewhere.
 
 **Why coverage-versus-nominal is next after CRPS, not just next-cheapest:** CRPS is a summary, it says how badly calibrated but not which way. PIT and coverage-vs-nominal say which way, overconfident, underconfident, or biased mean. "Calibration degrades under shift because the ensemble stays overconfident when intervals should widen" is a sharper and more recognisable finding than "the score got worse," and coverage-vs-nominal is also the diagnostic most directly tied to defending the deferral threshold.
 
@@ -1294,13 +1294,13 @@ Coverage at six nominal levels, CRPS, and PIT, all on total uncertainty per the 
 | hole p30 | 0.950 | 0.871 | −0.079 |
 | tail-low | 0.956 | 0.779 | **−0.177** |
 
-**Coverage degrades with distance, which is the deliverable.** ⚠️ This read "monotonically" until 2026-08-31 and the bins contradict it: the tail's third and fourth bins run 0.781 then 0.822, and the hole rises before it falls. The trend is unambiguous and the wording was not. The tail runs 0.928 at the nearest bin down to 0.587 at 1.63 to 2.13 std out, so a stated 90% interval is closer to a 60% interval there. The hole runs 0.916 to 0.806, shallower and flattening. **At matched distance around 0.4 std the tail is worse than the hole**, 0.78 against 0.81, consistent with the distance-matched premium measured on single MLPs in 3.11.
+**Coverage degrades with distance, which is the deliverable.** This read "monotonically" until 2026-08-31 and the bins contradict it: the tail's third and fourth bins run 0.781 then 0.822, and the hole rises before it falls. The trend is unambiguous and the wording was not. The tail runs 0.928 at the nearest bin down to 0.587 at 1.63 to 2.13 std out, so a stated 90% interval is closer to a 60% interval there. The hole runs 0.916 to 0.806, shallower and flattening. **At matched distance around 0.4 std the tail is worse than the hole**, 0.78 against 0.81, consistent with the distance-matched premium measured on single MLPs in 3.11.
 
 **CRPS tracks it,** 0.00544 in region at the tail rising to 0.03207 in the furthest bin, a factor of 5.9. Reported in the target's physical units and on the same scale the deferral curve will use.
 
 **Random is the control and behaves.** In and out differ by 0.004 in coverage, which is the correct answer for a split with no shift, and it is what makes the other two rows readable as shift rather than as a quirk of the diagnostic.
 
-⚠️ **In-region coverage is 0.95 to 0.97 against a nominal 0.9 on all three splits, so the model is conservative in region, not exactly calibrated.** This was the independent corroboration that surfaced the 5.4 aggregation bug, since the previously reported ratio of 1.05 could not produce coverage that high.
+**In-region coverage is 0.95 to 0.97 against a nominal 0.9 on all three splits, so the model is conservative in region, not exactly calibrated.** This was the independent corroboration that surfaced the 5.4 aggregation bug, since the previously reported ratio of 1.05 could not produce coverage that high.
 
 **PIT found something coverage did not: the tail is biased.** Full statement in 3.8 above. Mean PIT 0.348 out of region at the tail against 0.51 to 0.53 everywhere else. The model over-predicts at the compact edge, which is a fault of the mean rather than the interval. This is the diagnostic that was cut from 7.1 and reinstated the same day, and it justified itself on its first run.
 
@@ -1316,7 +1316,7 @@ Coverage at six nominal levels, CRPS, and PIT, all on total uncertainty per the 
 
 ---
 
-**7.3 Post-hoc recalibration** `SETTLED` ⚠️
+**7.3 Post-hoc recalibration** `SETTLED` 
 
 - [x] Decided
 
@@ -1324,7 +1324,7 @@ Coverage at six nominal levels, CRPS, and PIT, all on total uncertainty per the 
 
 **Why the demotion:** it does not serve either headline deliverable. Its value is narrow but real, as a robustness check: if calibration degrades out-of-region even after a standard in-region correction, that rules out "you just had a globally miscalibrated ensemble and forgot to fix it" as an alternative explanation for your finding. That is a supporting argument, not a third result.
 
-⚠️ **Why the in-region constraint is not just technical:** recalibrating on out-of-region points assumes access to exactly the labels your premise says you do not have. It would produce a good-looking result that means nothing, and the flaw is invisible in the figure.
+**Why the in-region constraint is not just technical:** recalibrating on out-of-region points assumes access to exactly the labels your premise says you do not have. It would produce a good-looking result that means nothing, and the flaw is invisible in the figure.
 
 **My decision:**
 > Push it to the bottom of optional scope. It answers a "but did you just forget to calibrate" objection rather than producing a finding of its own, and it comes with a trap that is easy to trip under time pressure.
@@ -1344,11 +1344,11 @@ Coverage at six nominal levels, CRPS, and PIT, all on total uncertainty per the 
 
 ---
 
-**7.5 Which uncertainty signal for calibration** `AMENDED 2026-08-30` ⚠️
+**7.5 Which uncertainty signal for calibration** `AMENDED 2026-08-30` 
 
 **Decided:** Epistemic alone for the calibration-under-shift analysis.
 
-⚠️ **AMENDED 2026-08-30, before any calibration figure was drawn. Coverage and CRPS use TOTAL. Epistemic and aleatoric are reported beside them as components, not as the interval.**
+**AMENDED 2026-08-30, before any calibration figure was drawn. Coverage and CRPS use TOTAL. Epistemic and aleatoric are reported beside them as components, not as the interval.**
 
 **Why the original is wrong for coverage specifically.** This entry was written before a mean-variance ensemble existed, when "the uncertainty signal" had no components with measured magnitudes. Coverage asks whether the truth landed inside an interval, so it needs the full predicted spread. Step 2 measured in-region epistemic at 0.00887 against an actual RMSE of 0.01256. An epistemic-only 90% interval would therefore under-cover badly **in-region**, on the random split, where step 2 established the model is honest to within 18% and coverage later confirmed it at 0.966 against a nominal 0.9. That reads as a calibration failure and is nothing of the kind: it is the arithmetic consequence of using roughly 60% of the predicted standard deviation. Worse, it would contaminate the comparison, because the in-region reference point would be broken in every split at once and the out-of-region degradation would be measured against a floor that is already wrong.
 
@@ -1379,19 +1379,31 @@ Coverage at six nominal levels, CRPS, and PIT, all on total uncertainty per the 
 
 - [x] Decided
 
-**Decided:** Two curves, epistemic-ranked and total-ranked. Not aleatoric-ranked.
+**Decided:** Three curves, epistemic-ranked, aleatoric-ranked and total-ranked. Amended 2026-09-03; it read "two curves, not aleatoric-ranked" until then, and the reason recorded for that cut turned out to be false.
 
 **ANSWERED, and upgraded from a lean to a result 2026-08-31.** Replicated over three seeds on all three splits, total-ranked wins **all nine paired runs** by 0.8% to 5.8% on AUC, mean near 3.5%. On the tail out of region, 0.00647 ± 0.00018 against 0.00677 ± 0.00026.
 
-⚠️ **Quote the paired comparison, not the unpaired one.** Across seeds the two AUC distributions overlap, but both signals are computed from the same ensemble, so what varies between them within a run is the signal and what varies between runs is the level. Comparing the marginals throws away the pairing and understates a difference that is consistent in sign nine times out of nine.
+**Quote the paired comparison, not the unpaired one.** Across seeds the two AUC distributions overlap, but both signals are computed from the same ensemble, so what varies between them within a run is the signal and what varies between runs is the level. Comparing the marginals throws away the pairing and understates a difference that is consistent in sign nine times out of nine.
 
-⚠️ It read "at every rate" until 2026-08-31, which was false at one of 49 rates per region. AUC 0.00642 against 0.00667 at seed 0, consistently at every rate and in both regions. See the step 7 result below. The 4% margin at one seed makes it a lean rather than a finding, but it went the way 5.1 predicts, since the aleatoric term is model misfit and misfit is informative about local difficulty.
+It read "at every rate and in both regions" until 2026-08-31, which was false at one of 49 rates per region. The claim is now the paired win count, not per-rate dominance. Do not restate the "4% margin at one seed, so a lean rather than a finding" caveat that stood before replication; three seeds on three splits settled it.
 
-**Why:** Which signal defers best is a result, not a setup detail, and showing both is nearly free, same trained ensemble and same predictions, just two sort orders. It also tests the "total and epistemic should be close" claim empirically instead of assuming it, which matters because that claim rests on aleatoric sitting near zero, which is itself a prediction 6.2 is designed to check.
+The direction went the way 5.1 predicts, since the aleatoric term is model misfit and misfit is informative about local difficulty. 2026-09-03 pushed that reading further than expected: ranking on the misfit term alone already beats ranking on epistemic alone.
+
+**Why:** Which signal defers best is a result, not a setup detail, and showing all three is nearly free, same trained ensemble and same predictions, just three sort orders. It also tests the "total and epistemic should be close" claim empirically instead of assuming it, which matters because that claim rests on aleatoric sitting near zero, which is itself a prediction 6.2 is designed to check. That prediction failed, which is why the third curve exists.
 
 **Dropped from the original "all three":** aleatoric-ranked. If aleatoric really does sit at the numerical floor, ranking by it is ranking by noise, and the curve would land on the random baseline by construction. It answers nothing that the floor measurement in Stage 2 does not already answer.
 
-**My decision:**
+**REINSTATED 2026-09-03. The premise above was falsified by step 2 and the conclusion drawn from it was never revisited.** Aleatoric does not sit at the numerical floor. Step 2 measured it at 0.01194, larger than epistemic's 0.00887, and 5.1 established it as model misfit rather than label noise. Ranking by it is therefore not ranking by noise, and the curve does not land on random. Measured (`scripts/deferral.py`, replicated by `seed_spread.py`) on the tail split out of region across three seeds, aleatoric-ranked AUC is 0.00660 ± 0.00016 against epistemic-ranked's 0.00677 ± 0.00026, about 61% of the available headroom against epistemic's 59% at seed 0. It beats epistemic-ranked in three paired runs out of three on the tail. Under MAE, where the score does not involve any variance and no coupling between the metric and the ranking signal is possible, the ordering is unchanged.
+
+**It does not win on every split, and the pattern is clean rather than noisy.** Paired across all three splits the count is 6 of 9, not 9 of 9: aleatoric beats epistemic on random (3/3) and tail (3/3), loses on the hole (3/3, one seed by 8.3%). Total-ranked still wins all nine against both alternatives, so it remains the one signal with no split where it loses. Report aleatoric-ranked as competitive with, and on the headline tail split better than, epistemic-ranked, not as a uniformly better single signal.
+
+**Why the term named for ignorance is the weaker ranker where it wins.** Aleatoric here says "this part of the function is hard for me to fit", which is close to a direct statement about local error magnitude. Epistemic says "my members disagree here", which is a proxy for unfamiliarity, and unfamiliarity predicts error less directly than difficulty does. That also explains why total beats both in all nine paired runs: the component treated throughout the design as noise carries real ranking signal on top of the one treated as the useful part. Why aleatoric specifically loses on the hole is unexplained; it is reported rather than rationalised.
+
+**It does not undermine the decomposition.** The N-sweep showed epistemic shrinking monotonically with data while the injected floor did not, so the two terms measure different things and both earn their names. This says only that for ranking purposes, misfit is the more informative of the two.
+
+**The cost of the error was one sort, and the cost of not catching it was larger.** The cut was made before any ensemble existed, on a prediction about aleatoric that the conceptual commitments section corrected on 2026-08-29, and the correction never propagated here. That is the same failure pattern as the aggregation bug: a conclusion outliving the premise it rested on.
+
+**My decision, as recorded before the run and now superseded:**
 > Show epistemic-ranked and total-ranked. Which one defers better is a finding, and running both costs one extra sort. Drop the aleatoric curve, if aleatoric is at the floor as predicted then that curve is just the random baseline with extra steps.
 
 ---
@@ -1427,7 +1439,7 @@ Coverage at six nominal levels, CRPS, and PIT, all on total uncertainty per the 
 
 **Why:** Your curve alone is unreadable. The gap to random is the actual result; the gap to oracle is how much headroom the signal leaves on the table.
 
-⚠️ **Corrected:** this item previously said three curves with the oracle deferring by true absolute error. Both halves were wrong once 8.3 settled on CRPS. **The oracle must defer by per-point CRPS, not by |error|.** An |error|-ranked oracle is a ceiling for MAE, not for the metric actually plotted, so it would not bound the curve and the "mine" lines could cross it, which reads as a bug and is awkward to explain.
+**Corrected:** this item previously said three curves with the oracle deferring by true absolute error. Both halves were wrong once 8.3 settled on CRPS. **The oracle must defer by per-point CRPS, not by |error|.** An |error|-ranked oracle is a ceiling for MAE, not for the metric actually plotted, so it would not bound the curve and the "mine" lines could cross it, which reads as a bug and is awkward to explain.
 
 ---
 
@@ -1457,15 +1469,15 @@ CRPS of the hybrid system in physical units, out of region at the compact edge, 
 
 **Deferral works, and by a wide margin over the floor.** Solving the worst 20% by uncertainty cuts CRPS by 41%; a random 20% cuts it by 20%. To halve the error, solve 27% of designs rather than 50%. Measured against the ceiling the signal captures 63% of the available headroom out of region ((random − mine) / (random − oracle) on AUC), and 76% in region.
 
-**⚠️ This is the entry that makes the project's argument whole, and it should be stated as a pair with Stage 7's result rather than on its own.** Stage 7 established the intervals are badly miscalibrated at the compact edge: ratio 0.66, coverage 0.587 in the furthest distance bin. This entry establishes the ranking still works out there. **A signal can be useless as an absolute interval and still be good at ordering, and deferral only needs the ordering.** Reporting only the calibration failure understates what the surrogate is worth; reporting only the deferral curve hides that the intervals cannot be read as intervals. Both together is the finding.
+**This is the entry that makes the project's argument whole, and it should be stated as a pair with Stage 7's result rather than on its own.** Stage 7 established the intervals are badly miscalibrated at the compact edge: ratio 0.66, coverage 0.587 in the furthest distance bin. This entry establishes the ranking still works out there. **A signal can be useless as an absolute interval and still be good at ordering, and deferral only needs the ordering.** Reporting only the calibration failure understates what the surrogate is worth; reporting only the deferral curve hides that the intervals cannot be read as intervals. Both together is the finding.
 
-**Total narrowly beats epistemic**, at every deferral rate and in both regions, AUC 0.00642 against 0.00667. That is the answer 8.1 deliberately left to measurement. It is consistent with 5.1 and 5.4's conclusion that the aleatoric term is model misfit rather than label noise: misfit carries genuine information about which points are locally hard, so a ranking that includes it does better than one that does not. ⚠️ The margin is 4% at a single seed. Report it as a consistent lean, not a result, and note that the two curves are close enough that either signal would be a defensible choice in practice.
+**Total narrowly beats epistemic**, at every deferral rate and in both regions, AUC 0.00642 against 0.00667. That is the answer 8.1 deliberately left to measurement. It is consistent with 5.1 and 5.4's conclusion that the aleatoric term is model misfit rather than label noise: misfit carries genuine information about which points are locally hard, so a ranking that includes it does better than one that does not. The margin is 4% at a single seed. Report it as a consistent lean, not a result, and note that the two curves are close enough that either signal would be a defensible choice in practice.
 
 **In-region deferral behaves the same way but ranks better**, 76% of headroom against 63%. The signal orders points better where it is calibrated, which is expected and worth one sentence rather than treatment as a problem.
 
 **Sanity check built into the output.** The 0% column is identical across all four rankings, since nothing is deferred there and the ranking cannot matter. A mismatch would expose an off-by-one in the cumulative-sum indexing, which is the only real bug risk in the computation.
 
-⚠️ **The random floor is measured, not asserted.** It averages 50 permutations rather than drawing the straight line its expectation traces, so all four curves are produced by the same code path.
+**The random floor is measured, not asserted.** It averages 50 permutations rather than drawing the straight line its expectation traces, so all four curves are produced by the same code path.
 
 ---
 
@@ -1479,9 +1491,9 @@ CRPS of the hybrid system in physical units, out of region at the compact edge, 
 
 **The obstacle, and why this is more than a groupby.** `metrics.aspect_ratio` is computed *from* the solved equilibrium, so it is **null on all 5,278 forward-model failures at NFP=3**. We know which shapes failed and not how compact they were. Two cheap geometric proxies were tried and rejected before any script was written: `1/|r10|` reaches Spearman 0.72 and `1/sqrt(|r10 z10|)` reaches 0.83, which would scatter shapes across neighbouring bins badly enough to hide a real effect or manufacture a fake one. So aspect ratio is **predicted from the 80 coefficients**, reusing what 3.5 established: it is input-measurable, out-of-fold R² 0.9876, RMSE 0.180 against a spread of 1.62, Spearman 0.990.
 
-⚠️ **Both groups are measured with the same instrument, deliberately.** Using the true aspect ratio for successes and a prediction for failures would compare two populations through two different lenses, and any difference in failure rate could then be prediction error rather than physics. Every row gets an out-of-fold prediction: successes from the one fold model that did not train on them, failures from the average of all five.
+**Both groups are measured with the same instrument, deliberately.** Using the true aspect ratio for successes and a prediction for failures would compare two populations through two different lenses, and any difference in failure rate could then be prediction error rather than physics. Every row gets an out-of-fold prediction: successes from the one fold model that did not train on them, failures from the average of all five.
 
-⚠️ **The aspect-ratio model is itself extrapolating onto the failures.** It was fit only on shapes that solved, and no label exists on a failure to check it against, so its accuracy there is unmeasurable. This project's own subject, one level down. The held-out R² bounds the instrument on successes and nothing bounds it on failures.
+**The aspect-ratio model is itself extrapolating onto the failures.** It was fit only on shapes that solved, and no label exists on a failure to check it against, so its accuracy there is unmeasurable. This project's own subject, one level down. The held-out R² bounds the instrument on successes and nothing bounds it on failures.
 
 **Two failure modes, and only one of them is a solver call.** Generation-stage failure means no usable boundary was ever produced, so VMEC++ was never invoked; forward-model failure means a valid shape reached the solver and it did not converge. The population removes the first (1 row of 182,222) and keeps the second as the outcome, because "if I send this shape to the solver, do I get an answer back" is only about the second.
 
@@ -1496,15 +1508,15 @@ Then, holding the generator fixed:
 
 **Every solver failure is a `vmec`-pathway row, and within `vmec` aspect ratio barely matters.** The 2.68x is **composition, not geometry**: the compact region is 82% `vmec`-proposed against 34% in the extended region, so sorting by compactness was sorting by generator. The U at the extended end has the same explanation.
 
-⚠️ **Do not read `desc` at exactly 0.00% across 17,671 rows as evidence that DESC-proposed shapes always solve.** Too clean. Far more likely the flag is set differently per pathway, or the DESC pipeline ran a forward model internally and emitted only converged rows. State it as "no forward-model failures are recorded on the DESC pathway" and stop there.
+**Do not read `desc` at exactly 0.00% across 17,671 rows as evidence that DESC-proposed shapes always solve.** Too clean. Far more likely the flag is set differently per pathway, or the DESC pipeline ran a forward model internally and emitted only converged rows. State it as "no forward-model failures are recorded on the DESC pathway" and stop there.
 
 **What survives and what does not.** The *operational* number survives: shapes below the cutoff in this dataset fail about a third of the time, so deferring them returns nothing about a third of the time. The *causal* claim does not: compactness is not what breaks the solver. **The defensible sentence is that solver reliability is a property of the proposal process, not of the geometry**, and it correlates with compactness here only through who proposed what. That is the more useful finding, because it says what would actually change the risk: swap the generator, not the region.
 
-**Effect on the deferral curve, as a caveat rather than a correction.** Out of region at 20% deferral with total ranking, CRPS falls 0.01947 to 0.01150, a 41% cut. Crediting only the roughly 69% of deferrals that would actually solve puts it near 0.0140, a **28% cut**. ⚠️ That is a back-of-envelope figure and 31% is a *lower bound* on the deferred subset's failure rate, since deferral picks the most uncertain shapes, which are the most compact, where bin 0 reads 42%.
+**Effect on the deferral curve, as a caveat rather than a correction.** Out of region at 20% deferral with total ranking, CRPS falls 0.01947 to 0.01150, a 41% cut. Crediting only the roughly 69% of deferrals that would actually solve puts it near 0.0140, a **28% cut**. That is a back-of-envelope figure and 31% is a *lower bound* on the deferred subset's failure rate, since deferral picks the most uncertain shapes, which are the most compact, where bin 0 reads 42%.
 
 **Why a caveat and not a second curve.** Correcting properly means crediting each deferred point with its own failure probability, which is a real second curve and a further hour. The comparison the figure exists to make is unaffected: **deferral still beats random by the same margin, because random deferral draws from the same population and eats the same failure rate.** Only the absolute level moves, and one paragraph reports that honestly. The project is at the point where polish beats scope.
 
-⚠️ **None of this makes the measured curve wrong on its own terms.** Every shape in our pool solved successfully, by construction, since the filter chain keeps only converged rows. This is a statement about **deployment**: an optimizer proposing new compact shapes may meet a failure rate the experiment never saw, and how bad it is depends on which optimizer.
+**None of this makes the measured curve wrong on its own terms.** Every shape in our pool solved successfully, by construction, since the filter chain keeps only converged rows. This is a statement about **deployment**: an optimizer proposing new compact shapes may meet a failure rate the experiment never saw, and how bad it is depends on which optimizer.
 
 **Incidental, and it is the project's own premise arriving from a third direction.** Sampling density, surrogate accuracy and solver reliability all peak in the same middle band of aspect ratio and all degrade at both ends. Three unrelated measurements, one shape.
 
@@ -1522,7 +1534,7 @@ Then, holding the generator fixed:
 
 **Why first to survive:** one line of code once the pipeline works, and it gives you a comparative claim.
 
-**My decision: cut.** ⚠️ **The objection it answers is real and should be stated in the write-up rather than avoided:** every uncertainty finding in this project, the decomposition, the calibration gap, the deferral curve, exists on one target, so "you picked the metric where the gap is biggest" is a fair question.
+**My decision: cut.** **The objection it answers is real and should be stated in the write-up rather than avoided:** every uncertainty finding in this project, the decomposition, the calibration gap, the deferral curve, exists on one target, so "you picked the metric where the gap is biggest" is a fair question.
 
 **It is partially answered already, by the day 1-2 grid, and that is the line to use.** The grid fitted the same single MLP on both candidate targets across the same three cuts of the aspect-ratio axis. Out-of-region over in-region RMSE:
 
@@ -1535,7 +1547,7 @@ Then, holding the generator fixed:
 
 **Why cut rather than run.** Three reasons, and the first is the one that decides it.
 
-⚠️ **The cost is not the "one line of code" this entry promised.** `mv_ensemble.py` exposes no `--target` flag; `target_col` is a dataclass field argparse never reaches, and the log10 transform (the grid maps it as `'log10_qi': ('metrics.qi', np.log10)`) has to come across with it. `calibration.py` and `deferral.py` both hardcode `mv_ensemble_{split}_points.csv` and would need target-aware filenames the way seed replication needed seed-aware ones. Realistic cost is about 90 minutes, of which only 25 is unattended compute for the three ensembles.
+**The cost is not the "one line of code" this entry promised.** `mv_ensemble.py` exposes no `--target` flag; `target_col` is a dataclass field argparse never reaches, and the log10 transform (the grid maps it as `'log10_qi': ('metrics.qi', np.log10)`) has to come across with it. `calibration.py` and `deferral.py` both hardcode `mv_ensemble_{split}_points.csv` and would need target-aware filenames the way seed replication needed seed-aware ones. Realistic cost is about 90 minutes, of which only 25 is unattended compute for the three ensembles.
 
 **It adds breadth, not depth.** It reruns validated machinery on a different column. Nothing about the method is under test that the primary target has not already tested, which is why the standing decision already ruled out giving a second target its own N-sweep or variance-head check.
 
@@ -1571,7 +1583,7 @@ Then, holding the generator fixed:
 
 **Why:** Demoted here from 7.3. Narrow value as a robustness check, not a standalone finding: it tests whether an out-of-region calibration gap survives a standard in-region correction, which closes off one alternative explanation for the headline result. Reporting only, never feeds the deferral rule (7.4).
 
-⚠️ **Trap:** the calibration set must come from in-region data. Calibrating on out-of-region points assumes access to exactly the labels the premise says are unavailable.
+**Trap:** the calibration set must come from in-region data. Calibrating on out-of-region points assumes access to exactly the labels the premise says are unavailable.
 
 **My decision: variance scaling, a single scalar, fit in region on a held-out half of the in-region slice and applied unchanged everywhere.** Under Gaussian NLL the minimiser has a closed form, `s = sqrt(mean(z^2))` with `z = (y - mu) / sigma`, so there is no optimiser and no new dependency.
 
@@ -1579,13 +1591,13 @@ Then, holding the generator fixed:
 
 *Isotonic recalibration of the CDF* (Kuleshov et al. 2018) is more expressive and would fix shape distortions a scalar cannot. It also makes the predictive distribution non-Gaussian, which retires the closed-form CRPS in `metrics.crps_gaussian` and would force a sample-based CRPS into the deferral curve's y axis. That is a change to a frozen deliverable in exchange for expressiveness the claim does not need.
 
-*Conformal prediction* gives finite-sample marginal coverage guarantees, and ⚠️ **its guarantee assumes exchangeability between the calibration and test sets, which the tail split deliberately breaks.** So it would be valid in region and void out of region, which is exactly the regime under study. Naming that is sharper than running it.
+*Conformal prediction* gives finite-sample marginal coverage guarantees, and **its guarantee assumes exchangeability between the calibration and test sets, which the tail split deliberately breaks.** So it would be valid in region and void out of region, which is exactly the regime under study. Naming that is sharper than running it.
 
 **Why one parameter is the right expressiveness.** The question is whether an in-region correction *transfers* out of region. A richer corrector makes the answer about which corrector was chosen.
 
 ---
 
-⚠️ **PREDICTION, COMMITTED BEFORE THE RUN**, per the standing rule from 2026-08-31 that a prediction goes in its own commit before the run that tests it. This is a case where the outcome is guessable, which is when the rule earns its keep.
+**PREDICTION, COMMITTED BEFORE THE RUN**, per the standing rule from 2026-08-31 that a prediction goes in its own commit before the run that tests it. This is a case where the outcome is guessable, which is when the rule earns its keep.
 
 In region the ensemble is *over*-dispersed, ratio 1.13 ± 0.03. So the fitted scalar should land **below 1, around 0.85 to 0.90**, and shrink the intervals. Applied unchanged out of region, where the ratio is already 0.677 ± 0.021, that should push it to roughly **0.60**, and out-of-region coverage at nominal 0.9 down from 0.788 toward the low 0.7s.
 
@@ -1597,17 +1609,17 @@ In region the ensemble is *over*-dispersed, ratio 1.13 ± 0.03. So the fitted sc
 
 **Three design points that decide whether it is honest, settled in advance.**
 
-⚠️ **The calibration set must be in-region AND not reused for reporting.** The in-region test slice is what the headline table reports on, so fitting `s` there and then reporting the corrected ratio on the same rows is circular. It is split in half: fit on one, report on the other. The early-stopping validation set is not a substitute, since training already saw it through the stopping rule.
+**The calibration set must be in-region AND not reused for reporting.** The in-region test slice is what the headline table reports on, so fitting `s` there and then reporting the corrected ratio on the same rows is circular. It is split in half: fit on one, report on the other. The early-stopping validation set is not a substitute, since training already saw it through the stopping rule.
 
-⚠️ **`s` and the reported calibration ratio are different aggregations and will not be reciprocal.** The table's ratio is `sqrt(mean(sigma^2)) / sqrt(mean(e^2))`; the NLL scalar is `sqrt(mean(e^2 / sigma^2))`. They coincide only when sigma is constant across points. Expect `s` near but not exactly `1 / 1.13`, and never present one as a check on the other.
+**`s` and the reported calibration ratio are different aggregations and will not be reciprocal.** The table's ratio is `sqrt(mean(sigma^2)) / sqrt(mean(e^2))`; the NLL scalar is `sqrt(mean(e^2 / sigma^2))`. They coincide only when sigma is constant across points. Expect `s` near but not exactly `1 / 1.13`, and never present one as a check on the other.
 
-⚠️ **A global scalar cannot change the deferral ranking.** Sorting by `s^2 * sigma^2` is the same order as sorting by `sigma^2`, so both "mine" curves are identical after recalibration and only the CRPS level moves. Stated as an invariance rather than rerun to rediscover. The oracle curve can shift slightly, since it ranks by CRPS and CRPS is not invariant to the scale.
+**A global scalar cannot change the deferral ranking.** Sorting by `s^2 * sigma^2` is the same order as sorting by `sigma^2`, so both "mine" curves are identical after recalibration and only the CRPS level moves. Stated as an invariance rather than rerun to rediscover. The oracle curve can shift slightly, since it ranks by CRPS and CRPS is not invariant to the scale.
 
 ---
 
 **RUN 2026-08-31, `scripts/recalibration.py`, no training, seconds. VERDICT: the standard fix makes off-distribution overconfidence WORSE.**
 
-⚠️ **The prediction was directionally right and wrong on magnitude. Recorded as a miss rather than softened.** Predicted `s` in 0.85 to 0.90; measured **0.758 (random), 0.809 (hole), 0.775 (tail)**, all three below the band. Predicted the tail's out-of-region ratio near 0.60; measured **0.515**. The damage is worse than predicted. The gap is exactly the aggregation subtlety pre-registered above: `1 / 1.196 = 0.836` against a fitted `s` of 0.775, non-reciprocal as expected but by more than was allowed for.
+**The prediction was directionally right and wrong on magnitude. Recorded as a miss rather than softened.** Predicted `s` in 0.85 to 0.90; measured **0.758 (random), 0.809 (hole), 0.775 (tail)**, all three below the band. Predicted the tail's out-of-region ratio near 0.60; measured **0.515**. The damage is worse than predicted. The gap is exactly the aggregation subtlety pre-registered above: `1 / 1.196 = 0.836` against a fitted `s` of 0.775, non-reciprocal as expected but by more than was allowed for.
 
 | split | region | ratio before | ratio after | cov@0.9 before | cov@0.9 after | CRPS before | CRPS after |
 |---|---|---|---|---|---|---|---|
@@ -1632,13 +1644,13 @@ In region the ensemble is *over*-dispersed, ratio 1.13 ± 0.03. So the fitted sc
 
 *PIT barely moves*, 0.348 to 0.333 at the tail. Correct and expected: **a variance scale cannot fix a mean bias.** This independently reconfirms 7.1's finding that the tail failure is not purely a variance problem, by a completely different route.
 
-⚠️ **In-region coverage lands slightly above nominal after correction**, 0.910 to 0.920 against 0.9. Expected: the scalar is fitted by Gaussian NLL, not by matching coverage at one level, so it balances the whole distribution rather than pinning a single quantile. Do not read it as a residual failure.
+**In-region coverage lands slightly above nominal after correction**, 0.910 to 0.920 against 0.9. Expected: the scalar is fitted by Gaussian NLL, not by matching coverage at one level, so it balances the whole distribution rather than pinning a single quantile. Do not read it as a residual failure.
 
 **The ranking invariance held on all three splits**, verified by `check_ranking` rather than assumed, so the deferral curve stands as published with no rerun.
 
 **What this buys, and it is the reason the entry was worth an hour:** it closes the strongest objection to the headline. The sentence for the write-up is that **recalibrating on in-region data, the only data available under the premise, makes off-distribution overconfidence worse, because it corrects an over-dispersion that exists only in region.** There is no cheap post-hoc route to honest intervals at the compact edge, which leaves targeted sampling or deferral. That is a stronger conclusion than a null result would have been.
 
-⚠️ **Scope discipline held.** Reporting only, per 7.4. Nothing here feeds the deferral rule, no headline number in CLAUDE.md changed, and the recalibrated figures live in their own table beside the originals rather than replacing them.
+**Scope discipline held.** Reporting only, per 7.4. Nothing here feeds the deferral rule, no headline number in CLAUDE.md changed, and the recalibrated figures live in their own table beside the originals rather than replacing them.
 
 ---
 
@@ -1688,7 +1700,7 @@ In region the ensemble is *over*-dispersed, ratio 1.13 ± 0.03. So the fitted sc
 
 **Why:** This is the strongest sentence available to you: they trained an ensemble of ten MLPs on this dataset, reported in-domain accuracy per metric, and explicitly named uncertainty calibration as future work. You matched their in-region numbers and then did the thing they named. Draft it deliberately rather than improvising it.
 
-⚠️ **Two limits on how far this can be pushed** (see 4.1 and 5.3). Architecture: it is unverified whether their ensemble was one multi-output network or twelve single-output ones, so claim same-metric test performance, not a reproduced model. Metrics: only RMSE and R² are directly comparable, since their NRMSE and SNR formulas are not published.
+**Two limits on how far this can be pushed** (see 4.1 and 5.3). Architecture: it is unverified whether their ensemble was one multi-output network or twelve single-output ones, so claim same-metric test performance, not a reproduced model. Metrics: only RMSE and R² are directly comparable, since their NRMSE and SNR formulas are not published.
 
 **Also worth stating accurately:** Table 7's RMSE is not uniformly small. It spans 0.006 to 0.581, and three metrics exceed 0.1. R² above 0.97 holds for all twelve, lowest 0.974. The two rows relevant here are edge rotational transform at RMSE 0.006 / R² 0.997 and log_10_qi at RMSE 0.051 / R² 0.982.
 
@@ -1716,7 +1728,7 @@ In region the ensemble is *over*-dispersed, ratio 1.13 ± 0.03. So the fitted sc
 
 ---
 
-**GATE: day 1-2 of week 1** `GATE` ✅ PASSED 2026-08-27
+**GATE: day 1-2 of week 1** `GATE` PASSED 2026-08-27
 
 - [x] Passed
 
@@ -1741,7 +1753,7 @@ In region the ensemble is *over*-dispersed, ratio 1.13 ± 0.03. So the fitted sc
 
 **Decisions this settles:** 3.1 primary target (edge rotational transform), 3.2 secondary evidence (log10 qi viable, defers to week 2), 3.4 split axis (aspect ratio), 3.6 direction (low), 3.7 δ (0.06). 7.1 remains open, see that entry.
 
-⚠️ **RETRACTED 2026-08-29, see 3.7 and 3.8.** This block previously read: "the most important result is the one that looks like nothing," on the grounds that interior-hole ratios of 0.95 and 0.91 meant the model fills a mid-range gap with no measurable penalty while the same recipe cost 3x at the tail, giving a clean "can interpolate into gaps, cannot leave the region" story.
+**RETRACTED 2026-08-29, see 3.7 and 3.8.** This block previously read: "the most important result is the one that looks like nothing," on the grounds that interior-hole ratios of 0.95 and 0.91 meant the model fills a mid-range gap with no measurable penalty while the same recipe cost 3x at the tail, giving a clean "can interpolate into gaps, cannot leave the region" story.
 
 **Two later measurements killed it.** The placement sweep showed 0.95 held for a hole at the median only; moving the hole toward the sparse compact end raises the penalty to 1.80 and then 1.96, so the absence of a gap penalty was a property of the placement, not of interpolation. The distance-error curves then showed that most of the remaining hole-versus-tail difference is distance rather than edge: at matched distance the tail costs about 15% more, not 200%.
 
