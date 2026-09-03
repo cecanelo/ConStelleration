@@ -15,26 +15,34 @@ whether the uncertainty estimate is worth having.
 No training. Reads results/mv_ensemble_tail_points.csv, which already carries
 the per-point mean and all three variance terms. Seconds.
 
-Four lines per region, frozen in 8.1 and 8.4:
+Five lines per region, from 8.1 and 8.4:
 
     epistemic-ranked   defer where the members disagree most
+    aleatoric-ranked   defer where the members' own variances are largest
     total-ranked       defer where the full predicted spread is largest
     random             the floor, defer at the same rate but pick at random
     oracle             the ceiling, defer by the per-point CRPS itself
 
-The two "mine" curves cost one extra sort, and which of them wins is a result
-rather than a setup detail. Without the floor the curve is unreadable, since any
-monotone-in-anything ranking slopes downward. The gap to random is the finding;
-the gap to oracle is the headroom left on the table.
+The three "mine" curves cost one extra sort each, and which of them wins is a
+result rather than a setup detail. Without the floor the curve is unreadable,
+since any monotone-in-anything ranking slopes downward. The gap to random is the
+finding; the gap to oracle is the headroom left on the table.
 
-⚠️ The oracle defers by per-point CRPS, not by absolute error (8.4, corrected).
+Aleatoric-ranked was cut in 8.1 and reinstated 2026-09-03. The cut assumed the
+term would sit at the numerical floor, so ranking by it would be ranking by
+noise and the curve would land on random by construction. Step 2 falsified that
+premise: aleatoric is model misfit, larger than epistemic in region, and misfit
+is informative about local difficulty. It is measured here rather than argued.
+
+The oracle defers by per-point CRPS, not by absolute error (8.4, corrected).
 An error-ranked oracle bounds MAE, not the metric plotted here, so the "mine"
 curves could cross it, which reads as a bug and is tedious to explain.
 
-⚠️ Deferred points are credited with the exact solver value, contributing zero
-error. That assumes the fallback always succeeds, which 8.6 leaves open as a
-stretch item: if VMEC++ fails at a meaningful rate in the compact region, this
-curve is optimistic.
+Deferred points are credited with the exact solver value, contributing zero
+error. That assumes the fallback always succeeds, which 8.6 measured and closed
+on 2026-08-31: about a third of VMEC++ calls fail in the region deferral sends
+work to, so this curve is optimistic in level. The gap to random survives, since
+random deferral draws from the same population and eats the same failure rate.
 
     python3 scripts/deferral.py
 """
@@ -98,6 +106,7 @@ def run_region(df):
 
     curves = {
         'epistemic': deferral_curve(crps, df['epistemic_variance'], RATES),
+        'aleatoric': deferral_curve(crps, df['aleatoric_variance'], RATES),
         'total': deferral_curve(crps, df['total_variance'], RATES),
         'random': random_curve(crps, RATES, SEED),
         # Ranking by the score itself is the best any ranking can do, which is
@@ -124,7 +133,7 @@ def print_region(label, summary):
     header += f' {"auc":>9s} {"halve at":>9s}'
     print(header)
     print('-' * len(header))
-    for name in ('epistemic', 'total', 'random', 'oracle'):
+    for name in ('epistemic', 'aleatoric', 'total', 'random', 'oracle'):
         row = summary[name]
         cells = ' '.join(f'{row["crps_at"][f"{r:g}"]:9.5f}' for r in REPORT_AT)
         halve = row['rate_to_halve']
@@ -160,7 +169,7 @@ def main():
 
     out = payload['out']['rankings']
     print('\nthe headline, out of region at the compact edge')
-    for name in ('epistemic', 'total'):
+    for name in ('epistemic', 'aleatoric', 'total'):
         no_deferral = out[name]['crps_at']['0']
         at_20 = out[name]['crps_at']['0.2']
         print(
