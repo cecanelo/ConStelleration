@@ -205,7 +205,7 @@ def gaussian_nll(raw_mean, raw_log_variance, target):
     The clamped raw value is used directly as log(variance) rather than taking
     a log of the exponentiated one, which is both cheaper and exact.
 
-    ⚠️ **The clamp has zero derivative outside its bounds, in BOTH directions,
+    **The clamp has zero derivative outside its bounds, in BOTH directions,
     and that is a latent trap rather than only a safety rail.** The floor
     correctly blocks a point being pulled further down, but it equally blocks it
     being pulled back up: a point whose raw output dives below log(1e-6)
@@ -243,7 +243,7 @@ def train_one_mv(
 
     predict(X) returns (mean, variance), both in physical units.
 
-    ⚠️ The variance un-scales by y_std squared while the mean un-scales by
+    The variance un-scales by y_std squared while the mean un-scales by
     y_std. Getting that wrong produces entirely plausible numbers that are off
     by the square of the target's spread, and nothing raises. It is the most
     likely silent error in this codebase, which is why this is a separate
@@ -258,7 +258,7 @@ def train_one_mv(
     different scales and are not comparable, which is why the phase is recorded
     and why best-weight tracking resets at the switch.
     """
-    # ⚠️ Without this the failure is silent and total. Best-weight tracking
+    # Without this the failure is silent and total. Best-weight tracking
     # resets at the warm-up boundary, so a loop that never reaches it restores
     # the best MSE-phase checkpoint instead, and `predict` then returns
     # variances from a head that was never trained on the NLL at all. Every

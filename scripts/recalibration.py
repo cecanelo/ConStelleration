@@ -14,22 +14,22 @@ what a tail split breaks. One parameter is also the right expressiveness for the
 claim: the question is whether an in-region correction TRANSFERS, and a richer
 corrector makes the answer about which corrector was chosen.
 
-⚠️ **Reporting only. This never feeds the deferral rule** (7.4), so the two
+**Reporting only. This never feeds the deferral rule** (7.4), so the two
 results stay independent.
 
-⚠️ **The calibration set is in-region and is not the set the numbers are
+**The calibration set is in-region and is not the set the numbers are
 reported on.** Fitting `s` on the in-region slice and then reporting the
 corrected ratio on those same rows is circular. The slice is split in half:
 `s` is fitted on one half and every reported number comes from the other half
 and from the untouched out-of-region set. The early-stopping validation set is
 not a substitute, since training already saw it through the stopping rule.
 
-⚠️ **`s` is not the reciprocal of the reported calibration ratio.** The table's
+**`s` is not the reciprocal of the reported calibration ratio.** The table's
 ratio is sqrt(mean(sigma^2)) / sqrt(mean(e^2)); this scalar is
 sqrt(mean(e^2 / sigma^2)). They coincide only when sigma is constant across
 points. Near, not equal, and neither is a check on the other.
 
-⚠️ **A global scalar cannot change the deferral ranking**, since sorting by
+**A global scalar cannot change the deferral ranking**, since sorting by
 s^2 * sigma^2 is the same order as sorting by sigma^2. Both "mine" curves are
 identical after recalibration and only the CRPS level moves, so the deferral
 curve is not rerun. The invariance is asserted here and tested in check_ranking.

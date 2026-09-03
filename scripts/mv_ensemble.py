@@ -98,7 +98,7 @@ def summarise(label, y_true, parts, selection):
     RMSE. The addition happened in decompose, in variance space, where it is
     valid.
 
-    ⚠️ This used mean(sqrt(variance)) until 2026-08-30, biasing every reported
+    This used mean(sqrt(variance)) until 2026-08-30, biasing every reported
     calibration ratio low. metrics.rms_uncertainty carries the reasoning. Caught
     by scripts/calibration.py computing the same quantity a second way and
     disagreeing, and independently confirmed by in-region coverage reading 0.95
@@ -119,7 +119,7 @@ def summarise(label, y_true, parts, selection):
 def restored_rows(df, trimmed, config, axis, out_mask):
     """The rows the 0.05% target trim deleted from this split's held-out region.
 
-    ⚠️ The trim reads held-out labels. `trim_target_tails` computes its quantiles
+    The trim reads held-out labels. `trim_target_tails` computes its quantiles
     over the whole pool and drops rows by their target value, before any split
     exists. Target and split axis are correlated, which is this project's own
     premise, so the deleted rows do not land evenly: 22 of 28 fall inside the
@@ -147,7 +147,7 @@ def restored_rows(df, trimmed, config, axis, out_mask):
         raise ValueError('cannot recover a cutoff from an empty held-out set')
     lo, hi = axis[out_mask].min(), axis[out_mask].max()
 
-    # ⚠️ A tail split is one-sided, so its lower bound is the pool minimum
+    # A tail split is one-sided, so its lower bound is the pool minimum
     # rather than a real boundary. Keeping it would exclude any restored row
     # lying past that minimum, which is precisely the kind of row worth
     # recovering. A hole is genuinely two-sided and keeps both bounds.
@@ -229,7 +229,7 @@ def main():
         print(f'{k:7d} {epochs:7d} {best:9.4f} {now - previous[0]:6.1f}s', flush=True)
         previous[0] = now
 
-    # ⚠️ base_seed * N_MEMBERS, not base_seed. train_mv_ensemble uses
+    # base_seed * N_MEMBERS, not base_seed. train_mv_ensemble uses
     # `seed = base_seed + k` for its ten members, so consecutive replication
     # seeds would share nine of ten member initialisations and the measured
     # spread would read far smaller than the real one. Blocks of N_MEMBERS keep
@@ -266,7 +266,7 @@ def main():
     print(f'\nvariance floor in physical units: {floor_physical:.3e}')
     print(f'member predictions pinned on it:  {pinned * 100:.2f}%')
     if pinned > 0.5:
-        print('  ⚠️  over half pinned. This is the 4.4 trigger for beta-NLL.')
+        print('  Warning: over half pinned. This is the 4.4 trigger for beta-NLL.')
 
     if config.split == 'random':
         print(
@@ -325,7 +325,7 @@ def main():
     # The mask holds the in-region slice, which would then read distance 0 by
     # construction rather than by measurement.
     #
-    # ⚠️ Precisely, the reference is fit UNION validation, since fit_pool is the
+    # Precisely, the reference is fit UNION validation, since fit_pool is the
     # index array before split_validation carves the 500 early-stopping rows out
     # of it. That is deliberate, the model did see those rows for stopping, and
     # they are a random draw from the training region so they barely move any

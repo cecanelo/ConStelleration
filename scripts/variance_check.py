@@ -8,7 +8,7 @@ Step 2 then reported aleatoric 0.01048, not zero, which is the model's own
 misfit rather than noise in the world. Either way there is no ground truth to
 check it against, so one has to be manufactured.
 
-⚠️ The check is NOT "aleatoric went up". Anything makes a number go up. It is
+The check is NOT "aleatoric went up". Anything makes a number go up. It is
 whether aleatoric lands on a magnitude that was chosen in advance.
 
   1. Add Gaussian noise of a known standard deviation to the training targets.
@@ -124,7 +124,7 @@ def measure_injected_noise(X_reduced, y, percentile=TWIN_PERCENTILE):
     both carry independent noise of standard deviation sigma, the expected
     squared difference is 2 sigma squared, hence the division by root two.
 
-    ⚠️ Probably biased low on this pool, see the module docstring. Kept for the
+    Probably biased low on this pool, see the module docstring. Kept for the
     record, not used by the main check.
     """
     scaled = StandardScaler().fit_transform(X_reduced)
@@ -198,7 +198,7 @@ def run_level(sigma, X, y, fit_pool, in_idx, baseline_aleatoric):
     member_means, member_variances = predict_all(X[in_idx])
     parts = decompose(member_means, member_variances)
 
-    # ⚠️ Aggregated by metrics.rms_uncertainty, which was mean(sqrt(variance))
+    # Aggregated by metrics.rms_uncertainty, which was mean(sqrt(variance))
     # inline here until 2026-08-30. The aggregation is not cosmetic in this
     # script: the entire check is that injected noise adds in VARIANCE, so
     # expected = sqrt(baseline^2 + sigma^2) is an identity about mean variances

@@ -24,7 +24,7 @@ CRPS_AT_MEAN = 2 * norm.pdf(0.0) - 1 / np.sqrt(np.pi)
 def _standard_deviation(variance):
     """Variance to standard deviation, with the one check worth making.
 
-    ⚠️ Every function here takes VARIANCE, not standard deviation, because that
+    Every function here takes VARIANCE, not standard deviation, because that
     is what ensemble.decompose returns and what the points CSVs store. Passing a
     standard deviation instead is undetectable from inside: it is positive, it is
     finite, and it produces coverage and CRPS numbers that look entirely
@@ -46,7 +46,7 @@ def rms_uncertainty(variance):
     target lives on and the only one comparable to RMSE. The averaging happens
     in variance space, where adding epistemic and aleatoric is valid.
 
-    ⚠️ NOT mean(sqrt(variance)). Two scripts computed the average standard
+    NOT mean(sqrt(variance)). Two scripts computed the average standard
     deviation until 2026-08-30, which biased every calibration ratio and every
     variance-recovery ratio in the project low. The correct aggregation follows
     from what the ratio claims: a calibrated point satisfies E[(y - mu)^2] =

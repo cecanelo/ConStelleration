@@ -11,7 +11,7 @@ reason the plain MSE ensemble exists.
 Six fits, three learning rates by two batch sizes, single networks rather than
 ensembles.
 
-⚠️ Random split only, selected on validation loss only. Choosing
+Random split only, selected on validation loss only. Choosing
 hyperparameters by tail-split performance would leak the extrapolation
 condition into the model and invalidate the study in a way no reviewer could
 detect from the results. This script never constructs a tail split, which is

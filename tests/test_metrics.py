@@ -59,7 +59,7 @@ def test_rms_uncertainty_equals_rmse_when_calibrated(calibrated):
 
 
 def test_rms_uncertainty_is_not_the_mean_standard_deviation(calibrated):
-    """⚠️ Pins the distinction rather than trusting the name. The two agree when
+    """Pins the distinction rather than trusting the name. The two agree when
     every point shares one variance and diverge as the spread grows, so a
     homoscedastic-only test would pass on the wrong implementation."""
     _, _, variance = calibrated
@@ -120,7 +120,7 @@ def test_coverage_hits_nominal_when_calibrated(calibrated):
 
 
 def test_coverage_matches_the_pit_route(calibrated):
-    """⚠️ The independent second path. coverage halves inside its ppf argument
+    """The independent second path. coverage halves inside its ppf argument
     and this route does not, so a dropped or doubled half shows up here as a
     mismatch. Same numbers, two derivations."""
     y_true, mean, variance = calibrated
@@ -180,7 +180,7 @@ def test_crps_is_never_negative(calibrated):
 
 def test_crps_scales_with_the_units_of_the_target(calibrated):
     """Rescaling the target by c rescales CRPS by c, since variance carries c
-    squared. ⚠️ This is the guard against the y_std versus y_std squared error
+    squared. This is the guard against the y_std versus y_std squared error
     that nets.py flags as the most likely silent unit bug in the codebase."""
     y_true, mean, variance = calibrated
     c = 7.0
@@ -243,7 +243,7 @@ def test_points_lie_inside_their_reported_edges(distance):
 
 
 def test_furthest_point_is_binned_not_clipped(distance):
-    """⚠️ The nextafter guard. searchsorted with side='right' puts the maximum
+    """The nextafter guard. searchsorted with side='right' puts the maximum
     past the last edge, and the clip would then fold it back into the top bin
     without it ever being counted as inside. Same answer here, different reason,
     so this asserts the edge brackets it rather than that it merely landed."""

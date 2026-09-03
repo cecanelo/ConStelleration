@@ -414,7 +414,7 @@ def test_warmup_default_is_the_frozen_value():
 
 
 def test_mv_refuses_a_max_epochs_that_skips_the_nll_phase(fit_and_val):
-    """⚠️ The silent-failure guard. Best-weight tracking resets at the warm-up
+    """The silent-failure guard. Best-weight tracking resets at the warm-up
     boundary, so a run that never reaches it restores the best MSE-phase
     checkpoint and returns variances from a head that never saw the NLL. Every
     downstream number would look ordinary and mean nothing. Unreachable with the

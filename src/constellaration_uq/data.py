@@ -50,7 +50,7 @@ def trim_target_tails(
 ) -> pd.DataFrame:
     """Drop the extreme tails of one target column.
 
-    ⚠️ Reads labels, and does so before any split exists. On a random split that
+    Reads labels, and does so before any split exists. On a random split that
     is harmless. On this project's splits it is not: target and split axis are
     correlated, so the dropped rows concentrate in the held-out region. 22 of
     the 28 dropped rows land in the tail split's held-out set. The cost is
@@ -58,7 +58,7 @@ def trim_target_tails(
     decision log 1.4; it is about 2% on the tail headline, in the flattering
     direction.
 
-    ⚠️ NaN targets would vanish here silently. `between` is False for NaN, so a
+    NaN targets would vanish here silently. `between` is False for NaN, so a
     NaN row is dropped by this function and counted against the tail fraction,
     which makes the trim quietly remove more than it claims to. There are none
     in the current pool, so this is a guard against a future target column
@@ -94,7 +94,7 @@ N_PER_SURFACE = 40
 def poloidal_mode_columns(m: int) -> np.ndarray:
     """Column indices in the 80-vector belonging to one poloidal mode number.
 
-    ⚠️ The dropped five shift every later block, so an m block does NOT sit at
+    The dropped five shift every later block, so an m block does NOT sit at
     m * 9 in the flattened vector. m = 4 is columns 31 to 39 and 71 to 79, not
     the last 18 of the 80. Taking the last 18 would grab one surface's m = 3
     and m = 4 and none of the other's, which runs fine and produces plausible

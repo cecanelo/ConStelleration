@@ -75,7 +75,7 @@ def nested_subsamples(n_pool, sizes, seed):
     range(n_pool), so the N = 2000 set is the N = 1000 set plus 1000 more rows
     rather than an independent draw.
 
-    ⚠️ Nesting is the point, not an implementation convenience. The sweep asks
+    Nesting is the point, not an implementation convenience. The sweep asks
     whether epistemic uncertainty shrinks as data is added. With independent
     draws per size, the difference between two rungs mixes "more data" with
     "different data", and at the small rungs the second term is large: 1000 rows

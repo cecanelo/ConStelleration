@@ -15,7 +15,7 @@ is on identical data with no switching in between.
 
     python3 scripts/time_device.py
 
-⚠️ Times ONE member with the frozen recipe. Do not change the recipe to make a
+Times ONE member with the frozen recipe. Do not change the recipe to make a
 number look better, the point is to measure the sweep as it will actually run.
 """
 
@@ -48,7 +48,7 @@ def devices():
     if torch.cuda.is_available():
         found.append((torch.cuda.get_device_name(0), torch.device('cuda')))
     else:
-        print('⚠️  no CUDA device visible, timing CPU only. Switch the studio to')
+        print('Warning: no CUDA device visible, timing CPU only. Switch the studio to')
         print('   a GPU machine and rerun to get the comparison.\n')
     return found
 

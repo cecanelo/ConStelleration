@@ -5,7 +5,7 @@ it assumes the fallback always succeeds. If VMEC++ fails at a higher rate in the
 compact region, that assumption is weakest exactly where deferral sends the most
 work, and the curve is optimistic where it matters most.
 
-⚠️ This is a statement about DEPLOYMENT, not about the measured curve. Every
+This is a statement about DEPLOYMENT, not about the measured curve. Every
 shape in our pool solved successfully, by construction: the filter chain keeps
 only converged rows. So the deferral experiment is not wrong on its own terms.
 The risk is that an optimizer proposing new compact shapes meets a failure rate
@@ -22,14 +22,14 @@ So aspect ratio is predicted from the 80 boundary coefficients, which gate 3.5
 established is possible at R2 0.988. That gate asked whether the split axis is
 input-measurable; this reuses the answer for a different purpose.
 
-⚠️ Both groups must be measured with the SAME instrument. Using the true aspect
+Both groups must be measured with the SAME instrument. Using the true aspect
 ratio for successes and a prediction for failures would compare two populations
 through two different lenses, and any difference in failure rate could then be
 prediction error rather than physics. Every row here gets an out-of-fold
 prediction: successes from a model that did not see them, failures from the
 average of the same fold models. Nobody is scored in sample.
 
-⚠️ The aspect-ratio model is itself extrapolating onto the failures. It was fit
+The aspect-ratio model is itself extrapolating onto the failures. It was fit
 only on shapes that solved, and there is no label on a failure to check it
 against, so its accuracy there is unmeasurable. This is the project's own
 subject appearing one level down. The held-out R2 below bounds the instrument

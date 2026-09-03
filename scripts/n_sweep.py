@@ -11,7 +11,7 @@ The claim under test is what earns the two terms their names:
     epistemic is ignorance, so it must SHRINK as training data grows
     aleatoric is noise, so it must NOT
 
-⚠️ On clean targets the second half is vacuous, and that is why this runs in two
+On clean targets the second half is vacuous, and that is why this runs in two
 noise conditions. 5.1 and 5.4 established that on clean targets the aleatoric
 term is the model's own misfit, which *does* shrink with N, so "aleatoric stays
 flat" would have no content. Adding Gaussian noise of σ = 0.020 to the training
@@ -19,7 +19,7 @@ targets installs a floor that genuinely should not move, and the contrast betwee
 the conditions is the result: epistemic decaying while the injected part does
 not. It also makes the claim falsifiable to a number rather than to a trend.
 
-⚠️ The number is the *recovered* injection, `sqrt(noisy² − clean²)` within seed,
+The number is the *recovered* injection, `sqrt(noisy² − clean²)` within seed,
 not the raw noisy aleatoric curve. Measured, it converges to 0.020 from above
 (0.0318, 0.0241, 0.0223, 0.0223, 0.0208), because the subtraction credits the
 clean run's misfit to the noisy run while noisy training actually fits worse.
@@ -38,7 +38,7 @@ the sweep validates the uncertainty machinery rather than any one metric.
     python3 scripts/n_sweep.py            # 30 ensembles, the full grid
     python3 scripts/n_sweep.py --reduced  # 12 ensembles, the documented floor
 
-⚠️ Report the SHAPE of the decay, not a fitted exponent (6.3). At ten members
+Report the SHAPE of the decay, not a fitted exponent (6.3). At ten members
 with a fixed architecture the curve is dominated by how fast members stop
 disagreeing, which is not the clean statistical rate a fitted number implies.
 """
@@ -99,12 +99,12 @@ def build_sets(X, y, axis, seed=0):
 
     Returns (fit_pool_X, fit_pool_y, X_val, y_val, out_idx, in_idx).
 
-    ⚠️ No distance is returned. This used to compute one and no caller ever
+    No distance is returned. This used to compute one and no caller ever
     read it, which is dead code in a script whose whole claim is that only N
     varies. Removed 2026-08-31. The sweep reports in-region and out-of-region
     aggregates, not a distance curve; that lives in scripts/calibration.py.
 
-    ⚠️ The test sets and the validation set are frozen ACROSS the whole sweep.
+    The test sets and the validation set are frozen ACROSS the whole sweep.
     Only the subsample drawn from the fit pool varies. If the validation set
     changed with N, models would stop training at different points for a reason
     unrelated to data volume, which is the confound the fixed 500-point
@@ -258,7 +258,7 @@ def report_shape(averaged, noise_levels):
 def load_completed(constants):
     """Cells already on disk from an interrupted run, or [] if there are none.
 
-    ⚠️ Refuses to resume across a configuration change. The saved constants must
+    Refuses to resume across a configuration change. The saved constants must
     match the current ones exactly, because the alternative failure is silent: a
     results file half produced under one recipe and half under another looks
     complete and is not comparable rung to rung, which is the single assumption
@@ -273,7 +273,7 @@ def load_completed(constants):
         return []
 
     if document.get('constants') != constants:
-        print('⚠️  existing results/n_sweep.json was produced under different')
+        print('Warning: existing results/n_sweep.json was produced under different')
         print('   constants. Starting over rather than mixing two recipes.\n')
         return []
 
@@ -348,7 +348,7 @@ def main():
     def checkpoint(rows, averaged=None, total_seconds=None):
         """Write what exists so far.
 
-        ⚠️ Called after every cell, not once at the end. This run is 30
+        Called after every cell, not once at the end. This run is 30
         ensembles and roughly 40 minutes, and the summary and reporting
         functions do not execute until the last one finishes. Without this, a
         typo in either would discard every trained ensemble, which is the one

@@ -80,7 +80,7 @@ def bin_by_distance(distance, abs_error, n_bins):
 def matched_windows(all_points, width=WINDOW_WIDTH):
     """Hole against tail inside identical distance windows.
 
-    ⚠️ **This exists because reading the two binned curves at their bin medians
+    **This exists because reading the two binned curves at their bin medians
     does not compare like with like, and a headline number was wrong for exactly
     that reason.** The bins are equal-count, so their widths differ wherever the
     two splits differ in density: the tail's second bin spans 0.13 to 0.31 while

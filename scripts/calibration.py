@@ -13,7 +13,7 @@ per point. Seconds, not minutes.
 Three diagnostics, frozen in 7.1: coverage versus nominal, CRPS, and PIT. Coverage and CRPS bin by distance using metrics.distance_bins,
 the same edges the distance-error figure uses, so the two curves overlay.
 
-⚠️ Everything here scores TOTAL predicted variance, which amends 7.5's original
+Everything here scores TOTAL predicted variance, which amends 7.5's original
 "epistemic alone". Coverage is an interval question and an interval needs the
 full spread: in-region epistemic is 0.00887 against an RMSE of 0.01256, so an
 epistemic-only 90% interval would read as badly broken on the random split,
@@ -96,13 +96,13 @@ def score(df):
 def bin_out_of_region(df):
     """Coverage and CRPS in the shared quantile bins of distance.
 
-    ⚠️ Out-of-region points only, and the in-region set is a separate anchor at
+    Out-of-region points only, and the in-region set is a separate anchor at
     distance zero rather than the first bin. Nearly half the evaluation points
     sit at exactly zero distance, so binning the combined set spends three of
     eight bins stacking them against the y axis. Same convention as
     distance_error.py, which is what lets the two figures share an x axis.
 
-    ⚠️ **PIT mean is binned here, and 7.1's cut does not forbid it.** That entry
+    **PIT mean is binned here, and 7.1's cut does not forbid it.** That entry
     cut the per-bin PIT *histogram*, where ten bars rest on about sixty points
     each and jump around from sampling noise alone. A per-bin PIT *mean* rests
     on all ~675 points in the bin and is stable. Two different objects.
