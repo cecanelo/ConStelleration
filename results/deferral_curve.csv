@@ -1,4 +1,4 @@
-region,ranking,deferred,saved,crps
+region,ranking,deferred,saved,score
 out,epistemic,0.0,1.0,0.019474690973745722
 out,epistemic,0.02,0.98,0.018490787537544167
 out,epistemic,0.04,0.96,0.017708285958930398

@@ -1381,7 +1381,7 @@ Coverage at six nominal levels, CRPS, and PIT, all on total uncertainty per the 
 
 **Decided:** Three curves, epistemic-ranked, aleatoric-ranked and total-ranked. Amended 2026-09-03; it read "two curves, not aleatoric-ranked" until then, and the reason recorded for that cut turned out to be false.
 
-**ANSWERED, and upgraded from a lean to a result 2026-08-31.** Replicated over three seeds on all three splits, total-ranked wins **all nine paired runs** by 0.8% to 5.8% on AUC, mean near 3.5%. On the tail out of region, 0.00647 ± 0.00018 against 0.00677 ± 0.00026.
+**ANSWERED, and upgraded from a lean to a result 2026-08-31.** Replicated over three seeds on all three splits, total-ranked beats epistemic-ranked in **all nine paired runs**. **Re-measured under both scoring rules 2026-09-04: 9/9 by 1.2% to 5.4% on MAE, 9/9 by 0.8% to 5.8% on CRPS.** Quote the MAE numbers, since CRPS scales with sigma and total is the larger sigma, so CRPS can favour total by construction. On the tail out of region, CRPS AUC 0.00647 ± 0.00018 against 0.00677 ± 0.00026; MAE AUC 0.00875 ± 0.00023 against 0.00915 ± 0.00032.
 
 **Quote the paired comparison, not the unpaired one.** Across seeds the two AUC distributions overlap, but both signals are computed from the same ensemble, so what varies between them within a run is the signal and what varies between runs is the level. Comparing the marginals throws away the pairing and understates a difference that is consistent in sign nine times out of nine.
 
@@ -1393,9 +1393,11 @@ The direction went the way 5.1 predicts, since the aleatoric term is model misfi
 
 **Dropped from the original "all three":** aleatoric-ranked. If aleatoric really does sit at the numerical floor, ranking by it is ranking by noise, and the curve would land on the random baseline by construction. It answers nothing that the floor measurement in Stage 2 does not already answer.
 
-**REINSTATED 2026-09-03. The premise above was falsified by step 2 and the conclusion drawn from it was never revisited.** Aleatoric does not sit at the numerical floor. Step 2 measured it at 0.01194, larger than epistemic's 0.00887, and 5.1 established it as model misfit rather than label noise. Ranking by it is therefore not ranking by noise, and the curve does not land on random. Measured (`scripts/deferral.py`, replicated by `seed_spread.py`) on the tail split out of region across three seeds, aleatoric-ranked AUC is 0.00660 ± 0.00016 against epistemic-ranked's 0.00677 ± 0.00026, about 61% of the available headroom against epistemic's 59% at seed 0. It beats epistemic-ranked in three paired runs out of three on the tail. Under MAE, where the score does not involve any variance and no coupling between the metric and the ranking signal is possible, the ordering is unchanged.
+**REINSTATED 2026-09-03. The premise above was falsified by step 2 and the conclusion drawn from it was never revisited.** Aleatoric does not sit at the numerical floor. Step 2 measured it at 0.01194, larger than epistemic's 0.00887, and 5.1 established it as model misfit rather than label noise. Ranking by it is therefore not ranking by noise, and the curve does not land on random. Measured (`scripts/deferral.py`, replicated by `seed_spread.py`) on the tail split out of region across three seeds, aleatoric-ranked AUC is 0.00893 ± 0.00019 against epistemic-ranked's 0.00915 ± 0.00032 on MAE, and 0.00660 ± 0.00016 against 0.00677 ± 0.00026 on CRPS. That is about 61% of the available headroom against epistemic's 58% at seed 0, and it beats epistemic-ranked in three paired runs out of three on the tail. **The per-split win pattern is identical under both scoring rules**, random 3/3, hole 0/3, tail 3/3, so nothing here depends on the metric and MAE rules out any coupling between the score and the ranking signal.
 
-**It does not win on every split, and the pattern is clean rather than noisy.** Paired across all three splits the count is 6 of 9, not 9 of 9: aleatoric beats epistemic on random (3/3) and tail (3/3), loses on the hole (3/3, one seed by 8.3%). Total-ranked still wins all nine against both alternatives, so it remains the one signal with no split where it loses. Report aleatoric-ranked as competitive with, and on the headline tail split better than, epistemic-ranked, not as a uniformly better single signal.
+**It does not win on every split, and the pattern is clean rather than noisy.** Paired across all three splits the count is 6 of 9, not 9 of 9, and identical under both scoring rules: aleatoric beats epistemic on random (3/3) and tail (3/3), loses on the hole (3/3). Report aleatoric-ranked as competitive with, and on the headline tail split better than, epistemic-ranked, not as a uniformly better single signal.
+
+**CORRECTED 2026-09-04. This said "total-ranked still wins all nine against both alternatives, so it remains the one signal with no split where it loses." That held under CRPS and does not under MAE.** Total beats aleatoric 9/9 on CRPS but **8/9 on MAE**, losing one run by 0.1%. The two signals differ by exactly the term CRPS scales with, so CRPS was handing total a construction advantage in precisely that comparison, which is what moving the y axis to MAE (8.3, reversed the same day) was meant to expose. Against epistemic-ranked total wins 9/9 under both rules, so nothing in the headline moves. **Say that total-ranked is never beaten by more than noise, not that it always wins.**
 
 **Why the term named for ignorance is the weaker ranker where it wins.** Aleatoric here says "this part of the function is hard for me to fit", which is close to a direct statement about local error magnitude. Epistemic says "my members disagree here", which is a proxy for unfamiliarity, and unfamiliarity predicts error less directly than difficulty does. That also explains why total beats both in all nine paired runs: the component treated throughout the design as noise carries real ranking signal on top of the one treated as the useful part. Why aleatoric specifically loses on the hole is unexplained; it is reported rather than rationalised.
 
@@ -1416,19 +1418,29 @@ The direction went the way 5.1 predicts, since the aleatoric term is model misfi
 
 ---
 
-**8.3 Y-axis** `SETTLED`
+**8.3 Y-axis** `SETTLED, REVERSED 2026-09-04`
 
 - [x] Decided
 
-**Decided:** CRPS of the hybrid system, in physical units per 5.2. Deferred points are credited with the exact solver value, so they contribute zero error.
+**Decided:** MAE of the hybrid system, in physical units per 5.2, with CRPS reported alongside as a supporting check. Deferred points are credited with the exact solver value, so they contribute zero error.
 
-**Why CRPS and not RMSE or MAE:** this is the one figure where the full predictive distribution, not just the mean, is under test. The deferral decision is driven by predicted uncertainty, so scoring its outcome with a metric that ignores uncertainty would be internally inconsistent, RMSE and MAE score a mean-variance ensemble identically to a plain point predictor with the same means. CRPS has a closed form for a Gaussian predictive distribution, so it is cheap.
+**REVERSED 2026-09-04. This read "CRPS, not RMSE or MAE" until then, and the original reasoning is kept below because it was correct when it was written.** Two things changed.
+
+**The unique-job argument expired.** CRPS was chosen because this was "the one figure where the full predictive distribution is under test". That was true in a project that had no calibration figures yet. It is not true now: coverage against nominal, coverage against distance, PIT and the recalibration panel all test the distribution directly, and the variance-head injection check (6.2, step 3) tests it harder than a deferral curve can, by recovering a known injected sigma to within 7%. CRPS no longer answers anything here that nothing else answers.
+
+**The circularity does not expire.** For a Gaussian, CRPS scales with sigma. The curve ranks by sigma, so it strips high-CRPS points partly by construction rather than because those points were genuinely wrong, and the margin over the random floor is flattered by the ranking signal living inside the metric. MAE never touches the predicted variance, so a win on MAE means the uncertainty located genuinely wrong predictions. That is the sharper claim and the one the write-up makes in words.
+
+**A second, smaller reason.** The curve is a cumulative mean with deferred points credited zero, so on MAE it is linear in the retained fraction and random deferral at rate r lands at exactly (1-r) of the baseline. "Spend 20% of the budget, remove 20% of the error" is then exact rather than empirical. Under CRPS the random floor is a curve and that reading is approximate.
+
+**Nothing in the headline moves,** which is what makes this a reporting change rather than a result change. At seed 0, out of region: 40.8% cut at 20% deferral and 63% of the headroom on MAE, against 41.0% and 63% on CRPS. Both curves are produced by the same notebook cell via the `SCORE` toggle, so neither can drift from the other.
+
+**The original reasoning, superseded but kept.** Why CRPS and not RMSE or MAE: this is the one figure where the full predictive distribution, not just the mean, is under test. The deferral decision is driven by predicted uncertainty, so scoring its outcome with a metric that ignores uncertainty would be internally inconsistent, RMSE and MAE score a mean-variance ensemble identically to a plain point predictor with the same means. CRPS has a closed form for a Gaussian predictive distribution, so it is cheap.
 
 **Convenient property:** where aleatoric sits at the floor, CRPS collapses toward MAE numerically. So the difference from RMSE/MAE only appears where it should, out-of-region, where epistemic widens the interval.
 
 **Scope:** CRPS is for this figure only. RMSE stays the right tool everywhere else, the Table 7 comparison and general point-accuracy reporting.
 
-**My decision:**
+**My decision, as recorded before the calibration figures existed and now superseded:**
 > CRPS here. The whole figure is about whether the uncertainty estimate is useful, and RMSE or MAE would give the same answer whether or not the variance head did anything, which defeats the point. Keep RMSE for the Table 7 comparison.
 
 ---

@@ -76,30 +76,43 @@ def score_region(df):
     }
 
 
+def absolute_error(y_true, mean, variance):
+    """MAE's per-point score, matching the CRPS signature so the two are
+    interchangeable. Same helper as scripts/deferral.py."""
+    del variance
+    return np.abs(np.asarray(y_true) - np.asarray(mean))
+
+
+# Both scoring rules, because the claim this function backs is exactly the kind
+# CRPS can flatter. CRPS scales with sigma for a Gaussian, and total IS the
+# larger sigma, so ranking by total sits close to ranking by the metric itself
+# and gains an edge by construction rather than by predicting error better. MAE
+# never touches the predicted variance and so cannot do that. Reporting both
+# turns "total wins" into "total wins under a rule that cannot favour it".
+SCORERS = {'mae': absolute_error, 'crps': crps_gaussian}
+
+# Lower AUC is better, so a "win" is the smaller number.
+RANKING_SIGNALS = ('total', 'aleatoric', 'epistemic')
+
+
 def deferral_aucs(df):
-    """The three ranking signals against each other, out of region.
+    """Every ranking signal against every other, under both scoring rules.
 
     Margins here are a few percent, small enough that seed 0 alone cannot settle
-    them. All three come from one ensemble, so the comparison is paired: what
-    varies within a run is the signal and what varies between runs is the level.
-    Count wins per run rather than comparing the marginals, which overlap.
+    them. All three signals come from one ensemble, so the comparison is paired:
+    what varies within a run is the signal and what varies between runs is the
+    level. Count wins per run rather than comparing the marginals, which overlap.
 
     Aleatoric joined the set on 2026-09-03. It was cut in 8.1 on the assumption
     that it would sit at the numerical floor, which step 2 falsified.
     """
-    crps = crps_gaussian(df['y_true'], df['mean'], df['total_variance'])
-    return {
-        f'auc_{name}': float(np.trapz(deferral_curve(crps, signal, RATES), RATES))
-        for name, signal in (
-            ('total', df['total_variance']),
-            ('epistemic', df['epistemic_variance']),
-            ('aleatoric', df['aleatoric_variance']),
-        )
-    }
-
-
-# Lower AUC is better, so a "win" is the smaller number.
-RANKING_SIGNALS = ('total', 'aleatoric', 'epistemic')
+    aucs = {}
+    for metric, score_fn in SCORERS.items():
+        score = score_fn(df['y_true'], df['mean'], df['total_variance'])
+        for name in RANKING_SIGNALS:
+            curve = deferral_curve(score, df[f'{name}_variance'], RATES)
+            aucs[f'auc_{metric}_{name}'] = float(np.trapz(curve, RATES))
+    return aucs
 
 
 def summarise(values):
@@ -141,10 +154,15 @@ def collect():
         }
         summary['gap'] = summarise([measured[s]['gap'] for s in seeds])
         aucs = {
-            name: [measured[s]['out'][f'auc_{name}'] for s in seeds] for name in RANKING_SIGNALS
+            metric: {
+                name: [measured[s]['out'][f'auc_{metric}_{name}'] for s in seeds]
+                for name in RANKING_SIGNALS
+            }
+            for metric in SCORERS
         }
-        for name, values in aucs.items():
-            summary[f'auc_{name}'] = summarise(values)
+        for metric, by_signal in aucs.items():
+            for name, values in by_signal.items():
+                summary[f'auc_{metric}_{name}'] = summarise(values)
 
         per_seed[split] = {'seeds': seeds, 'summary': summary, 'deferral_aucs': aucs}
         for key, stats in summary.items():
@@ -179,34 +197,43 @@ def paired_wins(per_seed):
     A run is one split at one seed, so three splits by three seeds is nine. The
     marginals overlap across seeds while the sign of the difference is stable,
     which is exactly the case where pairing is the whole point.
+
+    Counted separately under each scoring rule. A result that holds under MAE is
+    the one to quote, since MAE cannot favour the larger-sigma signal.
     """
     result = {}
-    for a, b in itertools.combinations(RANKING_SIGNALS, 2):
-        wins, margins = 0, []
-        for block in per_seed.values():
-            paired = zip(block['deferral_aucs'][a], block['deferral_aucs'][b], strict=True)
-            for auc_a, auc_b in paired:
-                wins += auc_a < auc_b
-                margins.append(1.0 - auc_a / auc_b)
-        result[f'{a}_over_{b}'] = {
-            'wins': int(wins),
-            'runs': len(margins),
-            'margin_mean': float(np.mean(margins)),
-            'margin_min': float(np.min(margins)),
-            'margin_max': float(np.max(margins)),
-        }
+    for metric in SCORERS:
+        for a, b in itertools.combinations(RANKING_SIGNALS, 2):
+            wins, margins = 0, []
+            for block in per_seed.values():
+                by_signal = block['deferral_aucs'][metric]
+                paired = zip(by_signal[a], by_signal[b], strict=True)
+                for auc_a, auc_b in paired:
+                    wins += auc_a < auc_b
+                    margins.append(1.0 - auc_a / auc_b)
+            result[f'{metric}:{a}_over_{b}'] = {
+                'metric': metric,
+                'wins': int(wins),
+                'runs': len(margins),
+                'margin_mean': float(np.mean(margins)),
+                'margin_min': float(np.min(margins)),
+                'margin_max': float(np.max(margins)),
+            }
     return result
 
 
 def print_paired(wins):
     print('paired deferral comparison, out of region, one run per split per seed')
-    print(f'{"comparison":>24s} {"wins":>9s} {"margin":>9s} {"min":>8s} {"max":>8s}')
+    print(f'{"comparison":>30s} {"wins":>9s} {"margin":>9s} {"min":>8s} {"max":>8s}')
     for name, row in wins.items():
+        label = name.replace('_', ' ').replace(':', '  ')
         print(
-            f'{name.replace("_", " "):>24s} {row["wins"]:4d}/{row["runs"]:<4d} '
+            f'{label:>30s} {row["wins"]:4d}/{row["runs"]:<4d} '
             f'{row["margin_mean"]:8.1%} {row["margin_min"]:7.1%} {row["margin_max"]:7.1%}'
         )
-    print('Lower AUC is better, so a win is the smaller number and a positive margin.\n')
+    print('Lower AUC is better, so a win is the smaller number and a positive margin.')
+    print('Quote the mae rows: crps scales with sigma and so can favour total by')
+    print('construction, while mae never touches the predicted variance.\n')
 
 
 def print_table(per_seed):
@@ -262,8 +289,11 @@ def main():
             'SPLITS': SPLITS,
             'COVERAGE_LEVEL': COVERAGE_LEVEL,
             'RANKING_SIGNALS': list(RANKING_SIGNALS),
+            'SCORERS': list(SCORERS),
             'note': 'seed varies member init, in-region slice and validation set; '
             'hole and tail held-out sets are deterministic',
+            'deferral_note': 'auc keys are auc_{metric}_{signal}; quote the mae rows, '
+            'crps scales with sigma and can favour total-ranked by construction',
         },
     )
     save_table('seed_spread', rows)

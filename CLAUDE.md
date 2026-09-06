@@ -291,7 +291,7 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 **Coverage degrades with distance, which is the deliverable.** Tail: 0.928 at the nearest bin falling to 0.587 at 1.63 to 2.13 std out, with one non-monotone step (0.781 then 0.822 at the third and fourth bins). This read "monotonically" until 2026-08-31, which the bins contradict. Hole: 0.916 to 0.806, shallower and it flattens. At matched distance around 0.4 std the tail is worse than the hole (0.78 against 0.81), consistent with the single-MLP distance-matched premium.
 
-**Step 7 done (2026-08-30), `scripts/deferral.py`.** Deliverable two, no training, reads the tail points file in seconds. Rank the held-out shapes by uncertainty, defer the worst fraction to VMEC++, credit those exact, score the hybrid system by CRPS in physical units.
+**Step 7 done (2026-08-30), `scripts/deferral.py`.** Deliverable two, no training, reads the tail points file in seconds. Rank the held-out shapes by uncertainty, defer the worst fraction to VMEC++, credit those exact, score the hybrid system in physical units. **Scored by MAE since 2026-09-04, with CRPS alongside as the supporting check**; the script takes `--score` and writes a file per rule, and the two agree to within 0.2 points on every headline number.
 
 | ranking | 0% | 10% | 20% | 30% | 50% | AUC | halve at |
 |---|---|---|---|---|---|---|---|
@@ -306,11 +306,13 @@ Headline numbers, out/in RMSE ratio on the primary target: **aspect ratio tail-l
 
 **The result that pairs steps 6 and 7, and the honest framing of the whole project:** the intervals are badly miscalibrated at the compact edge (ratio 0.66, coverage 0.587 in the furthest bin), and the ranking still works there. **A signal can be useless as an absolute interval and still be good at ordering.** Say this rather than either half alone.
 
-**Total beats epistemic, and this is now a result rather than a lean.** Paired within each ensemble, total-ranked wins in **all nine runs**, three splits by three seeds, by 0.8% to 5.8% on AUC with a mean near 3.5%. On the tail out of region it is 0.00647 ± 0.00018 against 0.00677 ± 0.00026. Compared *unpaired* the two overlap across seeds, so the paired comparison is the one to quote: both signals come from the same ensemble, so the difference is what varies, not the level. It read "at every rate and in both regions" until 2026-08-31, which was false at 1 of 49 rates per region, so quote the paired win count rather than per-rate dominance. Which signal ranks best was deliberately left open when the deferral curve was specified, so the answer is a result either way. Consistent with aleatoric measuring model misfit rather than noise: misfit carries real information about local difficulty, so including it helps the ranking.
+**Total beats epistemic, and this is now a result rather than a lean.** Paired within each ensemble, total-ranked wins in **all nine runs**, three splits by three seeds. **Measured under both scoring rules since 2026-09-04: 9/9 by 1.2% to 5.4% on MAE, 9/9 by 0.8% to 5.8% on CRPS.** Quote the MAE figures. CRPS scales with sigma for a Gaussian and total is the larger sigma, so CRPS can favour total-ranked by construction; MAE never touches the predicted variance and cannot. On the tail out of region it is 0.00647 ± 0.00018 against 0.00677 ± 0.00026. Compared *unpaired* the two overlap across seeds, so the paired comparison is the one to quote: both signals come from the same ensemble, so the difference is what varies, not the level. It read "at every rate and in both regions" until 2026-08-31, which was false at 1 of 49 rates per region, so quote the paired win count rather than per-rate dominance. Which signal ranks best was deliberately left open when the deferral curve was specified, so the answer is a result either way. Consistent with aleatoric measuring model misfit rather than noise: misfit carries real information about local difficulty, so including it helps the ranking.
 
-**Aleatoric-ranked deferral was cut on a premise that turned out to be false, and reinstated 2026-09-03.** The deferral spec dropped it on the grounds that aleatoric would sit at the numerical floor, so ranking by it would be ranking by noise and the curve would land on random by construction. Step 2 falsified that premise, measuring aleatoric at 0.01194 against epistemic's 0.00887, and the conclusion drawn from it was never revisited. **Measured, `scripts/deferral.py` plus `seed_spread.py`: on the tail split out of region, aleatoric-ranked AUC is 0.00660 ± 0.00016 against epistemic-ranked's 0.00677 ± 0.00026, capturing about 61% of the available headroom against epistemic's 59% at seed 0. It beats epistemic-ranked in three paired runs out of three on the tail.** It lands nowhere near random. The ordering is unchanged under MAE, where the score involves no variance at all so the metric cannot be coupled to the ranking signal.
+**Aleatoric-ranked deferral was cut on a premise that turned out to be false, and reinstated 2026-09-03.** The deferral spec dropped it on the grounds that aleatoric would sit at the numerical floor, so ranking by it would be ranking by noise and the curve would land on random by construction. Step 2 falsified that premise, measuring aleatoric at 0.01194 against epistemic's 0.00887, and the conclusion drawn from it was never revisited. **Measured, `scripts/deferral.py` plus `seed_spread.py`: on the tail split out of region, aleatoric-ranked AUC is 0.00893 ± 0.00019 against epistemic-ranked's 0.00915 ± 0.00032 on MAE (0.00660 ± 0.00016 against 0.00677 ± 0.00026 on CRPS), capturing about 61% of the available headroom against epistemic's 58% at seed 0. It beats epistemic-ranked in three paired runs out of three on the tail.** It lands nowhere near random. **The per-split pattern is identical under both scoring rules**, random 3/3, hole 0/3, tail 3/3, so this finding does not depend on the metric and MAE cannot be coupling the score to the ranking signal.
 
-**It does not win everywhere, and that is itself part of the finding.** Across all three splits the paired count is 6 of 9, not 9 of 9: aleatoric-ranked beats epistemic-ranked on random (3/3) and tail (3/3), and loses on the hole (3/3, one seed by 8.3%). Total still wins all nine against both epistemic and aleatoric, so total-ranked stays the one signal that is never worse than the alternative. Do not claim aleatoric-ranked is the better single-signal choice; claim it is competitive with, and on the headline split better than, the term that was assumed to carry the ranking.
+**It does not win everywhere, and that is itself part of the finding.** Across all three splits the paired count is 6 of 9, not 9 of 9, under both scoring rules: aleatoric-ranked beats epistemic-ranked on random (3/3) and tail (3/3), and loses on the hole (3/3). Do not claim aleatoric-ranked is the better single-signal choice; claim it is competitive with, and on the headline split better than, the term that was assumed to carry the ranking.
+
+**"Total is never worse than the alternative" was true under CRPS and is not under MAE. Corrected 2026-09-04.** Against aleatoric-ranked, total wins 9/9 on CRPS but **8/9 on MAE**, the one exception losing by 0.1%, which is a tie in practice. That is the confound the metric switch was meant to expose: CRPS was giving total a construction advantage over aleatoric specifically, because those two differ by exactly the term CRPS scales with. Against epistemic-ranked total still wins 9/9 on both rules, so the headline is untouched. **The defensible sentence is that total-ranked is never beaten by more than noise, not that it always wins.**
 
 **The term named for ignorance is the weaker ranker on the split that matters most, and that is coherent.** Aleatoric says "this part of the function is hard for me to fit", close to a direct statement about local error magnitude. Epistemic says "my members disagree here", a proxy for unfamiliarity, which predicts error less directly than difficulty does. It also explains why total wins everywhere: the component treated as noise carries real ranking signal on top of the one treated as the useful part. **It does not undermine the decomposition**, since the N-sweep showed epistemic shrinking with data while the injected floor did not. For ranking specifically, misfit is the more informative term on random and tail; why it is not on the hole is unexplained and not worth speculating on without a targeted check.
 
@@ -436,7 +438,7 @@ are marked below.
 | `n_sweep.py [--restart]` | yes | 1386s on a T4 | `n_sweep.{json,csv}` |
 | `solver_failures.py` | yes | ~60s | `solver_failures.json`, `_bins.csv` |
 | `calibration.py` | no | seconds | `calibration.{json,csv}`, `_bins.csv`, `_points.csv` |
-| `deferral.py` | no | seconds | `deferral.json`, `deferral_curve.csv` |
+| `deferral.py [--score {mae,crps}]` | no | seconds | `deferral[_mae].json`, `deferral_curve[_mae].csv` |
 | `recalibration.py` | no | seconds | `recalibration.{json,csv}` |
 | `seed_spread.py` | no | seconds | `seed_spread.{json,csv}` |
 | `time_device.py` | yes | ~2 min | nothing, prints a CPU/GPU comparison |
@@ -454,6 +456,7 @@ for s in 1 2; do for k in random hole tail; do
 done; done
 python3 scripts/calibration.py
 python3 scripts/deferral.py
+python3 scripts/deferral.py --score crps
 python3 scripts/recalibration.py
 python3 scripts/seed_spread.py
 ```
@@ -972,14 +975,26 @@ architecture claim in either direction.
 - Deferral curve evaluation set: out-of-region is the headline
   (this is the tail split's held-out portion), in-region shown
   alongside as contrast, not as a competing headline.
-- Deferral curve y-axis: CRPS, not RMSE or MAE. This is the one
-  figure where the full predictive distribution, not just the
-  mean, is under test, and RMSE/MAE would score it identically
-  whether or not the variance head does anything useful. Closed
-  form for a Gaussian predictive distribution, cheap to compute.
-  Collapses toward MAE numerically where aleatoric sits near the
-  floor, so the difference from RMSE/MAE only shows up where it
-  should, out-of-region, where epistemic widens the interval.
+- Deferral curve y-axis: **MAE, with CRPS reported alongside as
+  a supporting check. Reversed 2026-09-04; this read "CRPS, not
+  RMSE or MAE" until then.** The original reason was that this
+  is the one figure where the full predictive distribution is
+  under test, since RMSE and MAE score a mean-variance ensemble
+  identically to a point predictor with the same mean. That was
+  true before the calibration figures existed. It is not now:
+  coverage, PIT and the recalibration panel test the
+  distribution directly, and the variance-head injection check
+  tests it harder by recovering a known sigma. What does not
+  expire is the circularity: CRPS scales with sigma for a
+  Gaussian, the curve ranks by sigma, so it strips high-CRPS
+  points partly by construction and the margin over random is
+  flattered by the ranking signal sitting inside the metric.
+  MAE never touches the predicted variance, so a win there
+  means the uncertainty found genuinely wrong predictions.
+  MAE also makes the random floor exact rather than empirical,
+  since the curve is a cumulative mean and so linear in the
+  retained fraction. **Nothing in the headline moved:** 40.8%
+  cut and 63% headroom on MAE against 41.0% and 63% on CRPS.
   RMSE stays the right tool everywhere else in the project
   (Table 7 comparison, general point-accuracy reporting).
 - Train a plain MSE ensemble first, before the mean-variance
