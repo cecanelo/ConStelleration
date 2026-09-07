@@ -21,54 +21,43 @@ That is the useful part of this project.
 
 ## Background
 
-A **stellarator** is a magnetic confinement fusion device. Its confining field is
-produced entirely by external coils, twisted into a three-dimensional geometry
-that holds the plasma in place without driving a current through it.
+A **stellarator** is a magnetic confinement fusion device: external coils
+alone twist a three-dimensional field that holds the plasma in place, no
+driven current needed.
 
 The object being designed is the **plasma boundary**, the outer surface the
-confined plasma is held to. In this dataset a boundary is parameterised by
-**80 Fourier coefficients**. A stellarator's twist repeats a fixed number of
-times around the torus, its **field period count**, and everything in this project is at
-field period = 3, matching Proxima's own example filter. The coefficients are indexed in 
-units of that field period count, so a boundary built at a different field period count is a different 
-kind of object, not a further-away point in the same space.
+plasma is held to, parameterised here by **80 Fourier coefficients**. Every
+boundary in this dataset shares the same **field period count**, 3, matching
+Proxima's own example filter.
 
-To find out whether a shape is good, engineers run an equilibrium solver,
-VMEC++, and compute performance metrics from the field it produces. That solve
-is the expensive step: this dataset alone is the product of roughly 182,000
-candidate boundaries evaluated that way.
+Checking whether a shape is good means running VMEC++, an equilibrium solver,
+and computing performance metrics from the field it produces. That solve is
+expensive: this dataset is the product of roughly 182,000 candidate boundaries
+evaluated that way.
 
-So people train a **surrogate**: a neural network that looks at the 80 numbers
-and predicts one of those metrics directly, here the **edge rotational
-transform**, a measure of how much the magnetic field lines twist around the
-torus per trip. However, it inherits one catch, true of supervised models
-generally:
+So people train a **surrogate**: a neural network that predicts one of those
+metrics directly from the 80 numbers, here the **edge rotational transform**,
+how much the field lines twist around the torus per trip. It inherits one
+catch, true of supervised models generally:
 
-> A model is accurate on inputs resembling its training data and degrades outside
-> it. A point prediction gives no indication of which case you are in, so the
-> output looks the same whether the input was well covered or not.
+> A model is accurate on inputs resembling its training data and degrades
+> outside it, with no visible sign in the output of which case you're in.
 
-This is the covariate-shift failure mode, and it is silent: nothing in the
-prediction itself flags the problem. The standard response is to have the model
-report an uncertainty alongside each prediction. **Whether that uncertainty can
-be trusted in the region where it matters most (the compact end: low aspect
-ratio, a fatter torus relative to its size) is what this project measures.**
+This is covariate shift, and it's silent. The standard response is to have the
+model report an uncertainty alongside each prediction. **Whether that
+uncertainty can be trusted where it matters most, the compact end, low aspect
+ratio, is what this project measures.**
 
-The team behind the dataset, Proxima Fusion, published it with a baseline
-surrogate of their own ([arXiv 2506.19583](https://arxiv.org/abs/2506.19583),
-NeurIPS 2025). In their appendix A.4, they report how accurate it is on familiar
-shapes, then note that surrogates like this go wrong when asked about unfamiliar
-ones, and list uncertainty calibration as one of the strategies to continue forward.
+Proxima Fusion published this dataset with a baseline surrogate of their own
+([arXiv 2506.19583](https://arxiv.org/abs/2506.19583), NeurIPS 2025): accurate
+on familiar shapes, prone to error on unfamiliar ones, with uncertainty
+calibration named as a direction for future work. This project does that.
 
-This project does that.
-
-The compact end matters on its own terms. The paper's Section 3 lists
+The compact end matters on its own terms, too. The paper's Section 3 lists
 "limiting the aspect ratio to achieve a compact device" as an engineering and
-economic consideration in stellarator design, not merely a gap in prior work
-([arXiv 2506.19583](https://arxiv.org/abs/2506.19583), Section 3).
-A confidently wrong surrogate does the most damage exactly where
-the dataset is thinnest, which is also where the design goal actually
-points.
+economic consideration, not merely a gap in prior work. A confidently wrong
+surrogate does the most damage exactly where the dataset is thinnest, which is
+also where the design goal points.
 
 ---
 
@@ -76,9 +65,10 @@ points.
 
 ### Three splits
 
-The hard part is defining "unfamiliar". You cannot just test on random held-out
-shapes, because those are all familiar by construction. So I built **three
-different train/test splits** and trained the same model on each.
+A random train/test split does not test whether the model generalizes to
+unfamiliar shapes, since the held-out shapes are familiar by construction. So
+I built **three different train/test splits** and trained the same model on
+each.
 
 ![Where the cuts fall](figures/split_design.png)
 
@@ -114,28 +104,35 @@ training step.
 
 - **Ensemble mean**: the average of the 10 predicted means, the number actually
   reported as the prediction.
+
   $$\bar\mu(x) = \frac{1}{K}\sum_{k=1}^{K} \mu_k(x)$$
 
 - **Epistemic uncertainty**: how much the 10 means disagree with each other.
   Wide agreement means confidence, wide disagreement means the training data
   left room for different networks to learn different things. Shrinks with
   more data.
+
   $$\sigma^2_{\text{epi}}(x) = \frac{1}{K-1}\sum_{k=1}^{K} \big(\mu_k(x) - \bar\mu(x)\big)^2$$
 
 - **Aleatoric uncertainty**: the average of the 10 networks' own reported
   variances, each network's estimate of the error it expects on top of its
   best guess.
+
   $$\sigma^2_{\text{ale}}(x) = \frac{1}{K}\sum_{k=1}^{K} \sigma_k^2(x)$$
 
 - **Total uncertainty**: epistemic plus aleatoric, the number that sets the
   model's predictive interval.
+
   $$\sigma^2_{\text{total}}(x) = \sigma^2_{\text{epi}}(x) + \sigma^2_{\text{ale}}(x)$$
 
-**Aleatoric is not literally noise here.** As far as it can be measured, this
-dataset has none: the few dozen genuinely near-identical shape pairs in it get
-simulation results that agree to six decimal places.
-What the term actually measures is the **network's own misfit**, the part of the
-function it cannot fit exactly, which looks like noise from inside the model.
+**Aleatoric is not literally noise here.** VMEC++ is an iterative solver with
+no stochastic component, so nothing in it can return two different answers for
+the same boundary beyond floating-point round-off and convergence tolerance,
+both far below this model's error. The data agrees: the closest genuinely
+distinct shape pairs differ in target by about 0.002, the function varying
+smoothly rather than scattering. What the term actually measures is the
+**network's own misfit**, the part of the function it cannot fit exactly,
+which looks like noise from inside the model.
 
 **The split is validated, not just assumed.** Across a seventeenfold increase
 in training data, the epistemic term fell 1.7x and the misfit part of the
@@ -167,11 +164,13 @@ Three honest limits on that comparison:
   exactly on the paper's own published figures, so my pipeline follows their
   documented steps correctly up to that point. The remaining gap could be an incompletely
   documented filter, or the dataset growing since their submission.
-- That same size difference is part of why R-squared isn't comparable either,
-  only the raw error is. R-squared depends on how spread out the test set is,
-  and ours differs from theirs in both size and distribution.
+- R-squared is not comparable either, only the error is. R-squared measures
+  error against the spread of the test set, and theirs is wider: their
+  published RMSE and R-squared imply a target spread of roughly 0.09 to 0.13,
+  against 0.079 measured on mine. The same error scores a worse R-squared on
+  the narrower set, which is why mine reads 0.982 against their 0.997.
 - Their paper does not say enough about their architecture for me to claim I reproduced
-  it. I matched the metric, not the model.
+  it.
 
 ---
 
@@ -183,24 +182,19 @@ Three honest limits on that comparison:
 than the hole.**
 
 Each held-out shape is scored on how far it sits from the nearest training
-shape, measured along the aspect ratio axis. Plotting error against that
-distance separates two things a single accuracy number cannot: whether the
-model degrades at all, and whether it degrades differently at a gap than at
-the edge of the data.
+shape, measured along the aspect ratio axis.
 
 ![Error against distance](figures/distance_error.png)
 
 Both conditions get worse with distance, and the tail sits above the hole
-almost everywhere.
+almost everywhere. But the tail's held-out set reaches much further out, to
+2.1 standard deviations against the hole's 0.45, and two thirds of its shapes
+sit beyond anything the hole contains, so comparing the two curves as wholes
+compares distance as much as it compares the kind of unfamiliarity. The grey
+band marks the range where both splits have shapes, the only place a
+matched-distance comparison exists. Inside it, the tail costs more than the
+hole in every one of three training runs, by 12% to 23%.
 
-**Most of that difference is distance, not the edge.** The tail's held-out set
-reaches much further out, to 2.1 standard deviations against the hole's 0.45,
-and two thirds of its shapes sit beyond anything the hole contains. So
-comparing the two aggregates partly compares distance rather than the thing
-the split was built to isolate. The grey band marks the range where both
-splits have shapes, which is the only place a fair comparison exists. Inside
-it, at the same distance, the tail costs more than the hole in every one of
-three training runs, by 12% to 23%.
 
 ### Do the predictive intervals keep up?
 
@@ -229,7 +223,7 @@ a bias neither curve can show, the next result.
 
 ### Is the tail biased, or just imprecise?
 
-**Biased. The hole is not.**
+**The tail is biased. The hole is not.**
 
 A wide predictive interval and a systematically wrong prediction are different failures,
 and coverage alone cannot tell them apart. A diagnostic called PIT (the
@@ -265,7 +259,7 @@ the dashed line is where an honest 90% interval would sit. Every arrow points
 down, because one scalar shrinks every interval it touches.
 
 The result has three parts. It works where it was fitted, the familiar columns
-land on the line. It transfers harmlessly on the random split, which has no
+land close to the line. It transfers harmlessly on the random split, which has no
 real shift to correct for. And it backfires on both genuinely shifted cases:
 the interior hole drops from 87% to 80% and the tail from 78% to 67%, because
 one scalar cannot fix a model that is too cautious near home and too confident
@@ -289,8 +283,8 @@ achieves, even though the predictive intervals behind it cannot be read literall
 On unfamiliar shapes the stated intervals still carry real information about the
 *order*: the predictions the model flags as least certain tend to be the worst
 ones more often than chance would explain. So use it as a filter. Send the
-most uncertain 20% of shapes to the simulation and keep the fast model's
-answer for the other 80%.
+most uncertain shapes to the simulation and keep the fast model's
+answer for the others.
 
 | approach | error reduction |
 |---|---|
