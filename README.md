@@ -1,12 +1,12 @@
 # Where can you trust a stellarator surrogate?
 
 **Short version:** I trained a fast model to replace a slower physics simulation,
-then measured where its answers stop being trustworthy. Three findings:
+then estimated its uncertainty and measured where its answers stop being trustworthy. Three findings:
 
-- **The error bars fail where they matter most.** On the least familiar shapes
-  the error roughly triples while the stated error bar only doubles, and a
-  range the model calls "90%" holds the truth 59% of the time.
-  ([Do the error bars keep up?](#do-the-error-bars-keep-up))
+- **The predictive intervals fail where they matter most.** On the least familiar shapes
+  the error roughly triples while the stated interval only doubles, and a
+  "90%" one holds the truth 59% of the time.
+  ([Do the intervals keep up?](#do-the-predictive-intervals-keep-up))
 - **The standard fix makes it worse.** Recalibrating on the data you have
   narrows intervals that were already too narrow.
   ([Can recalibration fix it?](#can-recalibration-fix-it))
@@ -30,7 +30,7 @@ confined plasma is held to. In this dataset a boundary is parameterised by
 **80 Fourier coefficients**. A stellarator's twist repeats a fixed number of
 times around the torus, its **field period count**, and everything in this project is at
 field period = 3, matching Proxima's own example filter. The coefficients are indexed in 
-units of that count, so a boundary built at a different field period count is a different 
+units of that field period count, so a boundary built at a different field period count is a different 
 kind of object, not a further-away point in the same space.
 
 To find out whether a shape is good, engineers run an equilibrium solver,
@@ -127,8 +127,8 @@ training step.
   best guess.
   $$\sigma^2_{\text{ale}}(x) = \frac{1}{K}\sum_{k=1}^{K} \sigma_k^2(x)$$
 
-- **Total uncertainty**: epistemic plus aleatoric, the number reported as the
-  model's error bar.
+- **Total uncertainty**: epistemic plus aleatoric, the number that sets the
+  model's predictive interval.
   $$\sigma^2_{\text{total}}(x) = \sigma^2_{\text{epi}}(x) + \sigma^2_{\text{ale}}(x)$$
 
 **Aleatoric is not literally noise here.** As far as it can be measured, this
@@ -202,13 +202,13 @@ splits have shapes, which is the only place a fair comparison exists. Inside
 it, at the same distance, the tail costs more than the hole in every one of
 three training runs, by 12% to 23%.
 
-### Do the error bars keep up?
+### Do the predictive intervals keep up?
 
 **They do not. On the least familiar shapes the error roughly triples while the
-stated error bar only doubles**, so the model notices it is on shakier ground,
+stated interval only doubles**, so the model notices it is on shakier ground,
 just not by enough.
 
-Growing error is fine if the reported range grows with it. This plots the
+Growing error is fine if the reported interval grows with it. This plots the
 fraction of truths that actually landed inside the model's stated 90% interval,
 against the same distance axis.
 
@@ -231,7 +231,7 @@ a bias neither curve can show, the next result.
 
 **Biased. The hole is not.**
 
-A wide error bar and a systematically wrong prediction are different failures,
+A wide predictive interval and a systematically wrong prediction are different failures,
 and coverage alone cannot tell them apart. A diagnostic called PIT (the
 probability integral transform) can. For each point, it marks where the truth
 landed inside the model's predicted distribution, expressed as one number
@@ -244,7 +244,7 @@ shifted too high, not merely too confident.
 
 The interior hole sits flat at 0.50 to 0.56 across its entire range, no trend
 and little bias. The tail is biased from the first bin, already at 0.43, and falls
-to 0.15 at the furthest distance measured. Widening the error bars would not
+to 0.15 at the furthest distance measured. Widening the intervals would not
 fix this: it is the center of the prediction that is wrong, and that is a
 different problem from the interval being too narrow.
 
@@ -252,11 +252,11 @@ different problem from the interval being too narrow.
 
 **No. It helps where it is fitted and makes both shifted cases worse.**
 
-If the error bars are miscalibrated, the standard repair is variance scaling
-([Kuleshov et al., 2018](#references)): measure how far off the ranges are on
-data you already have, then stretch or shrink every future range by that same
+If the predictive intervals are miscalibrated, the standard repair is variance scaling
+([Kuleshov et al., 2018](#references)): measure how far off the intervals are on
+data you already have, then stretch or shrink every future interval by that same
 factor. On familiar shapes the model was a little too cautious, so the fix
-correctly narrowed its ranges there.
+correctly narrowed its intervals there.
 
 ![Recalibration makes it worse](figures/recalibration_coverage.png)
 
@@ -272,8 +272,8 @@ one scalar cannot fix a model that is too cautious near home and too confident
 far away.
 
 For the tail there is a second reason no scalar could have worked. Variance
-scaling only stretches or shrinks the width of the range; it cannot shift where
-the range is centered. The PIT result above showed the tail's center is what is
+scaling only stretches or shrinks the interval's width; it cannot shift where
+it is centered. The PIT result above showed the tail's center is what is
 wrong, so the fix narrowed a width that was not the problem and left the bias
 untouched.
 
@@ -284,9 +284,9 @@ There is no cheap post-processing trick that fixes the intervals here.
 
 **Ranking.** It orders predictions well enough that solving the most uncertain
 20% of shapes cuts the total error by 41%, twice what solving a random 20%
-achieves, even though the ranges behind it cannot be read literally.
+achieves, even though the predictive intervals behind it cannot be read literally.
 
-On unfamiliar shapes the stated ranges still carry real information about the
+On unfamiliar shapes the stated intervals still carry real information about the
 *order*: the predictions the model flags as least certain tend to be the worst
 ones more often than chance would explain. So use it as a filter. Send the
 most uncertain 20% of shapes to the simulation and keep the fast model's
@@ -302,8 +302,8 @@ them, 50 out of 100, to cut the error in half, that is just what "no signal"
 looks like. With the model's ranking, checking the worst 27 out of 100 gets you
 there instead.
 
-The figure below turns that single 20%-deferral example into a full curve
-into a full curve. The horizontal axis is the percentage of shapes sent to the
+The figure below turns that single 20%-deferral example into a full curve. The
+horizontal axis is the percentage of shapes sent to the
 solver, and the vertical axis is the error that remains after doing so. Pick a
 solver-call budget you can afford, find it on the curve, and read off the error
 left over.
@@ -324,10 +324,10 @@ The model's curve sits roughly two thirds of the way from the blind line to the
 perfect one, the honest summary of how much the uncertainty signal is worth:
 clearly far better than nothing, and clearly not clairvoyant.
 
-Together with the two results before it, this is the whole finding. The ranges
-understate the real error, the standard fix cannot repair that
+Together with the two results before it, this is the whole finding. The
+predictive intervals understate the real error, the standard fix cannot repair that
 off-distribution, and the ranking still works. Reporting only the ranking
-would hide that the ranges cannot be read literally. Reporting only the
+would hide that the intervals cannot be read literally. Reporting only the
 miscalibration would make the model sound less useful than it is. Both are
 true at once: wrong as a number, still right as an order.
 
