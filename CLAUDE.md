@@ -401,8 +401,8 @@ Two loose ends, neither blocking anything: the mirror-pair search (folded into d
 
 ## Reproducing the results
 
-**Nothing here needs rerunning to read the findings.** All 57 files in `results/`
-and 23 in `figures/` are committed on purpose, so a reviewer sees every number on
+**Nothing here needs rerunning to read the findings.** All 58 files in `results/`
+and 26 in `figures/` are committed on purpose, so a reviewer sees every number on
 GitHub without running anything. This section is the map for when something does
 need regenerating.
 
